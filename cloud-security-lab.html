@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudSec Lab — Student Security Exercise</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #0f1623;
+    --panel: #141c2e;
+    --border: #1e2d47;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #39ff14;
+    --warn: #ffca28;
+    --danger: #ff4444;
+    --success: #39ff14;
+    --text: #c8d8f0;
+    --muted: #4a6080;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,14,23,0.95);
+    backdrop-filter: blur(12px);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), #0055ff);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  .logo-text { font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
+  .logo-text span { color: var(--text); font-weight: 300; }
+  .header-badges { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px;
+    border-radius: 4px; border: 1px solid; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .badge-free    { border-color: var(--accent3); color: var(--accent3); background: rgba(57,255,20,0.08); }
+  .badge-student { border-color: var(--accent);  color: var(--accent);  background: rgba(0,212,255,0.08); }
+
+  /* ── App layout ── */
+  .app {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 256px 1fr;
+    height: calc(100vh - 63px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 18px 0;
+  }
+  .sidebar-section { padding: 0 14px; margin-bottom: 22px; }
+  .sidebar-title {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 10px; padding: 0 4px;
+  }
+  .module-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 6px; cursor: pointer;
+    transition: all 0.15s; border: 1px solid transparent; margin-bottom: 3px;
+  }
+  .module-item:hover   { background: var(--panel); border-color: var(--border); }
+  .module-item.active  { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.3); }
+  .module-item.done-mod{ opacity: 0.65; }
+  .module-icon  { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+  .module-info  { flex: 1; min-width: 0; }
+  .module-name  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .module-meta  { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .module-status{ font-size: 13px; flex-shrink: 0; color: var(--muted); }
+  .module-status.complete { color: var(--success); }
+  .difficulty   { display: inline-flex; gap: 2px; }
+  .diff-dot     { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .diff-dot.lit { background: var(--accent2); }
+
+  /* global progress */
+  .progress-meta {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    display: flex; justify-content: space-between; margin-bottom: 6px; padding: 0 4px;
+  }
+  .progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill  {
+    height: 100%; background: linear-gradient(90deg, var(--accent), #0088ff);
+    border-radius: 2px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* ── Main ── */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Scenario header ── */
+  .scenario-header {
+    padding: 16px 26px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .scenario-breadcrumb {
+    font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.05em;
+  }
+  .scenario-breadcrumb span { color: var(--accent); }
+  .scenario-title { font-size: 19px; font-weight: 700; margin-bottom: 5px; color: #fff; }
+  .scenario-desc  { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 700px; }
+  .scenario-tags  { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
+  .tag {
+    font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 3px;
+    background: var(--panel); border: 1px solid var(--border); color: var(--muted); letter-spacing: 0.05em;
+  }
+
+  /* ── Content area ── */
+  .content-area { flex: 1; display: grid; grid-template-columns: 1fr 310px; overflow: hidden; }
+
+  /* ── Terminal ── */
+  .terminal-pane {
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: #070b12; overflow: hidden;
+  }
+  .terminal-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 14px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .terminal-dots { display: flex; gap: 6px; }
+  .tdot { width: 10px; height: 10px; border-radius: 50%; }
+  .tdot-r { background: #ff5f57; }
+  .tdot-y { background: #febc2e; }
+  .tdot-g { background: #28c840; }
+  .terminal-title { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+
+  .terminal-output {
+    flex: 1; padding: 14px 16px;
+    overflow-y: auto;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.85;
+  }
+  .terminal-output::-webkit-scrollbar { width: 4px; }
+  .terminal-output::-webkit-scrollbar-track { background: transparent; }
+  .terminal-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .t-line      { display: block; }
+  .t-prompt    { color: var(--accent3); }
+  .t-cmd       { color: #fff; }
+  .t-out       { color: var(--text); opacity: 0.85; }
+  .t-err       { color: var(--danger); }
+  .t-warn      { color: var(--warn); }
+  .t-success   { color: var(--success); }
+  .t-info      { color: var(--accent); }
+  .t-comment   { color: var(--muted); }
+  .t-highlight { color: var(--accent2); font-weight: 500; }
+
+  .terminal-input-row {
+    display: flex; align-items: center;
+    padding: 11px 16px; background: var(--panel);
+    border-top: 1px solid var(--border); gap: 8px; flex-shrink: 0;
+  }
+  .t-prompt-inline { font-family: var(--mono); font-size: 12.5px; color: var(--accent3); white-space: nowrap; flex-shrink: 0; }
+  .terminal-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-family: var(--mono); font-size: 12.5px; color: #fff; caret-color: var(--accent3);
+  }
+  .terminal-input::placeholder { color: var(--muted); }
+
+  /* ── Right panel ── */
+  .right-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
+
+  .panel-tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+    background: var(--panel); flex-shrink: 0;
+  }
+  .ptab {
+    padding: 12px 20px; font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.05em; color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.15s; text-transform: uppercase;
+  }
+  .ptab:hover  { color: var(--text); }
+  .ptab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .panel-content {
+    flex: 1; overflow-y: auto; padding: 18px;
+  }
+  .panel-content::-webkit-scrollbar { width: 4px; }
+  .panel-content::-webkit-scrollbar-track { background: transparent; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .panel-label {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .panel-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Objectives */
+  .objective-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 8px; transition: border-color 0.2s, background 0.2s;
+  }
+  .objective-item.done {
+    border-color: rgba(57,255,20,0.35);
+    background: rgba(57,255,20,0.05);
+  }
+  .obj-check {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--muted); flex-shrink: 0; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; transition: all 0.2s;
+  }
+  .objective-item.done .obj-check { border-color: var(--success); background: var(--success); color: #000; }
+  .obj-text { font-size: 12.5px; line-height: 1.5; color: var(--text); }
+  .objective-item.done .obj-text { color: var(--muted); text-decoration: line-through; }
+
+  /* Module progress bar inside panel */
+  .obj-progress-wrap { margin: 14px 0 0; }
+  .obj-progress-meta {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    display: flex; justify-content: space-between; margin-bottom: 5px;
+  }
+
+  /* Complete banner */
+  .complete-banner {
+    display: none; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-top: 14px;
+    background: rgba(57,255,20,0.07);
+    border: 1px solid rgba(57,255,20,0.3); border-radius: 7px;
+    font-size: 12.5px; color: var(--success); font-weight: 600;
+    animation: slideIn 0.3s ease;
+  }
+  .complete-banner.show { display: flex; }
+  .complete-banner .next-btn {
+    margin-left: auto; flex-shrink: 0;
+    padding: 6px 14px; background: var(--success); color: #000;
+    border: none; border-radius: 5px; font-family: var(--sans);
+    font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
+  }
+  .complete-banner .next-btn:hover { opacity: 0.82; }
+
+  /* Hints */
+  .hint-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; margin-bottom: 8px;
+    cursor: pointer; transition: border-color 0.15s;
+    user-select: none;
+  }
+  .hint-card:hover { border-color: rgba(0,212,255,0.3); }
+  .hint-card.revealed { border-color: rgba(255,107,53,0.4); background: rgba(255,107,53,0.04); cursor: default; }
+  .hint-header { font-family: var(--mono); font-size: 11px; color: var(--accent2); }
+  .hint-body   { font-size: 12.5px; color: var(--text); margin-top: 8px; line-height: 1.55; display: none; }
+  .hint-card.revealed .hint-body { display: block; }
+  .hint-lock   { color: var(--muted); font-size: 11px; margin-top: 5px; }
+  .hint-card.revealed .hint-lock { display: none; }
+
+  /* Animations */
+  .t-new { animation: tFadeIn 0.25s ease; }
+  @keyframes tFadeIn  { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes slideIn  { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">CloudSec<span>Lab</span></div>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-free">✦ Free Access</span>
+    <span class="badge badge-student">Student Edition</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Progress</div>
+      <div class="progress-meta">
+        <span>Modules completed</span>
+        <span id="progressText" style="color:var(--accent);">0 / 5</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="globalProgress" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Modules</div>
+
+      <div class="module-item active" data-module="0">
+        <span class="module-icon">🪣</span>
+        <div class="module-info">
+          <div class="module-name">S3 Bucket Exposure</div>
+          <div class="module-meta">AWS ·
+            <span class="difficulty">
+              <span class="diff-dot lit"></span><span class="diff-dot"></span><span class="diff-dot"></span>
+            </span>
+          </div>
+        </div>
+        <span class="module-status" id="status-0">○</span>
+      </div>
+
+      <div class="module-item" data-module="1">
+        <span class="module-icon">🔑</span>
+        <div class="module-info">
+          <div class="module-name">IAM Privilege Escalation</div>
+          <div class="module-meta">AWS ·
+            <span class="difficulty">
+              <span class="diff-dot lit"></span><span class="diff-dot lit"></span><span class="diff-dot"></span>
+            </span>
+          </div>
+        </div>
+        <span class="module-status" id="status-1">○</span>
+      </div>
+
+      <div class="module-item" data-module="2">
+        <span class="module-icon">⚙️</span>
+        <div class="module-info">
+          <div class="module-name">Metadata Service Attack</div>
+          <div class="module-meta">Cloud ·
+            <span class="difficulty">
+              <span class="diff-dot lit"></span><span class="diff-dot lit"></span><span class="diff-dot"></span>
+            </span>
+          </div>
+        </div>
+        <span class="module-status" id="status-2">○</span>
+      </div>
+
+      <div class="module-item" data-module="3">
+        <span class="module-icon">🐳</span>
+        <div class="module-info">
+          <div class="module-name">Container Escape</div>
+          <div class="module-meta">K8s ·
+            <span class="difficulty">
+              <span class="diff-dot lit"></span><span class="diff-dot lit"></span><span class="diff-dot lit"></span>
+            </span>
+          </div>
+        </div>
+        <span class="module-status" id="status-3">○</span>
+      </div>
+
+      <div class="module-item" data-module="4">
+        <span class="module-icon">🔐</span>
+        <div class="module-info">
+          <div class="module-name">Secrets in Git History</div>
+          <div class="module-meta">DevOps ·
+            <span class="difficulty">
+              <span class="diff-dot lit"></span><span class="diff-dot"></span><span class="diff-dot"></span>
+            </span>
+          </div>
+        </div>
+        <span class="module-status" id="status-4">○</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <div class="scenario-header">
+      <div class="scenario-breadcrumb">CloudSec Lab / <span id="moduleCategory">AWS</span></div>
+      <div class="scenario-title" id="scenarioTitle"></div>
+      <div class="scenario-desc"  id="scenarioDesc"></div>
+      <div class="scenario-tags"  id="scenarioTags"></div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- Terminal -->
+      <div class="terminal-pane">
+        <div class="terminal-bar">
+          <div class="terminal-dots">
+            <div class="tdot tdot-r"></div>
+            <div class="tdot tdot-y"></div>
+            <div class="tdot tdot-g"></div>
+          </div>
+          <div class="terminal-title">student@cloudsec-lab:~$</div>
+        </div>
+        <div class="terminal-output" id="termOutput"></div>
+        <div class="terminal-input-row">
+          <span class="t-prompt-inline">student@lab:~$</span>
+          <input class="terminal-input" id="termInput" type="text"
+            placeholder="Type a command and press Enter…" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div class="right-panel">
+        <div class="panel-tabs">
+          <div class="ptab active" data-tab="objectives">Objectives</div>
+          <div class="ptab"        data-tab="hints">Hints</div>
+        </div>
+
+        <div class="panel-content">
+
+          <!-- Objectives -->
+          <div class="tab-panel active" id="tab-objectives">
+            <div class="panel-label">Mission Objectives</div>
+            <div id="objectivesList"></div>
+
+            <div id="completeBanner" class="complete-banner">
+              <span>✓ All objectives complete!</span>
+              <button class="next-btn" onclick="nextModule()">Next Module →</button>
+            </div>
+
+            <div class="obj-progress-wrap">
+              <div class="obj-progress-meta">
+                <span>Module progress</span>
+                <span id="objProgressText" style="color:var(--accent3);">0 / 0</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="objProgress" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hints -->
+          <div class="tab-panel" id="tab-hints">
+            <div class="panel-label">Available Hints</div>
+            <div id="hintsList"></div>
+            <p style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:12px;">
+              💡 Click a hint to reveal it
+            </p>
+          </div>
+
+        </div><!-- panel-content -->
+      </div><!-- right-panel -->
+
+    </div><!-- content-area -->
+  </main>
+</div><!-- app -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  MODULE DEFINITIONS
+// ═══════════════════════════════════════════════════════
+const MODULES = [
+
+  // ──────────────────────────────────────────
+  //  MODULE 0 — S3 Bucket Misconfiguration
+  // ──────────────────────────────────────────
+  {
+    id: 0,
+    title: "S3 Bucket Misconfiguration",
+    category: "AWS",
+    desc: "A startup's S3 bucket was left publicly accessible. Your job: enumerate the bucket, identify exposed sensitive files, and apply the correct remediation commands.",
+    tags: ["s3","aws-cli","public-access","data-exposure"],
+    intro: [
+      {cls:'t-info',    text:'🛡  Module loaded: S3 Bucket Exposure'},
+      {cls:'t-warn',    text:'⚠  A misconfigured S3 bucket has been reported. Investigate.'},
+      {cls:'',          text:''},
+      {cls:'t-out',     text:'Target bucket: <span class="t-highlight">s3://startup-prod-assets-2024</span>'},
+      {cls:'t-out',     text:'Region: us-east-1'},
+      {cls:'',          text:''},
+    ],
+    objectives: [
+      {id:'list',   text:'List the contents of the public S3 bucket', done:false},
+      {id:'find',   text:'Identify the sensitive file exposed in the bucket', done:false},
+      {id:'block',  text:'Apply the correct Block Public Access setting', done:false},
+      {id:'policy', text:'Remove the overly permissive bucket policy', done:false},
+    ],
+    hints: [
+      {text:'Use "aws s3 ls s3://BUCKET --no-sign-request" to list contents without credentials.'},
+      {text:'Sensitive files often have names like credentials, keys, .env, backup, or secret.'},
+      {text:'Block public access: aws s3api put-public-access-block --bucket BUCKET --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'},
+      {text:'Remove bucket policy: aws s3api delete-bucket-policy --bucket BUCKET_NAME'},
+    ],
+    simulate(cmd, state) {
+      const c = cmd.toLowerCase().trim();
+      if (c === 'help') return [
+        {cls:'t-info', text:'Available commands:'},
+        {cls:'t-out',  text:'  aws s3 ls s3://startup-prod-assets-2024 --no-sign-request'},
+        {cls:'t-out',  text:'  aws s3api get-bucket-acl --bucket startup-prod-assets-2024'},
+        {cls:'t-out',  text:'  aws s3api get-bucket-policy --bucket startup-prod-assets-2024'},
+        {cls:'t-out',  text:'  aws s3api put-public-access-block --bucket startup-prod-assets-2024 --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'},
+        {cls:'t-out',  text:'  aws s3api delete-bucket-policy --bucket startup-prod-assets-2024'},
+      ];
+      if (c.includes('s3 ls') && c.includes('startup-prod-assets-2024')) {
+        state.listed = true;
+        return [
+          {cls:'t-out',  text:'2024-01-15 09:23:11       1234  index.html'},
+          {cls:'t-out',  text:'2024-01-15 09:23:11       8820  app-bundle.js'},
+          {cls:'t-out',  text:'2024-01-15 09:23:11        512  .env.production'},
+          {cls:'t-out',  text:'2024-01-15 09:23:11       2048  database-credentials.json'},
+          {cls:'t-out',  text:'2024-01-15 09:23:11        256  README.md'},
+          {cls:'t-warn', text:'⚠  WARNING: Sensitive files detected in public bucket!'},
+        ];
+      }
+      if (c.includes('get-bucket-acl')) return [
+        {cls:'t-out',  text:'{ "Owner": { "DisplayName": "startup-admin" },'},
+        {cls:'t-out',  text:'  "Grants": [{ "Grantee": { "Type": "Group",'},
+        {cls:'t-highlight', text:'    "URI": "http://acs.amazonaws.com/groups/global/AllUsers"'},
+        {cls:'t-out',  text:'  }, "Permission": "READ" }] }'},
+        {cls:'t-err',  text:'✗ CRITICAL: Bucket grants READ access to AllUsers (public internet)!'},
+      ];
+      if (c.includes('get-bucket-policy')) return [
+        {cls:'t-out',  text:'{ "Statement": [{ "Effect": "Allow",'},
+        {cls:'t-highlight', text:'  "Principal": "*", "Action": "s3:GetObject",'},
+        {cls:'t-out',  text:'  "Resource": "arn:aws:s3:::startup-prod-assets-2024/*" }] }'},
+        {cls:'t-err',  text:'✗ Principal:* means ANYONE on the internet can read all objects!'},
+      ];
+      if ((c.includes('.env') || c.includes('credentials') || c.includes('database-cred')) &&
+          (c.includes('cp') || c.includes('cat') || c.includes('get-object') || c.includes('curl'))) {
+        state.foundSensitive = true;
+        return [
+          {cls:'t-out',  text:'Downloading: database-credentials.json ...'},
+          {cls:'t-out',  text:'{'},
+          {cls:'t-highlight', text:'  "db_host":     "prod-mysql.startup.internal",'},
+          {cls:'t-highlight', text:'  "db_user":     "admin",'},
+          {cls:'t-highlight', text:'  "db_password": "Sup3rS3cr3t!2024",'},
+          {cls:'t-out',  text:'  "db_name":     "users_production"'},
+          {cls:'t-out',  text:'}'},
+          {cls:'t-err',  text:'✗ CRITICAL: Production database credentials fully exposed to the internet!'},
+        ];
+      }
+      if (c.includes('put-public-access-block')) {
+        state.blockedPublic = true;
+        return [
+          {cls:'t-success', text:'✓ Block Public Access applied successfully.'},
+          {cls:'t-success', text:'  BlockPublicAcls:       true'},
+          {cls:'t-success', text:'  IgnorePublicAcls:      true'},
+          {cls:'t-success', text:'  BlockPublicPolicy:     true'},
+          {cls:'t-success', text:'  RestrictPublicBuckets: true'},
+        ];
+      }
+      if (c.includes('delete-bucket-policy')) {
+        state.deletedPolicy = true;
+        return [{cls:'t-success', text:'✓ Bucket policy deleted. Public access via policy removed.'}];
+      }
+      return null;
+    },
+    checkObjectives(state) {
+      const o = {};
+      if (state.listed)         o.list   = true;
+      if (state.foundSensitive) o.find   = true;
+      if (state.blockedPublic)  o.block  = true;
+      if (state.deletedPolicy)  o.policy = true;
+      return o;
+    },
+  },
+
+  // ──────────────────────────────────────────
+  //  MODULE 1 — IAM Privilege Escalation
+  // ──────────────────────────────────────────
+  {
+    id: 1,
+    title: "IAM Privilege Escalation",
+    category: "AWS",
+    desc: "You have access as a low-privilege IAM user. Discover how misconfigured IAM policies allow escalating to admin, then fix the vulnerability.",
+    tags: ["iam","privilege-escalation","aws","least-privilege"],
+    intro: [
+      {cls:'t-info', text:'🛡  Module loaded: IAM Privilege Escalation'},
+      {cls:'t-warn', text:'⚠  You have access as: dev-contractor (low privilege)'},
+      {cls:'',       text:''},
+      {cls:'t-out',  text:'User ARN: arn:aws:iam::123456789012:user/dev-contractor'},
+      {cls:'t-out',  text:'Goal: Discover and exploit misconfigured IAM permissions'},
+      {cls:'',       text:''},
+    ],
+    objectives: [
+      {id:'whoami',   text:'Identify the current IAM user and their ARN', done:false},
+      {id:'escalate', text:'Discover the privilege escalation path in the policy', done:false},
+      {id:'admin',    text:'Demonstrate the admin access gained', done:false},
+      {id:'fix',      text:'Apply least-privilege policy to close the vulnerability', done:false},
+    ],
+    hints: [
+      {text:'"aws sts get-caller-identity" identifies who you are and shows your ARN.'},
+      {text:'Check attached policies: aws iam list-attached-user-policies --user-name dev-contractor'},
+      {text:'iam:CreatePolicyVersion on * lets you create a new policy version with Action:* and set it as default — gaining full admin rights.'},
+      {text:'Fix: remove iam:CreatePolicyVersion and iam:PassRole from DevContractorPolicy.'},
+    ],
+    simulate(cmd, state) {
+      const c = cmd.toLowerCase().trim();
+      if (c === 'help') return [
+        {cls:'t-info', text:'Available commands:'},
+        {cls:'t-out',  text:'  aws sts get-caller-identity'},
+        {cls:'t-out',  text:'  aws iam list-attached-user-policies --user-name dev-contractor'},
+        {cls:'t-out',  text:'  aws iam get-policy-version --policy-arn arn:aws:iam::123456789012:policy/DevPolicy --version-id v1'},
+        {cls:'t-out',  text:"  aws iam create-policy-version --policy-arn arn:aws:iam::123456789012:policy/DevPolicy --policy-document '{\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"*\"}]}' --set-as-default"},
+      ];
+      if (c.includes('get-caller-identity') || c === 'whoami') {
+        state.identityChecked = true;
+        return [
+          {cls:'t-out', text:'{ "UserId":  "AIDA1234567890EXAMPLE",'},
+          {cls:'t-out', text:'  "Account": "123456789012",'},
+          {cls:'t-out', text:'  "Arn":     "arn:aws:iam::123456789012:user/dev-contractor" }'},
+        ];
+      }
+      if (c.includes('list-attached-user-policies')) return [
+        {cls:'t-out', text:'AttachedPolicies:'},
+        {cls:'t-out', text:'  - PolicyName: DevContractorPolicy'},
+        {cls:'t-out', text:'    PolicyArn:  arn:aws:iam::123456789012:policy/DevPolicy'},
+      ];
+      if (c.includes('get-policy-version') || c.includes('get-policy')) {
+        state.escalateDiscovered = true;
+        return [
+          {cls:'t-out',       text:'Permissions in DevPolicy v1:'},
+          {cls:'t-out',       text:'  s3:GetObject, s3:PutObject   (on dev-bucket only)'},
+          {cls:'t-highlight', text:'  iam:CreatePolicyVersion      (on *)  ← DANGEROUS'},
+          {cls:'t-highlight', text:'  iam:PassRole                 (on *)  ← DANGEROUS'},
+          {cls:'t-err',       text:'✗ These permissions allow full privilege escalation to admin!'},
+        ];
+      }
+      if (c.includes('create-policy-version') && (c.includes('action') || c.includes('*'))) {
+        state.adminGained = true;
+        return [
+          {cls:'t-warn',      text:'Creating new policy version...'},
+          {cls:'t-success',   text:'✓ PolicyVersion v2 created and set as default.'},
+          {cls:'t-highlight', text:'✓ dev-contractor now has Action:* (full admin access)'},
+          {cls:'t-err',       text:'✗ Privilege escalation SUCCESSFUL — this is the vulnerability!'},
+        ];
+      }
+      if (c.includes('iam') && (c.includes('remove') || c.includes('detach') || c.includes('put-user-policy') || c.includes('least'))) {
+        state.fixed = true;
+        return [
+          {cls:'t-success', text:'✓ Removed iam:CreatePolicyVersion from DevContractorPolicy'},
+          {cls:'t-success', text:'✓ Removed iam:PassRole from DevContractorPolicy'},
+          {cls:'t-success', text:'✓ Least-privilege policy applied. Escalation path closed.'},
+        ];
+      }
+      return null;
+    },
+    checkObjectives(state) {
+      const o = {};
+      if (state.identityChecked)    o.whoami   = true;
+      if (state.escalateDiscovered) o.escalate = true;
+      if (state.adminGained)        o.admin    = true;
+      if (state.fixed)              o.fix      = true;
+      return o;
+    },
+  },
+
+  // ──────────────────────────────────────────
+  //  MODULE 2 — SSRF / Metadata Service
+  // ──────────────────────────────────────────
+  {
+    id: 2,
+    title: "SSRF → Metadata Service",
+    category: "Cloud",
+    desc: "A web application has a Server-Side Request Forgery (SSRF) vulnerability. Use it to steal IAM credentials from the EC2 Instance Metadata Service (IMDS), then harden the instance.",
+    tags: ["ssrf","imds","ec2","metadata","credential-theft"],
+    intro: [
+      {cls:'t-info', text:'🛡  Module loaded: Metadata Service Attack (SSRF → IMDS)'},
+      {cls:'t-warn', text:'⚠  Vulnerable web app found at: http://webapp.target.lab/fetch?url='},
+      {cls:'',       text:''},
+      {cls:'t-out',  text:'EC2 metadata endpoint: http://169.254.169.254/latest/meta-data/'},
+      {cls:'t-out',  text:'IMDSv1 is enabled (no token required — vulnerable)'},
+      {cls:'',       text:''},
+    ],
+    objectives: [
+      {id:'probe',  text:'Probe the SSRF vulnerability with the metadata endpoint', done:false},
+      {id:'role',   text:'Retrieve the IAM role name from the metadata service', done:false},
+      {id:'creds',  text:'Extract temporary IAM credentials via SSRF', done:false},
+      {id:'imdsv2', text:'Enforce IMDSv2 to mitigate the SSRF attack', done:false},
+    ],
+    hints: [
+      {text:'SSRF probe: curl "http://webapp.target.lab/fetch?url=http://169.254.169.254/latest/meta-data/"'},
+      {text:'IAM role name lives at: /latest/meta-data/iam/security-credentials/'},
+      {text:'Credentials: curl ".../fetch?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/WebAppRole"'},
+      {text:'Enforce IMDSv2: aws ec2 modify-instance-metadata-options --instance-id i-0abc123 --http-tokens required --http-endpoint enabled'},
+    ],
+    simulate(cmd, state) {
+      const c = cmd.toLowerCase().trim();
+      if (c === 'help') return [
+        {cls:'t-info', text:'Available commands:'},
+        {cls:'t-out',  text:'  curl "http://webapp.target.lab/fetch?url=http://169.254.169.254/latest/meta-data/"'},
+        {cls:'t-out',  text:'  curl "http://webapp.target.lab/fetch?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/"'},
+        {cls:'t-out',  text:'  curl "http://webapp.target.lab/fetch?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/WebAppRole"'},
+        {cls:'t-out',  text:'  aws ec2 modify-instance-metadata-options --instance-id i-0abc123 --http-tokens required --http-endpoint enabled'},
+      ];
+      if (c.includes('169.254.169.254') && c.includes('meta-data/"')) {
+        state.probed = true;
+        return [
+          {cls:'t-out',  text:'ami-id'},
+          {cls:'t-out',  text:'hostname'},
+          {cls:'t-out',  text:'iam/'},
+          {cls:'t-out',  text:'instance-id'},
+          {cls:'t-out',  text:'instance-type'},
+          {cls:'t-out',  text:'local-ipv4'},
+          {cls:'t-warn', text:'⚠  SSRF confirmed! Metadata service is reachable via the web app.'},
+        ];
+      }
+      if (c.includes('security-credentials') && c.includes('meta-data') && !c.includes('webapprole')) {
+        state.roleFound = true;
+        return [
+          {cls:'t-out',  text:'WebAppRole'},
+          {cls:'t-warn', text:'⚠  IAM role attached to this EC2 instance: WebAppRole'},
+        ];
+      }
+      if (c.includes('webapprole')) {
+        state.credsStolen = true;
+        return [
+          {cls:'t-out',  text:'{'},
+          {cls:'t-highlight', text:'  "AccessKeyId":     "ASIA1234567890EXAMPLE",'},
+          {cls:'t-highlight', text:'  "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",'},
+          {cls:'t-highlight', text:'  "Token":           "AQoDYXdzEJr...(truncated)...",'},
+          {cls:'t-out',  text:'  "Expiration":      "2024-01-15T18:30:00Z"'},
+          {cls:'t-out',  text:'}'},
+          {cls:'t-err',  text:'✗ CRITICAL: Temporary IAM credentials stolen via SSRF!'},
+          {cls:'t-err',  text:'✗ Attacker can now use these to call AWS APIs!'},
+        ];
+      }
+      if (c.includes('modify-instance-metadata-options') && c.includes('required')) {
+        state.imdsv2 = true;
+        return [
+          {cls:'t-success', text:'✓ IMDSv2 enforced. Session token now required for all metadata requests.'},
+          {cls:'t-success', text:'  --http-tokens required applied to instance i-0abc123'},
+          {cls:'t-success', text:'  Basic SSRF attacks against the metadata service are now blocked.'},
+        ];
+      }
+      return null;
+    },
+    checkObjectives(state) {
+      const o = {};
+      if (state.probed)      o.probe  = true;
+      if (state.roleFound)   o.role   = true;
+      if (state.credsStolen) o.creds  = true;
+      if (state.imdsv2)      o.imdsv2 = true;
+      return o;
+    },
+  },
+
+  // ──────────────────────────────────────────
+  //  MODULE 3 — Kubernetes Container Escape
+  // ──────────────────────────────────────────
+  {
+    id: 3,
+    title: "Kubernetes Container Escape",
+    category: "K8s",
+    desc: "A Kubernetes pod is running with overly permissive settings. Identify the misconfigurations that allow container escape to the underlying node, then harden the pod spec.",
+    tags: ["kubernetes","container-escape","privileged-pod","pod-security"],
+    intro: [
+      {cls:'t-info', text:'🛡  Module loaded: Kubernetes Container Escape'},
+      {cls:'t-warn', text:'⚠  Pod "web-app" is deployed with dangerous security settings'},
+      {cls:'',       text:''},
+      {cls:'t-out',  text:'Namespace: production | Pod: web-app-7d9f8b-xkqpz'},
+      {cls:'t-out',  text:'You have kubectl access to the cluster'},
+      {cls:'',       text:''},
+    ],
+    objectives: [
+      {id:'describe', text:'Inspect the pod and identify security misconfigurations', done:false},
+      {id:'escape',   text:'Demonstrate the container escape to the host node', done:false},
+      {id:'fix',      text:'Apply Pod Security Standards to harden the pod spec', done:false},
+      {id:'netpol',   text:'Create a NetworkPolicy to restrict pod traffic', done:false},
+    ],
+    hints: [
+      {text:'kubectl describe pod web-app-7d9f8b-xkqpz -n production   — look for privileged, hostPID, hostNetwork settings.'},
+      {text:'A pod with privileged:true and hostPID:true can escape using nsenter inside kubectl exec.'},
+      {text:'Harden with: privileged:false, allowPrivilegeEscalation:false, readOnlyRootFilesystem:true, runAsNonRoot:true'},
+      {text:'Apply a NetworkPolicy: kubectl apply -f network-policy.yaml'},
+    ],
+    simulate(cmd, state) {
+      const c = cmd.toLowerCase().trim();
+      if (c === 'help') return [
+        {cls:'t-info', text:'Available commands:'},
+        {cls:'t-out',  text:'  kubectl describe pod web-app-7d9f8b-xkqpz -n production'},
+        {cls:'t-out',  text:'  kubectl get pod web-app-7d9f8b-xkqpz -n production -o yaml'},
+        {cls:'t-out',  text:'  kubectl exec -it web-app-7d9f8b-xkqpz -n production -- /bin/sh'},
+        {cls:'t-out',  text:'  kubectl apply -f hardened-pod.yaml'},
+        {cls:'t-out',  text:'  kubectl apply -f network-policy.yaml'},
+      ];
+      if (c.includes('describe pod') || (c.includes('get pod') && c.includes('-o yaml'))) {
+        state.described = true;
+        return [
+          {cls:'t-out',       text:'Name: web-app-7d9f8b-xkqpz | Namespace: production'},
+          {cls:'t-out',       text:'Containers:'},
+          {cls:'t-out',       text:'  web-app:'},
+          {cls:'t-out',       text:'    SecurityContext:'},
+          {cls:'t-err',       text:'      privileged:               true  ← CRITICAL'},
+          {cls:'t-err',       text:'      allowPrivilegeEscalation: true  ← CRITICAL'},
+          {cls:'t-highlight', text:'    HostPID:     true  ← Can enumerate all host processes'},
+          {cls:'t-highlight', text:'    HostNetwork: true  ← Shares host network namespace'},
+          {cls:'t-warn',      text:'⚠  This pod configuration enables escape to the Kubernetes node!'},
+        ];
+      }
+      if (c.includes('kubectl exec') || c.includes('nsenter') || c.includes('chroot') || c.includes('escape')) {
+        state.escaped = true;
+        return [
+          {cls:'t-out',       text:'Executing escape via privileged container...'},
+          {cls:'t-out',       text:'# nsenter --mount=/proc/1/ns/mnt -- /bin/bash'},
+          {cls:'t-highlight', text:'root@node-worker-1:/#'},
+          {cls:'t-err',       text:'✗ Container escape SUCCESSFUL — now root on the K8s node!'},
+          {cls:'t-err',       text:'✗ All pod secrets and node resources are exposed!'},
+        ];
+      }
+      if (c.includes('kubectl apply') && !c.includes('network')) {
+        state.fixed = true;
+        return [
+          {cls:'t-success', text:'✓ Pod security context updated:'},
+          {cls:'t-success', text:'  privileged:               false'},
+          {cls:'t-success', text:'  allowPrivilegeEscalation: false'},
+          {cls:'t-success', text:'  readOnlyRootFilesystem:   true'},
+          {cls:'t-success', text:'  runAsNonRoot:             true   runAsUser: 10001'},
+        ];
+      }
+      if (c.includes('networkpolicy') || c.includes('network-policy') || (c.includes('apply') && c.includes('network'))) {
+        state.netpolicy = true;
+        return [
+          {cls:'t-success', text:'✓ NetworkPolicy applied to the production namespace.'},
+          {cls:'t-success', text:'  Pod egress and ingress restricted to allowlisted services only.'},
+        ];
+      }
+      return null;
+    },
+    checkObjectives(state) {
+      const o = {};
+      if (state.described) o.describe = true;
+      if (state.escaped)   o.escape   = true;
+      if (state.fixed)     o.fix      = true;
+      if (state.netpolicy) o.netpol   = true;
+      return o;
+    },
+  },
+
+  // ──────────────────────────────────────────
+  //  MODULE 4 — Secrets in Git History
+  // ──────────────────────────────────────────
+  {
+    id: 4,
+    title: "Secrets in Git History",
+    category: "DevOps",
+    desc: "A developer accidentally committed AWS credentials to a public GitHub repository. Detect the exposure, rotate the compromised credentials, and prevent future leaks.",
+    tags: ["git","secrets","credential-rotation","trufflehog","pre-commit"],
+    intro: [
+      {cls:'t-info', text:'🛡  Module loaded: Secrets in Git History'},
+      {cls:'t-warn', text:'⚠  AWS credentials detected in public GitHub repo: github.com/startup/webapp'},
+      {cls:'',       text:''},
+      {cls:'t-out',  text:'Repo cloned to: /home/student/webapp/'},
+      {cls:'t-out',  text:'Tools available: git, trufflehog, aws-cli, pre-commit'},
+      {cls:'',       text:''},
+    ],
+    objectives: [
+      {id:'scan',    text:'Run a secrets scanner to find the leaked credentials', done:false},
+      {id:'history', text:'Locate the exact commit that introduced the secret', done:false},
+      {id:'rotate',  text:'Deactivate the compromised AWS key', done:false},
+      {id:'prevent', text:'Configure a pre-commit hook to prevent future leaks', done:false},
+    ],
+    hints: [
+      {text:'Scan: trufflehog git file://./webapp --only-verified   OR   git log --all -p | grep -E "AKIA[0-9A-Z]{16}"'},
+      {text:'Locate commit: git log --all --full-history  then  git show abc1234f  to view the diff.'},
+      {text:'Deactivate key: aws iam update-access-key --access-key-id AKIAIOSFODNN7EXAMPLE --status Inactive'},
+      {text:'Install pre-commit hook: pre-commit install && pre-commit autoupdate'},
+    ],
+    simulate(cmd, state) {
+      const c = cmd.toLowerCase().trim();
+      if (c === 'help') return [
+        {cls:'t-info', text:'Available commands:'},
+        {cls:'t-out',  text:'  trufflehog git file://./webapp --only-verified'},
+        {cls:'t-out',  text:'  git log --all -p | grep -E "AKIA[0-9A-Z]{16}"'},
+        {cls:'t-out',  text:'  git show abc1234f'},
+        {cls:'t-out',  text:'  aws iam update-access-key --access-key-id AKIAIOSFODNN7EXAMPLE --status Inactive'},
+        {cls:'t-out',  text:'  pre-commit install && pre-commit autoupdate'},
+      ];
+      if (c.includes('trufflehog') || (c.includes('git log') && c.includes('grep'))) {
+        state.scanned = true;
+        return [
+          {cls:'t-out',       text:'🔍 Scanning git history...'},
+          {cls:'t-err',       text:'✗ Found: AWS Access Key'},
+          {cls:'t-highlight', text:'   AccessKeyId:     AKIAIOSFODNN7EXAMPLE'},
+          {cls:'t-highlight', text:'   SecretAccessKey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'},
+          {cls:'t-out',       text:'   File:   config/aws-config.py'},
+          {cls:'t-out',       text:'   Commit: abc1234f  |  2024-01-10  |  developer@startup.com'},
+          {cls:'t-warn',      text:'⚠  This key has been public for 5 days. Treat as fully compromised!'},
+        ];
+      }
+      if (c.includes('git show') || (c.includes('git log') && c.includes('abc1234'))) {
+        state.historyFound = true;
+        return [
+          {cls:'t-out',       text:'commit abc1234f  by developer@startup.com'},
+          {cls:'t-out',       text:'Date:    Mon Jan 10 14:23:11 2024'},
+          {cls:'t-out',       text:'Message: "add aws config for deployment"'},
+          {cls:'t-out',       text:''},
+          {cls:'t-out',       text:'+++ b/config/aws-config.py'},
+          {cls:'t-highlight', text:'+AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"'},
+          {cls:'t-highlight', text:'+AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"'},
+          {cls:'t-err',       text:'✗ Plaintext credentials committed directly into source code!'},
+        ];
+      }
+      if (c.includes('update-access-key') && c.includes('inactive')) {
+        state.rotated = true;
+        return [
+          {cls:'t-success', text:'✓ Access key AKIAIOSFODNN7EXAMPLE deactivated.'},
+          {cls:'t-success', text:'  Create a new key: aws iam create-access-key --user-name deploy-user'},
+          {cls:'t-success', text:'  Store credentials in AWS Secrets Manager — never in code.'},
+          {cls:'t-warn',    text:'⚠  Old key still in git history — rewrite with git-filter-repo if needed.'},
+        ];
+      }
+      if (c.includes('pre-commit') || c.includes('detect-secrets') || c.includes('gitleaks')) {
+        state.prevented = true;
+        return [
+          {cls:'t-success', text:'✓ pre-commit hook installed.'},
+          {cls:'t-success', text:'✓ detect-secrets baseline created.'},
+          {cls:'t-out',     text:'  Future commits are scanned for secrets before they enter git history.'},
+          {cls:'t-out',     text:'  Add to .pre-commit-config.yaml:'},
+          {cls:'t-out',     text:'    - repo: https://github.com/Yelp/detect-secrets'},
+          {cls:'t-out',     text:'      hooks: [{id: detect-secrets}]'},
+        ];
+      }
+      return null;
+    },
+    checkObjectives(state) {
+      const o = {};
+      if (state.scanned)      o.scan    = true;
+      if (state.historyFound) o.history = true;
+      if (state.rotated)      o.rotate  = true;
+      if (state.prevented)    o.prevent = true;
+      return o;
+    },
+  },
+
+]; // end MODULES
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let currentModule   = 0;
+let moduleStates    = MODULES.map(() => ({}));
+let moduleCompleted = MODULES.map(() => false);
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+function init() {
+  // Tab switching
+  document.querySelectorAll('.ptab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Module sidebar
+  document.querySelectorAll('.module-item').forEach(item => {
+    item.addEventListener('click', () => loadModule(parseInt(item.dataset.module)));
+  });
+
+  // Terminal
+  document.getElementById('termInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const cmd = e.target.value.trim();
+      if (cmd) { runCommand(cmd); e.target.value = ''; }
+    }
+  });
+
+  loadModule(0);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOAD MODULE
+// ═══════════════════════════════════════════════════════
+function loadModule(idx) {
+  currentModule = idx;
+  const mod = MODULES[idx];
+
+  // Sidebar
+  document.querySelectorAll('.module-item').forEach(i => i.classList.remove('active'));
+  document.querySelector(`[data-module="${idx}"]`).classList.add('active');
+
+  // Header
+  document.getElementById('moduleCategory').textContent = mod.category;
+  document.getElementById('scenarioTitle').textContent  = mod.title;
+  document.getElementById('scenarioDesc').textContent   = mod.desc;
+  document.getElementById('scenarioTags').innerHTML =
+    mod.tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+  // Terminal — clear and print intro
+  const out = document.getElementById('termOutput');
+  out.innerHTML = '';
+  const header = [
+    {cls:'t-comment', text:'# CloudSec Lab — Simulated Environment'},
+    {cls:'t-comment', text:'# Type commands and press Enter  ·  type  help  for command list'},
+    {cls:'', text:''},
+  ];
+  [...header, ...mod.intro].forEach(l => appendLine(l.cls, l.text, false));
+
+  // Reset state unless already completed
+  if (!moduleCompleted[idx]) {
+    moduleStates[idx] = {};
+    mod.objectives.forEach(o => { o.done = false; });
+  }
+
+  // Render
+  renderObjectives();
+  renderHints();
+  document.getElementById('completeBanner').classList.remove('show');
+  updateObjProgress();
+  updateGlobalProgress();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RUN COMMAND
+// ═══════════════════════════════════════════════════════
+function runCommand(cmd) {
+  const mod   = MODULES[currentModule];
+  const state = moduleStates[currentModule];
+
+  appendLine('', `<span class="t-prompt">student@lab:~$</span> <span class="t-cmd">${esc(cmd)}</span>`, true);
+
+  const result = mod.simulate(cmd, state);
+  if (result === null) {
+    appendLine('t-err', `command not recognized: ${esc(cmd.split(' ')[0])} — type  help  to see available commands`, true);
+  } else {
+    result.forEach(l => appendLine(l.cls, l.text, true));
+  }
+  appendLine('', '', false);
+
+  // Update objective completion
+  const completed = mod.checkObjectives(state);
+  let anyNew = false;
+  mod.objectives.forEach(obj => {
+    if (completed[obj.id] && !obj.done) {
+      obj.done = true;
+      anyNew   = true;
+      const el = document.getElementById('obj-' + obj.id);
+      if (el) { el.classList.add('done'); el.querySelector('.obj-check').textContent = '✓'; }
+    }
+  });
+
+  if (anyNew) updateObjProgress();
+
+  // Check module completion
+  if (mod.objectives.every(o => o.done) && !moduleCompleted[currentModule]) {
+    moduleCompleted[currentModule] = true;
+    const statusEl = document.getElementById(`status-${currentModule}`);
+    if (statusEl) { statusEl.textContent = '✓'; statusEl.classList.add('complete'); }
+    document.querySelector(`[data-module="${currentModule}"]`).classList.add('done-mod');
+    setTimeout(() => document.getElementById('completeBanner').classList.add('show'), 350);
+    updateGlobalProgress();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER HELPERS
+// ═══════════════════════════════════════════════════════
+function renderObjectives() {
+  const mod = MODULES[currentModule];
+  document.getElementById('objectivesList').innerHTML = mod.objectives.map(obj => `
+    <div class="objective-item${obj.done ? ' done' : ''}" id="obj-${obj.id}">
+      <div class="obj-check">${obj.done ? '✓' : ''}</div>
+      <div class="obj-text">${obj.text}</div>
+    </div>
+  `).join('');
+}
+
+function renderHints() {
+  const mod = MODULES[currentModule];
+  document.getElementById('hintsList').innerHTML = mod.hints.map((h, i) => `
+    <div class="hint-card" id="hint-${i}" onclick="revealHint(${i})">
+      <div class="hint-header">Hint #${i + 1}</div>
+      <div class="hint-body">${h.text}</div>
+      <div class="hint-lock">🔒 Click to reveal</div>
+    </div>
+  `).join('');
+}
+
+function revealHint(idx) {
+  const card = document.getElementById('hint-' + idx);
+  if (card && !card.classList.contains('revealed')) {
+    card.classList.add('revealed');
+  }
+}
+
+function updateObjProgress() {
+  const mod   = MODULES[currentModule];
+  const done  = mod.objectives.filter(o => o.done).length;
+  const total = mod.objectives.length;
+  document.getElementById('objProgressText').textContent = `${done} / ${total}`;
+  document.getElementById('objProgress').style.width    = `${(done / total) * 100}%`;
+}
+
+function updateGlobalProgress() {
+  const done  = moduleCompleted.filter(Boolean).length;
+  const total = MODULES.length;
+  document.getElementById('progressText').textContent    = `${done} / ${total}`;
+  document.getElementById('globalProgress').style.width = `${(done / total) * 100}%`;
+}
+
+function appendLine(cls, html, animate) {
+  const out  = document.getElementById('termOutput');
+  const span = document.createElement('span');
+  span.className = 't-line' + (cls ? ' ' + cls : '') + (animate ? ' t-new' : '');
+  span.innerHTML = html;
+  out.appendChild(span);
+  out.scrollTop = out.scrollHeight;
+}
+
+function nextModule() {
+  const next = currentModule + 1;
+  if (next < MODULES.length) loadModule(next);
+}
+
+function esc(s) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+init();
+</script>
+</body>
+</html>
