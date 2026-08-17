@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Materials</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px;
+            background: #f5f5f5;
+            color: #222;
+        }
+
+        header {
+            background: #24292f;
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+        }
+
+        #status {
+            margin: 20px 0;
+            font-style: italic;
+        }
+
+        .page-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .page {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .page:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+        }
+
+        .page a {
+            text-decoration: none;
+            color: #0969da;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .filename {
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .error {
+            background: #ffe0e0;
+            color: #900;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Course Materials</h1>
+    <p>HTML pages available in this GitHub repository.</p>
+</header>
+
+<div id="status">Loading pages...</div>
+
+<div id="pageList" class="page-list"></div>
+
+<footer>
+    Automatically generated from the GitHub repository.
+</footer>
+
+<script>
+
+    // ============================================================
+    // GITHUB REPOSITORY SETTINGS
+    // ============================================================
+
+    const GITHUB_USER = "YOUR_USERNAME";
+    const GITHUB_REPO = "YOUR_REPOSITORY";
+
+    // Branch to search
+    const GITHUB_BRANCH = "main";
+
+
+    // ============================================================
+    // LOAD HTML FILES
+    // ============================================================
+
+    async function loadPages() {
+
+        const status = document.getElementById("status");
+        const pageList = document.getElementById("pageList");
+
+        const apiURL =
+            `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/git/trees/${GITHUB_BRANCH}?recursive=1`;
+
+        try {
+
+            const response = await fetch(apiURL);
+
+            if (!response.ok) {
+                throw new Error(
+                    `GitHub API returned HTTP ${response.status}`
+                );
+            }
+
+            const data = await response.json();
+
+            // Find all HTML files
+            const htmlFiles = data.tree
+                .filter(item =>
+                    item.type === "blob" &&
+                    item.path.toLowerCase().endsWith(".html")
+                )
+                .sort((a, b) =>
+                    a.path.localeCompare(b.path)
+                );
+
+
+            // Remove the index.html itself
+            const pages = htmlFiles.filter(
+                file => file.path.toLowerCase() !== "index.html"
+            );
+
+
+            if (pages.length === 0) {
+
+                status.textContent = "No HTML pages were found.";
+
+                return;
+            }
+
+
+            status.textContent =
+                `${pages.length} HTML page${pages.length === 1 ? "" : "s"} found.`;
+
+
+            // GitHub Pages base URL
+            const baseURL =
+                `https://${GITHUB_USER}.github.io/${GITHUB_REPO}/`;
+
+
+            pages.forEach(file => {
+
+                const div = document.createElement("div");
+
+                div.className = "page";
+
+
+                // Convert filename into a more readable title
+                const filename = file.path.split("/").pop();
+
+                const title = filename
+                    .replace(/\.html$/i, "")
+                    .replace(/[-_]/g, " ")
+                    .replace(/\b\w/g, char => char.toUpperCase());
+
+
+                const link = document.createElement("a");
+
+                link.href =
+                    baseURL +
+                    file.path
+                        .split("/")
+                        .map(encodeURIComponent)
+                        .join("/");
+
+                link.textContent = title;
+
+                link.target = "_blank";
+
+
+                const fileNameDisplay =
+                    document.createElement("div");
+
+                fileNameDisplay.className = "filename";
+
+                fileNameDisplay.textContent = file.path;
+
+
+                div.appendChild(link);
+
+                div.appendChild(fileNameDisplay);
+
+                pageList.appendChild(div);
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+            status.innerHTML =
+                `<div class="error">
+                    Unable to load the GitHub repository files.
+                    <br><br>
+                    ${error.message}
+                </div>`;
+        }
+    }
+
+
+    // Start
+    loadPages();
+
+</script>
+
+</body>
+</html>
