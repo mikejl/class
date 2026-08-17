@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureLab — Buffer Overflow Security Lab</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00e5ff;
+    --accent2: #ff4d6d;
+    --accent3: #39ff14;
+    --warn: #ffb300;
+    --text: #cdd6f4;
+    --text-dim: #6b7fa3;
+    --text-bright: #e8eaf6;
+    --red: #ff4d6d;
+    --green: #39ff14;
+    --yellow: #ffb300;
+    --purple: #b388ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,229,255,0.012) 2px,
+      rgba(0,229,255,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%,100% { box-shadow: 0 0 8px var(--accent); }
+    50% { box-shadow: 0 0 20px var(--accent), 0 0 40px rgba(0,229,255,0.3); }
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  /* Main layout */
+  .lab-container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 61px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 20px 0;
+    position: sticky;
+    top: 61px;
+    height: calc(100vh - 61px);
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 8px 20px 4px;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+    position: relative;
+  }
+
+  .sidebar-item:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .sidebar-item.active {
+    border-left-color: var(--accent);
+    background: rgba(0,229,255,0.07);
+    color: var(--accent);
+  }
+
+  .sidebar-item .step-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .sidebar-item.done .step-num {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--bg);
+  }
+
+  .sidebar-item.done {
+    color: var(--green);
+    border-left-color: var(--green);
+  }
+
+  /* Main content */
+  .main-content {
+    overflow-y: auto;
+    height: calc(100vh - 61px);
+  }
+
+  /* Panels / Phases */
+  .phase {
+    display: none;
+    padding: 32px 40px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .phase.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Phase header */
+  .phase-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .phase-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    padding: 4px 10px;
+    border-radius: 3px;
+    background: rgba(0,229,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,255,0.3);
+    white-space: nowrap;
+    margin-top: 4px;
+  }
+
+  .phase-badge.red { background: rgba(255,77,109,0.1); color: var(--red); border-color: rgba(255,77,109,0.3); }
+  .phase-badge.yellow { background: rgba(255,179,0,0.1); color: var(--yellow); border-color: rgba(255,179,0,0.3); }
+  .phase-badge.green { background: rgba(57,255,20,0.1); color: var(--green); border-color: rgba(57,255,20,0.3); }
+  .phase-badge.purple { background: rgba(179,136,255,0.1); color: var(--purple); border-color: rgba(179,136,255,0.3); }
+
+  .phase-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-bright);
+    line-height: 1.2;
+  }
+
+  .phase-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title .icon {
+    font-size: 1rem;
+  }
+
+  /* Code blocks */
+  .code-block {
+    background: #060a12;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .code-block .line-num {
+    color: var(--text-dim);
+    user-select: none;
+    margin-right: 16px;
+    display: inline-block;
+    width: 24px;
+    text-align: right;
+  }
+
+  .hl-keyword { color: #569cd6; }
+  .hl-type { color: #4ec9b0; }
+  .hl-string { color: #ce9178; }
+  .hl-comment { color: #6a9955; font-style: italic; }
+  .hl-func { color: #dcdcaa; }
+  .hl-num { color: #b5cea8; }
+  .hl-vuln { background: rgba(255,77,109,0.15); border-left: 2px solid var(--red); padding: 0 4px; }
+  .hl-fixed { background: rgba(57,255,20,0.08); border-left: 2px solid var(--green); padding: 0 4px; }
+
+  /* Terminal */
+  .terminal {
+    background: #030508;
+    border: 1px solid #1a2235;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .terminal-bar {
+    background: #111827;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .terminal-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+
+  .t-red { background: #ff5f57; }
+  .t-yellow { background: #ffbd2e; }
+  .t-green { background: #28c940; }
+
+  .terminal-title {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-left: 8px;
+  }
+
+  .terminal-body {
+    padding: 16px 20px;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    min-height: 80px;
+  }
+
+  .t-prompt { color: var(--green); }
+  .t-cmd { color: var(--text-bright); }
+  .t-output { color: var(--text-dim); }
+  .t-error { color: var(--red); }
+  .t-warn { color: var(--yellow); }
+  .t-highlight { color: var(--accent); }
+  .t-crash { color: var(--red); font-weight: 700; animation: crash-blink 0.5s step-end 4; }
+
+  @keyframes crash-blink {
+    0%,100% { opacity:1; } 50% { opacity:0; }
+  }
+
+  /* Memory diagram */
+  .memory-stack {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.73rem;
+    margin-bottom: 20px;
+    max-width: 480px;
+  }
+
+  .mem-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 100px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .mem-row:last-child { border-bottom: none; }
+
+  .mem-row.overflow {
+    background: rgba(255,77,109,0.12);
+    animation: overflow-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes overflow-pulse {
+    0%,100% { background: rgba(255,77,109,0.12); }
+    50% { background: rgba(255,77,109,0.22); }
+  }
+
+  .mem-row.normal { background: var(--surface2); }
+  .mem-row.ret-addr { background: rgba(179,136,255,0.1); }
+  .mem-row.stack-top { background: rgba(0,229,255,0.07); }
+
+  .mem-cell {
+    padding: 8px 12px;
+    border-right: 1px solid var(--border);
+  }
+
+  .mem-cell:last-child { border-right: none; }
+  .mem-addr { color: var(--text-dim); font-size: 0.68rem; }
+  .mem-label { color: var(--text); }
+  .mem-val { color: var(--yellow); text-align: right; }
+  .mem-val.bad { color: var(--red); font-weight: 700; }
+  .mem-val.overwritten { color: var(--red); text-decoration: line-through; }
+
+  /* Interactive terminal input */
+  .interactive-terminal {
+    background: #030508;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px rgba(0,229,255,0.08);
+  }
+
+  .terminal-output-area {
+    padding: 16px 20px;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    min-height: 140px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .terminal-input-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .terminal-input-row span { color: var(--green); flex-shrink: 0; }
+
+  .terminal-input-row input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-bright);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    flex: 1;
+    caret-color: var(--accent);
+  }
+
+  .run-btn {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 5px 14px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .run-btn:hover { background: #00b8d4; transform: translateY(-1px); }
+  .run-btn.red { background: var(--red); }
+  .run-btn.red:hover { background: #e0334d; }
+  .run-btn.green { background: var(--green); color: var(--bg); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    letter-spacing: 0.03em;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover {
+    background: #00b8d4;
+    box-shadow: 0 0 16px rgba(0,229,255,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-danger {
+    background: var(--red);
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background: #e0334d;
+    box-shadow: 0 0 16px rgba(255,77,109,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-success {
+    background: var(--green);
+    color: var(--bg);
+  }
+
+  .btn-success:hover {
+    box-shadow: 0 0 16px rgba(57,255,20,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* Info boxes */
+  .info-box {
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    border-left: 3px solid;
+  }
+
+  .info-box.note { background: rgba(0,229,255,0.06); border-color: var(--accent); }
+  .info-box.warn { background: rgba(255,179,0,0.06); border-color: var(--yellow); }
+  .info-box.danger { background: rgba(255,77,109,0.06); border-color: var(--red); }
+  .info-box.success { background: rgba(57,255,20,0.06); border-color: var(--green); }
+
+  .info-box strong {
+    display: block;
+    margin-bottom: 4px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+  }
+
+  .info-box.note strong { color: var(--accent); }
+  .info-box.warn strong { color: var(--yellow); }
+  .info-box.danger strong { color: var(--red); }
+  .info-box.success strong { color: var(--green); }
+
+  /* Ticket form */
+  .ticket-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    background: #060a12;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,255,0.08);
+  }
+
+  .form-group select option {
+    background: var(--surface);
+  }
+
+  /* Severity badge */
+  .severity-critical { color: var(--red); }
+  .severity-high { color: var(--yellow); }
+  .severity-medium { color: var(--purple); }
+
+  /* Ticket preview */
+  .ticket-preview {
+    background: #060a12;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 20px;
+  }
+
+  .ticket-header-bar {
+    background: var(--surface2);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ticket-id {
+    font-size: 0.72rem;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .ticket-body {
+    padding: 20px;
+  }
+
+  .ticket-field {
+    margin-bottom: 14px;
+    font-size: 0.78rem;
+  }
+
+  .ticket-field-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .tag-critical { background: rgba(255,77,109,0.15); color: var(--red); border: 1px solid rgba(255,77,109,0.3); }
+  .tag-high { background: rgba(255,179,0,0.15); color: var(--yellow); border: 1px solid rgba(255,179,0,0.3); }
+  .tag-feature { background: rgba(0,229,255,0.1); color: var(--accent); border: 1px solid rgba(0,229,255,0.2); }
+
+  /* Progress bar */
+  .sdlc-timeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 28px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .sdlc-step {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .sdlc-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sdlc-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    background: var(--surface);
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+
+  .sdlc-circle.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,255,0.1);
+    box-shadow: 0 0 12px rgba(0,229,255,0.2);
+  }
+
+  .sdlc-circle.done {
+    border-color: var(--green);
+    background: rgba(57,255,20,0.1);
+    color: var(--green);
+  }
+
+  .sdlc-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 64px;
+    line-height: 1.3;
+  }
+
+  .sdlc-label.active { color: var(--accent); }
+  .sdlc-label.done { color: var(--green); }
+
+  .sdlc-line {
+    width: 40px;
+    height: 2px;
+    background: var(--border);
+    margin-bottom: 22px;
+    transition: background 0.3s;
+  }
+
+  .sdlc-line.done { background: var(--green); }
+  .sdlc-line.active { background: var(--accent); }
+
+  /* Quiz */
+  .quiz-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.15s;
+    font-size: 0.8rem;
+  }
+
+  .quiz-option:hover { border-color: var(--accent); background: rgba(0,229,255,0.04); }
+  .quiz-option.correct { border-color: var(--green); background: rgba(57,255,20,0.08); color: var(--green); }
+  .quiz-option.wrong { border-color: var(--red); background: rgba(255,77,109,0.08); color: var(--red); }
+
+  .quiz-radio {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* XP badge */
+  .xp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(179,136,255,0.1);
+    border: 1px solid rgba(179,136,255,0.3);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 0.72rem;
+    color: var(--purple);
+    font-weight: 700;
+  }
+
+  /* Completion screen */
+  .completion-card {
+    text-align: center;
+    padding: 60px 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .completion-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center top, rgba(57,255,20,0.07) 0%, transparent 70%);
+  }
+
+  .completion-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--green);
+    margin-bottom: 12px;
+    text-shadow: 0 0 30px rgba(57,255,20,0.4);
+  }
+
+  .cert-box {
+    max-width: 480px;
+    margin: 28px auto;
+    border: 2px solid var(--green);
+    border-radius: 8px;
+    padding: 24px 32px;
+    background: rgba(57,255,20,0.04);
+    position: relative;
+  }
+
+  .cert-box::before, .cert-box::after {
+    content: '✦';
+    position: absolute;
+    color: var(--green);
+    font-size: 1.2rem;
+  }
+  .cert-box::before { top: 12px; left: 16px; }
+  .cert-box::after { bottom: 12px; right: 16px; }
+
+  /* Grid 2-col */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .concept-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    padding: 6px 0;
+  }
+
+  .concept-pill::before {
+    content: '▸';
+    color: var(--accent);
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* Responsive tweak */
+  @media (max-width: 768px) {
+    .lab-container { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .phase { padding: 20px; }
+    .grid-2, .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    SecureLab <span style="color:var(--text-dim);font-weight:300">// Buffer Overflow Lab</span>
+  </div>
+  <div class="header-status">
+    <span><span class="status-dot"></span>OFFLINE MODE</span>
+    <span id="xp-display" style="color:var(--purple)">⬡ 0 XP</span>
+    <span id="phase-indicator" style="color:var(--text-dim)">Phase 1/6</span>
+  </div>
+</header>
+
+<div class="lab-container">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-section">SDLC Phases</div>
+
+    <div class="sidebar-item active" id="nav-0" onclick="goPhase(0)">
+      <div class="step-num">1</div> Requirements & Threat Modeling
+    </div>
+    <div class="sidebar-item" id="nav-1" onclick="goPhase(1)">
+      <div class="step-num">2</div> Vulnerable Code Review
+    </div>
+    <div class="sidebar-item" id="nav-2" onclick="goPhase(2)">
+      <div class="step-num">3</div> Exploit the Vulnerability
+    </div>
+    <div class="sidebar-item" id="nav-3" onclick="goPhase(3)">
+      <div class="step-num">4</div> Root Cause & Memory Analysis
+    </div>
+    <div class="sidebar-item" id="nav-4" onclick="goPhase(4)">
+      <div class="step-num">5</div> File a Security Ticket
+    </div>
+    <div class="sidebar-item" id="nav-5" onclick="goPhase(5)">
+      <div class="step-num">6</div> Patch & Verify Fix
+    </div>
+
+    <div class="sidebar-section" style="margin-top:24px">Progress</div>
+    <div style="padding:0 20px;margin-top:8px">
+      <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden">
+        <div id="progress-bar" style="background:var(--accent);height:100%;width:0%;transition:width 0.4s ease;border-radius:4px"></div>
+      </div>
+      <div style="font-size:0.65rem;color:var(--text-dim);margin-top:6px" id="progress-text">0% complete</div>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:24px">Concepts Covered</div>
+    <div style="padding:0 20px">
+      <div class="concept-pill">Stack memory layout</div>
+      <div class="concept-pill">Return address hijacking</div>
+      <div class="concept-pill">CVSS scoring</div>
+      <div class="concept-pill">Secure coding (bounds checking)</div>
+      <div class="concept-pill">SDLC security integration</div>
+      <div class="concept-pill">Vulnerability ticketing</div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main-content">
+
+    <!-- PHASE 0: Requirements & Threat Modeling -->
+    <div class="phase active" id="phase-0">
+      <div class="phase-header">
+        <div class="phase-badge">PHASE 1</div>
+        <div>
+          <div class="phase-title">Requirements & Threat Modeling</div>
+          <div class="phase-subtitle">Understanding the system before we look for bugs</div>
+        </div>
+      </div>
+
+      <!-- SDLC Timeline -->
+      <div class="sdlc-timeline">
+        <div class="sdlc-step">
+          <div class="sdlc-node">
+            <div class="sdlc-circle active">📋</div>
+            <div class="sdlc-label active">Requirements</div>
+          </div>
+          <div class="sdlc-line"></div>
+        </div>
+        <div class="sdlc-step">
+          <div class="sdlc-node">
+            <div class="sdlc-circle">🔍</div>
+            <div class="sdlc-label">Code Review</div>
+          </div>
+          <div class="sdlc-line"></div>
+        </div>
+        <div class="sdlc-step">
+          <div class="sdlc-node">
+            <div class="sdlc-circle">💥</div>
+            <div class="sdlc-label">Exploit</div>
+          </div>
+          <div class="sdlc-line"></div>
+        </div>
+        <div class="sdlc-step">
+          <div class="sdlc-node">
+            <div class="sdlc-circle">🧠</div>
+            <div class="sdlc-label">Analysis</div>
+          </div>
+          <div class="sdlc-line"></div>
+        </div>
+        <div class="sdlc-step">
+          <div class="sdlc-node">
+            <div class="sdlc-circle">🎫</div>
+            <div class="sdlc-label">Ticket</div>
+          </div>
+          <div class="sdlc-line"></div>
+        </div>
+        <div class="sdlc-step">
+          <div class="sdlc-node">
+            <div class="sdlc-circle">🛡️</div>
+            <div class="sdlc-label">Patch</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🎯</span> Lab Scenario</div>
+        <p style="font-size:0.8rem;line-height:1.7;color:var(--text-dim)">
+          You are a junior security engineer at <strong style="color:var(--accent)">Acme Systems Inc.</strong> 
+          The team is reviewing <code style="color:var(--yellow)">login_server</code>, a legacy C program that handles 
+          user authentication for internal tools. Your task is to walk through the full 
+          <strong>Secure SDLC</strong>: identify a buffer overflow vulnerability, understand how it works, 
+          file a security ticket, and verify the fix.
+        </p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><span class="icon">📋</span> System Requirements</div>
+          <div style="font-size:0.76rem;line-height:1.8;color:var(--text-dim)">
+            <div style="margin-bottom:6px">• Accept username + password input</div>
+            <div style="margin-bottom:6px">• Validate credentials against a user store</div>
+            <div style="margin-bottom:6px">• Log all login attempts</div>
+            <div style="margin-bottom:6px">• Support up to 64-char usernames</div>
+            <div>• Written in C, runs on Linux x86-64</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="icon">⚠️</span> Threat Model (STRIDE)</div>
+          <div style="font-size:0.76rem;line-height:1.8;color:var(--text-dim)">
+            <div style="margin-bottom:6px"><span style="color:var(--red)">S</span>poofing — fake credentials</div>
+            <div style="margin-bottom:6px"><span style="color:var(--yellow)">T</span>ampering — corrupt session data</div>
+            <div style="margin-bottom:6px"><span style="color:var(--purple)">R</span>epudiation — forged logs</div>
+            <div style="margin-bottom:6px"><span style="color:var(--accent)">I</span>nfo Disclosure — memory leaks</div>
+            <div style="margin-bottom:6px"><span style="color:var(--red)">D</span>enial of Service — crash server</div>
+            <div><span style="color:var(--green)">E</span>scalation of Privilege — <strong style="color:var(--red)">our target today</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box note">
+        <strong>💡 KEY CONCEPT — What is a Buffer Overflow?</strong>
+        A buffer overflow occurs when a program writes more data to a fixed-size memory buffer than it can hold. 
+        The excess data spills into adjacent memory regions — potentially overwriting critical values like 
+        <em>return addresses</em> that control where execution jumps next. This is one of the oldest and most 
+        dangerous vulnerability classes in software security.
+      </div>
+
+      <!-- Quick Knowledge Check -->
+      <div class="card">
+        <div class="card-title"><span class="icon">❓</span> Quick Check — Before We Begin</div>
+        <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px">Which part of a C program's memory layout holds local variables?</p>
+        <div id="q1-opts">
+          <div class="quiz-option" onclick="checkQ1(0)"><div class="quiz-radio"></div>The Heap</div>
+          <div class="quiz-option" onclick="checkQ1(1)"><div class="quiz-radio"></div>The Stack</div>
+          <div class="quiz-option" onclick="checkQ1(2)"><div class="quiz-radio"></div>The Text Segment</div>
+          <div class="quiz-option" onclick="checkQ1(3)"><div class="quiz-radio"></div>The BSS Segment</div>
+        </div>
+        <div id="q1-result" style="display:none;font-size:0.78rem;margin-top:10px"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="nextPhase(0)">Begin Code Review →</button>
+      </div>
+    </div>
+
+    <!-- PHASE 1: Code Review -->
+    <div class="phase" id="phase-1">
+      <div class="phase-header">
+        <div class="phase-badge red">PHASE 2</div>
+        <div>
+          <div class="phase-title">Vulnerable Code Review</div>
+          <div class="phase-subtitle">Static analysis — reading the source for bugs</div>
+        </div>
+      </div>
+
+      <div class="info-box note">
+        <strong>🔍 STATIC ANALYSIS</strong>
+        We're reading the source code before running anything. This is called <em>static analysis</em> — 
+        it's the first line of defense in a Secure SDLC. Look carefully at the highlighted lines.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">📄</span> login_server.c — Source Code</div>
+        <div class="code-block">
+<span class="line-num">1</span><span class="hl-comment">// login_server.c — Acme Systems Internal Auth</span><br>
+<span class="line-num">2</span><span class="hl-keyword">#include</span> <span class="hl-string">&lt;stdio.h&gt;</span><br>
+<span class="line-num">3</span><span class="hl-keyword">#include</span> <span class="hl-string">&lt;string.h&gt;</span><br>
+<span class="line-num">4</span><span class="hl-keyword">#include</span> <span class="hl-string">&lt;stdlib.h&gt;</span><br>
+<span class="line-num">5</span><br>
+<span class="line-num">6</span><span class="hl-keyword">void</span> <span class="hl-func">authenticate</span>(<span class="hl-keyword">char</span> *input) {<br>
+<span class="line-num">7</span>    <span class="hl-type">char</span> username[<span class="hl-num">64</span>];         <span class="hl-comment">// Fixed 64-byte buffer on the stack</span><br>
+<span class="line-num">8</span>    <span class="hl-keyword">int</span>  auth_flag = <span class="hl-num">0</span>;        <span class="hl-comment">// 0 = not authenticated</span><br>
+<span class="line-num">9</span><br>
+<span class="line-num">10</span>   <span class="hl-comment">// ⚠️  VULNERABILITY: strcpy does NO bounds checking!</span><br>
+<span class="line-num">11</span>   <span class="hl-vuln"><span class="hl-func">strcpy</span>(username, input);   <span class="hl-comment">// Copies ALL of input into 64-byte buffer</span></span><br>
+<span class="line-num">12</span><br>
+<span class="line-num">13</span>   <span class="hl-keyword">if</span> (auth_flag != <span class="hl-num">0</span>) {<br>
+<span class="line-num">14</span>       <span class="hl-func">printf</span>(<span class="hl-string">"[AUTH] Access GRANTED for: %s\n"</span>, username);<br>
+<span class="line-num">15</span>       <span class="hl-func">grant_access</span>();<br>
+<span class="line-num">16</span>   } <span class="hl-keyword">else</span> {<br>
+<span class="line-num">17</span>       <span class="hl-func">printf</span>(<span class="hl-string">"[AUTH] Access DENIED for: %s\n"</span>, username);<br>
+<span class="line-num">18</span>   }<br>
+<span class="line-num">19</span>}<br>
+<span class="line-num">20</span><br>
+<span class="line-num">21</span><span class="hl-keyword">int</span> <span class="hl-func">main</span>() {<br>
+<span class="line-num">22</span>   <span class="hl-type">char</span> input[<span class="hl-num">512</span>];<br>
+<span class="line-num">23</span>   <span class="hl-func">printf</span>(<span class="hl-string">"Username: "</span>);<br>
+<span class="line-num">24</span>   <span class="hl-func">fgets</span>(input, <span class="hl-keyword">sizeof</span>(input), stdin);<br>
+<span class="line-num">25</span>   <span class="hl-func">authenticate</span>(input);<br>
+<span class="line-num">26</span>   <span class="hl-keyword">return</span> <span class="hl-num">0</span>;<br>
+<span class="line-num">27</span>}<br>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🔬</span> Analysis — What Makes This Dangerous?</div>
+        <div style="font-size:0.78rem;line-height:1.7;color:var(--text-dim)">
+          <p style="margin-bottom:12px">The vulnerability is on <strong style="color:var(--red)">line 11</strong>. Let's break it down:</p>
+          <div style="margin-bottom:10px;padding:10px 14px;background:rgba(255,77,109,0.06);border-radius:5px;border-left:3px solid var(--red)">
+            <strong style="color:var(--red)">strcpy(username, input)</strong><br>
+            <code>strcpy</code> copies bytes from <code>input</code> into <code>username</code> until it hits a null byte <code>\0</code>. 
+            It has <em>no idea</em> how large the destination buffer is. If <code>input</code> is longer than 64 bytes, 
+            it will keep writing past the end of <code>username</code>.
+          </div>
+          <div style="margin-bottom:10px;padding:10px 14px;background:rgba(255,179,0,0.06);border-radius:5px;border-left:3px solid var(--yellow)">
+            <strong style="color:var(--yellow)">auth_flag lives right after username on the stack</strong><br>
+            The C compiler lays out local variables sequentially on the stack. 
+            <code>auth_flag</code> sits right after <code>username[64]</code>. An input longer than 64 bytes will overwrite it!
+          </div>
+          <div style="padding:10px 14px;background:rgba(57,255,20,0.04);border-radius:5px;border-left:3px solid var(--green)">
+            <strong style="color:var(--green)">The exploit path:</strong><br>
+            Send 65+ bytes → overflow <code>username</code> → write non-zero value into <code>auth_flag</code> → 
+            the <code>if (auth_flag != 0)</code> check passes → <strong>access granted without a valid password!</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz -->
+      <div class="card">
+        <div class="card-title"><span class="icon">❓</span> Code Review Quiz</div>
+        <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px">
+          Why is <code>strcpy()</code> considered an unsafe function in C?
+        </p>
+        <div id="q2-opts">
+          <div class="quiz-option" onclick="checkQ2(0)"><div class="quiz-radio"></div>It only works on ASCII strings</div>
+          <div class="quiz-option" onclick="checkQ2(1)"><div class="quiz-radio"></div>It performs no bounds checking on the destination buffer</div>
+          <div class="quiz-option" onclick="checkQ2(2)"><div class="quiz-radio"></div>It is slower than memcpy</div>
+          <div class="quiz-option" onclick="checkQ2(3)"><div class="quiz-radio"></div>It requires heap allocation</div>
+        </div>
+        <div id="q2-result" style="display:none;font-size:0.78rem;margin-top:10px"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goPhase(0)">← Back</button>
+        <button class="btn btn-danger" onclick="nextPhase(1)">Proceed to Exploit →</button>
+      </div>
+    </div>
+
+    <!-- PHASE 2: Exploit -->
+    <div class="phase" id="phase-2">
+      <div class="phase-header">
+        <div class="phase-badge red">PHASE 3</div>
+        <div>
+          <div class="phase-title">Exploit the Vulnerability</div>
+          <div class="phase-subtitle">Dynamic analysis — triggering the bug in a controlled environment</div>
+        </div>
+      </div>
+
+      <div class="info-box warn">
+        <strong>⚠️ CONTROLLED ENVIRONMENT</strong>
+        This is a <em>simulation</em>. In real security work, exploits are only run against systems you own 
+        or have written permission to test. Unauthorized exploitation is illegal.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">💻</span> Simulated Terminal — Try the Exploit</div>
+        <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px">
+          Enter a username and press <kbd style="background:var(--surface2);padding:2px 6px;border-radius:3px;font-size:0.7rem">Run</kbd> to simulate program execution. 
+          Try different lengths to see what happens.
+        </p>
+
+        <div class="interactive-terminal">
+          <div class="terminal-bar">
+            <div class="terminal-dot t-red"></div>
+            <div class="terminal-dot t-yellow"></div>
+            <div class="terminal-dot t-green"></div>
+            <span class="terminal-title">bash — login_server simulation</span>
+          </div>
+          <div class="terminal-output-area" id="exploit-output">
+            <div><span class="t-prompt">$</span> <span class="t-cmd">./login_server</span></div>
+            <div class="t-output">Program compiled. Ready for input. Try entering a username...</div>
+          </div>
+          <div class="terminal-input-row">
+            <span>Username:</span>
+            <input type="text" id="exploit-input" placeholder="Type a username here..." maxlength="200" />
+            <button class="run-btn" onclick="runExploit()">▶ Run</button>
+            <button class="run-btn" onclick="clearExploit()" style="background:var(--surface2);color:var(--text-dim)">Clear</button>
+          </div>
+        </div>
+
+        <div style="font-size:0.75rem;color:var(--text-dim)">
+          💡 Hints: Try <code style="color:var(--yellow)">admin</code> (normal), then <code style="color:var(--yellow)">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</code> (65 A's)
+        </div>
+      </div>
+
+      <div id="exploit-insight" style="display:none">
+        <div class="info-box danger">
+          <strong>🚨 VULNERABILITY CONFIRMED</strong>
+          You've demonstrated the buffer overflow! An input of 65+ characters overwrote <code>auth_flag</code>, 
+          bypassing authentication entirely. An attacker doesn't need the real password — just a long string.
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="icon">📊</span> What Happened? — Step by Step</div>
+          <div style="font-size:0.78rem;line-height:1.8;color:var(--text-dim)">
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:start">
+              <span style="color:var(--accent)">Step 1</span><span>Program calls <code>authenticate(input)</code></span>
+              <span style="color:var(--accent)">Step 2</span><span>Stack frame created: <code>username[64]</code> then <code>auth_flag=0</code></span>
+              <span style="color:var(--accent)">Step 3</span><span><code>strcpy</code> copies your 65-byte input into the 64-byte buffer</span>
+              <span style="color:var(--red)">Step 4</span><span>Byte 65 overflows into <code>auth_flag</code>, setting it to <code>0x41</code> (ASCII 'A')</span>
+              <span style="color:var(--red)">Step 5</span><span><code>if (auth_flag != 0)</code> → true! <strong>Access granted.</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goPhase(1)">← Back</button>
+        <button class="btn btn-primary" onclick="nextPhase(2)" id="btn-phase2-next">Memory Analysis →</button>
+      </div>
+    </div>
+
+    <!-- PHASE 3: Memory Analysis -->
+    <div class="phase" id="phase-3">
+      <div class="phase-header">
+        <div class="phase-badge yellow">PHASE 4</div>
+        <div>
+          <div class="phase-title">Root Cause & Memory Analysis</div>
+          <div class="phase-subtitle">Understanding the stack layout during exploitation</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title"><span class="icon">🗂️</span> Normal Execution (58-byte input)</div>
+            <div class="memory-stack">
+              <div class="mem-row stack-top">
+                <div class="mem-cell mem-addr">HIGH ADDR</div>
+                <div class="mem-cell mem-label">Return Address</div>
+                <div class="mem-cell mem-val">0x00401234</div>
+              </div>
+              <div class="mem-row stack-top">
+                <div class="mem-cell mem-addr">0xffffc8a0</div>
+                <div class="mem-cell mem-label">Saved RBP</div>
+                <div class="mem-cell mem-val">0xffffc8c0</div>
+              </div>
+              <div class="mem-row normal">
+                <div class="mem-cell mem-addr">0xffffc870</div>
+                <div class="mem-cell mem-label">auth_flag</div>
+                <div class="mem-cell mem-val" style="color:var(--green)">0x00000000</div>
+              </div>
+              <div class="mem-row normal">
+                <div class="mem-cell mem-addr">0xffffc830</div>
+                <div class="mem-cell mem-label">username[64]</div>
+                <div class="mem-cell mem-val">"AAAAAA..." ✓</div>
+              </div>
+              <div class="mem-row">
+                <div class="mem-cell mem-addr">LOW ADDR</div>
+                <div class="mem-cell mem-label">Stack bottom</div>
+                <div class="mem-cell mem-val">↑ grows up</div>
+              </div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-dim)">auth_flag stays <code style="color:var(--green)">0</code> → Access DENIED (correct)</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title"><span class="icon">💥</span> During Overflow (80-byte input)</div>
+            <div class="memory-stack">
+              <div class="mem-row ret-addr">
+                <div class="mem-cell mem-addr">HIGH ADDR</div>
+                <div class="mem-cell mem-label">Return Address</div>
+                <div class="mem-cell mem-val" style="color:var(--purple)">⚠ may corrupt</div>
+              </div>
+              <div class="mem-row ret-addr">
+                <div class="mem-cell mem-addr">0xffffc8a0</div>
+                <div class="mem-cell mem-label">Saved RBP</div>
+                <div class="mem-cell mem-val" style="color:var(--purple)">⚠ overwritten</div>
+              </div>
+              <div class="mem-row overflow">
+                <div class="mem-cell mem-addr">0xffffc870</div>
+                <div class="mem-cell mem-label">auth_flag</div>
+                <div class="mem-cell mem-val bad">0x41414141 ✗</div>
+              </div>
+              <div class="mem-row overflow">
+                <div class="mem-cell mem-addr">0xffffc830</div>
+                <div class="mem-cell mem-label">username[64]</div>
+                <div class="mem-cell mem-val bad">"AAAA..." FULL</div>
+              </div>
+              <div class="mem-row">
+                <div class="mem-cell mem-addr">LOW ADDR</div>
+                <div class="mem-cell mem-label">Stack bottom</div>
+                <div class="mem-cell mem-val">↑ grows up</div>
+              </div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--red)">auth_flag becomes <code style="color:var(--red)">0x41</code> → Access GRANTED (exploit!)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🧮</span> Why 0x41? — ASCII & Hex Refresher</div>
+        <div style="font-size:0.78rem;line-height:1.7;color:var(--text-dim)">
+          <p>The letter <code>'A'</code> has ASCII value <code>65</code>, which in hexadecimal is <code>0x41</code>. When we overflow 
+          the buffer with 65 'A' characters, the 65th byte writes <code>0x41</code> into <code>auth_flag</code>. 
+          Since <code>0x41 ≠ 0</code>, the <code>if (auth_flag != 0)</code> condition evaluates to <strong>true</strong>.</p>
+          <div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:5px">
+            <code>'A' → decimal 65 → hex 0x41 → not zero → authenticated!</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box note">
+        <strong>📚 REAL-WORLD IMPACT — Beyond auth_flag</strong>
+        In more serious exploits, attackers aim further: overwriting the <em>saved return address</em> allows them 
+        to redirect program execution to attacker-controlled code (shellcode). This is the foundation of 
+        classic stack smashing attacks. Modern systems use mitigations like ASLR, stack canaries, and NX bits — 
+        but these are defeated if software is built without them.
+      </div>
+
+      <!-- Quiz 3 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">❓</span> Memory Quiz</div>
+        <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px">
+          In a classic stack buffer overflow, what critical value does an attacker try to overwrite to gain arbitrary code execution?
+        </p>
+        <div id="q3-opts">
+          <div class="quiz-option" onclick="checkQ3(0)"><div class="quiz-radio"></div>The heap pointer</div>
+          <div class="quiz-option" onclick="checkQ3(1)"><div class="quiz-radio"></div>The saved return address</div>
+          <div class="quiz-option" onclick="checkQ3(2)"><div class="quiz-radio"></div>The program counter directly</div>
+          <div class="quiz-option" onclick="checkQ3(3)"><div class="quiz-radio"></div>The printf format string</div>
+        </div>
+        <div id="q3-result" style="display:none;font-size:0.78rem;margin-top:10px"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goPhase(2)">← Back</button>
+        <button class="btn btn-primary" onclick="nextPhase(3)">File a Security Ticket →</button>
+      </div>
+    </div>
+
+    <!-- PHASE 4: Ticket -->
+    <div class="phase" id="phase-4">
+      <div class="phase-header">
+        <div class="phase-badge purple">PHASE 5</div>
+        <div>
+          <div class="phase-title">File a Security Ticket</div>
+          <div class="phase-subtitle">Documenting the vulnerability in the SDLC issue tracker</div>
+        </div>
+      </div>
+
+      <div class="info-box note">
+        <strong>🎫 WHY TICKETS MATTER</strong>
+        Every discovered vulnerability must be formally documented so it can be tracked, prioritized, 
+        assigned, and verified after patching. This is a critical step in the Secure SDLC — without it, 
+        bugs get forgotten and ships stay vulnerable.
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">📝</span> New Security Vulnerability Report</div>
+        <div class="ticket-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Title</label>
+              <input type="text" id="t-title" placeholder="Brief description of vulnerability" value="Buffer Overflow in authenticate() — login_server.c" />
+            </div>
+            <div class="form-group">
+              <label>Component</label>
+              <input type="text" id="t-component" placeholder="Affected component" value="login_server / authenticate()" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Severity</label>
+              <select id="t-severity">
+                <option value="">-- Select --</option>
+                <option value="CRITICAL" selected>CRITICAL — Remote Code Execution / Auth Bypass</option>
+                <option value="HIGH">HIGH — Significant data exposure</option>
+                <option value="MEDIUM">MEDIUM — Limited impact</option>
+                <option value="LOW">LOW — Cosmetic / minimal risk</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>CVSS Score (0–10)</label>
+              <input type="number" id="t-cvss" min="0" max="10" step="0.1" value="9.8" placeholder="0.0 – 10.0" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>CVE / CWE Reference</label>
+              <input type="text" id="t-cwe" value="CWE-121: Stack-based Buffer Overflow" placeholder="CWE or CVE ID" />
+            </div>
+            <div class="form-group">
+              <label>Assignee</label>
+              <input type="text" id="t-assignee" value="dev-team@acme.com" placeholder="Team or developer" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Steps to Reproduce</label>
+            <textarea id="t-repro" rows="4" placeholder="Describe how to trigger the vulnerability...">1. Compile: gcc -fno-stack-protector -o login_server login_server.c
+2. Run: ./login_server
+3. Enter 65+ character username (e.g., 65 'A' characters)
+4. Observe: "Access GRANTED" without valid credentials</textarea>
+          </div>
+          <div class="form-group">
+            <label>Root Cause</label>
+            <textarea id="t-cause" rows="3" placeholder="Describe the underlying cause...">Use of strcpy() on line 11 of authenticate() with no bounds checking. The destination buffer username[64] can be overflowed, corrupting adjacent stack variables including auth_flag.</textarea>
+          </div>
+          <div class="form-group">
+            <label>Recommended Fix</label>
+            <textarea id="t-fix" rows="3" placeholder="Proposed remediation...">Replace strcpy() with strncpy(username, input, sizeof(username) - 1) and explicitly null-terminate. Also add input length validation before calling authenticate(). Consider using snprintf for safer string handling.</textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Impact</label>
+              <select id="t-impact">
+                <option value="Authentication Bypass + Potential RCE" selected>Authentication Bypass + Potential RCE</option>
+                <option value="Denial of Service">Denial of Service</option>
+                <option value="Information Disclosure">Information Disclosure</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select id="t-priority">
+                <option value="P0 — Fix Immediately" selected>P0 — Fix Immediately</option>
+                <option value="P1 — This Sprint">P1 — This Sprint</option>
+                <option value="P2 — Next Sprint">P2 — Next Sprint</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-danger" onclick="submitTicket()">🎫 Submit Security Ticket</button>
+          <button class="btn btn-outline" onclick="autoFill()">Auto-fill Defaults</button>
+        </div>
+      </div>
+
+      <!-- Ticket preview -->
+      <div id="ticket-preview" style="display:none">
+        <div class="ticket-preview">
+          <div class="ticket-header-bar">
+            <span class="ticket-id" id="ticket-id">SEC-0000</span>
+            <span id="ticket-severity-tag" class="tag tag-critical">CRITICAL</span>
+          </div>
+          <div class="ticket-body">
+            <div class="ticket-field">
+              <div class="ticket-field-label">Title</div>
+              <div id="preview-title" style="color:var(--text-bright);font-weight:600"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="ticket-field">
+                <div class="ticket-field-label">Component</div>
+                <div id="preview-component" style="color:var(--text)"></div>
+              </div>
+              <div class="ticket-field">
+                <div class="ticket-field-label">CVSS Score</div>
+                <div id="preview-cvss" style="color:var(--red);font-weight:700"></div>
+              </div>
+              <div class="ticket-field">
+                <div class="ticket-field-label">CWE Reference</div>
+                <div id="preview-cwe" style="color:var(--purple)"></div>
+              </div>
+              <div class="ticket-field">
+                <div class="ticket-field-label">Priority</div>
+                <div id="preview-priority" style="color:var(--yellow)"></div>
+              </div>
+            </div>
+            <div class="ticket-field">
+              <div class="ticket-field-label">Impact</div>
+              <div id="preview-impact" style="color:var(--text)"></div>
+            </div>
+            <div class="ticket-field">
+              <div class="ticket-field-label">Recommended Fix</div>
+              <div id="preview-fix" style="color:var(--text);line-height:1.6"></div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--text-dim);margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+              Filed by: security-lab@acme.com · <span id="preview-date"></span> · Status: <span style="color:var(--yellow)">OPEN</span>
+            </div>
+          </div>
+        </div>
+        <div class="info-box success" style="margin-top:16px">
+          <strong>✅ TICKET SUBMITTED</strong>
+          Your security ticket has been filed. The development team has been notified and must address 
+          this before the next release. Now let's see the fix!
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goPhase(3)">← Back</button>
+        <button class="btn btn-primary" id="btn-phase4-next" onclick="nextPhase(4)" style="display:none">See the Patch →</button>
+      </div>
+    </div>
+
+    <!-- PHASE 5: Patch & Verify -->
+    <div class="phase" id="phase-5">
+      <div class="phase-header">
+        <div class="phase-badge green">PHASE 6</div>
+        <div>
+          <div class="phase-title">Patch & Verify Fix</div>
+          <div class="phase-subtitle">Remediation, code review, and regression testing</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon">🛠️</span> Patched Code — login_server_v2.c</div>
+        <div class="code-block">
+<span class="line-num">1</span><span class="hl-comment">// login_server_v2.c — PATCHED by dev-team · Fixes SEC-2024-001</span><br>
+<span class="line-num">2</span><span class="hl-keyword">#include</span> <span class="hl-string">&lt;stdio.h&gt;</span><br>
+<span class="line-num">3</span><span class="hl-keyword">#include</span> <span class="hl-string">&lt;string.h&gt;</span><br>
+<span class="line-num">4</span><span class="hl-keyword">#include</span> <span class="hl-string">&lt;stdlib.h&gt;</span><br>
+<span class="line-num">5</span><br>
+<span class="line-num">6</span><span class="hl-keyword">#define</span> MAX_USERNAME <span class="hl-num">63</span>  <span class="hl-comment">// Max length (64 - 1 for null terminator)</span><br>
+<span class="line-num">7</span><br>
+<span class="line-num">8</span><span class="hl-keyword">void</span> <span class="hl-func">authenticate</span>(<span class="hl-keyword">char</span> *input) {<br>
+<span class="line-num">9</span>    <span class="hl-comment">// FIX 1: Validate input length BEFORE processing</span><br>
+<span class="line-num">10</span>   <span class="hl-fixed"><span class="hl-keyword">if</span> (<span class="hl-func">strlen</span>(input) &gt; MAX_USERNAME) {</span><br>
+<span class="line-num">11</span>   <span class="hl-fixed">    <span class="hl-func">fprintf</span>(stderr, <span class="hl-string">"[ERROR] Input too long. Rejecting.\n"</span>);</span><br>
+<span class="line-num">12</span>   <span class="hl-fixed">    <span class="hl-keyword">return</span>;</span><br>
+<span class="line-num">13</span>   <span class="hl-fixed">}</span><br>
+<span class="line-num">14</span><br>
+<span class="line-num">15</span>   <span class="hl-type">char</span> username[<span class="hl-num">64</span>];<br>
+<span class="line-num">16</span>   <span class="hl-keyword">int</span>  auth_flag = <span class="hl-num">0</span>;<br>
+<span class="line-num">17</span><br>
+<span class="line-num">18</span>   <span class="hl-comment">// FIX 2: strncpy with explicit size limit</span><br>
+<span class="line-num">19</span>   <span class="hl-fixed"><span class="hl-func">strncpy</span>(username, input, <span class="hl-keyword">sizeof</span>(username) - <span class="hl-num">1</span>);</span><br>
+<span class="line-num">20</span>   <span class="hl-fixed">username[<span class="hl-keyword">sizeof</span>(username) - <span class="hl-num">1</span>] = <span class="hl-string">'\0'</span>; <span class="hl-comment">// Explicit null terminator</span></span><br>
+<span class="line-num">21</span><br>
+<span class="line-num">22</span>   <span class="hl-keyword">if</span> (auth_flag != <span class="hl-num">0</span>) {<br>
+<span class="line-num">23</span>       <span class="hl-func">printf</span>(<span class="hl-string">"[AUTH] Access GRANTED for: %s\n"</span>, username);<br>
+<span class="line-num">24</span>       <span class="hl-func">grant_access</span>();<br>
+<span class="line-num">25</span>   } <span class="hl-keyword">else</span> {<br>
+<span class="line-num">26</span>       <span class="hl-func">printf</span>(<span class="hl-string">"[AUTH] Access DENIED for: %s\n"</span>, username);<br>
+<span class="line-num">27</span>   }<br>
+<span class="line-num">28</span>}<br>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><span class="icon">✅</span> Changes Made</div>
+          <div style="font-size:0.76rem;line-height:1.8;color:var(--text-dim)">
+            <div style="margin-bottom:8px;padding:8px 12px;background:rgba(57,255,20,0.06);border-radius:4px;border-left:2px solid var(--green)">
+              <strong style="color:var(--green)">Fix 1:</strong> Input length validation <em>before</em> calling strcpy
+            </div>
+            <div style="margin-bottom:8px;padding:8px 12px;background:rgba(57,255,20,0.06);border-radius:4px;border-left:2px solid var(--green)">
+              <strong style="color:var(--green)">Fix 2:</strong> Replaced <code>strcpy</code> with <code>strncpy</code> + explicit size
+            </div>
+            <div style="padding:8px 12px;background:rgba(57,255,20,0.06);border-radius:4px;border-left:2px solid var(--green)">
+              <strong style="color:var(--green)">Fix 3:</strong> Explicit null-terminator to prevent unterminated strings
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="icon">🔐</span> Additional Defenses</div>
+          <div style="font-size:0.76rem;line-height:1.8;color:var(--text-dim)">
+            <div style="margin-bottom:6px"><span style="color:var(--accent)">▸</span> Compile with: <code>-fstack-protector-all</code></div>
+            <div style="margin-bottom:6px"><span style="color:var(--accent)">▸</span> Enable ASLR on the OS</div>
+            <div style="margin-bottom:6px"><span style="color:var(--accent)">▸</span> Use modern C++ alternatives (std::string)</div>
+            <div style="margin-bottom:6px"><span style="color:var(--accent)">▸</span> Add fuzzing to CI/CD pipeline</div>
+            <div><span style="color:var(--accent)">▸</span> Run static analysis (Clang-tidy, Coverity)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verification Terminal -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🧪</span> Regression Test — Verify the Fix</div>
+        <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px">
+          Run the same exploit against the patched binary to confirm it's fixed.
+        </p>
+        <div class="interactive-terminal">
+          <div class="terminal-bar">
+            <div class="terminal-dot t-red"></div>
+            <div class="terminal-dot t-yellow"></div>
+            <div class="terminal-dot t-green"></div>
+            <span class="terminal-title">bash — login_server_v2 (PATCHED)</span>
+          </div>
+          <div class="terminal-output-area" id="verify-output">
+            <div><span class="t-prompt">$</span> <span class="t-cmd">./login_server_v2</span></div>
+            <div class="t-output">Patched binary ready. Try the same attack inputs...</div>
+          </div>
+          <div class="terminal-input-row">
+            <span>Username:</span>
+            <input type="text" id="verify-input" placeholder="Try 65+ A's to verify the fix..." maxlength="200" />
+            <button class="run-btn green" onclick="runVerify()">▶ Test Patch</button>
+            <button class="run-btn" onclick="clearVerify()" style="background:var(--surface2);color:var(--text-dim)">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Final Quiz -->
+      <div class="card">
+        <div class="card-title"><span class="icon">❓</span> Final Quiz — SDLC Integration</div>
+        <p style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px">
+          At which SDLC phase is it <em>least expensive</em> to fix a security vulnerability?
+        </p>
+        <div id="q4-opts">
+          <div class="quiz-option" onclick="checkQ4(0)"><div class="quiz-radio"></div>During production deployment</div>
+          <div class="quiz-option" onclick="checkQ4(1)"><div class="quiz-radio"></div>After a customer reports it</div>
+          <div class="quiz-option" onclick="checkQ4(2)"><div class="quiz-radio"></div>During requirements & design</div>
+          <div class="quiz-option" onclick="checkQ4(3)"><div class="quiz-radio"></div>During integration testing</div>
+        </div>
+        <div id="q4-result" style="display:none;font-size:0.78rem;margin-top:10px"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goPhase(4)">← Back</button>
+        <button class="btn btn-success" id="btn-complete" onclick="completeLab()">🎓 Complete Lab →</button>
+      </div>
+
+      <!-- Completion -->
+      <div id="completion-section" style="display:none;margin-top:32px">
+        <div class="completion-card">
+          <div style="font-size:3rem;margin-bottom:8px">🛡️</div>
+          <div class="completion-title">Lab Complete!</div>
+          <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:24px;line-height:1.6">
+            You've completed the full Secure SDLC cycle for a buffer overflow vulnerability.
+          </p>
+
+          <div class="cert-box">
+            <div style="font-size:0.65rem;color:var(--text-dim);letter-spacing:0.15em;margin-bottom:8px">CERTIFICATE OF COMPLETION</div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:var(--green);margin-bottom:6px">SecureLab — Buffer Overflow</div>
+            <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:16px" id="cert-date"></div>
+            <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+              <span class="tag tag-feature">Static Analysis</span>
+              <span class="tag tag-feature">Dynamic Exploit</span>
+              <span class="tag tag-feature">Memory Layout</span>
+              <span class="tag tag-feature">Vulnerability Ticketing</span>
+              <span class="tag tag-feature">Secure Patching</span>
+            </div>
+            <div style="margin-top:20px;font-size:0.8rem;color:var(--green);font-weight:700" id="final-xp-display">⬡ 0 XP Earned</div>
+          </div>
+
+          <div style="font-size:0.78rem;color:var(--text-dim);line-height:1.8;margin-top:20px">
+            <strong style="color:var(--text-bright)">What you practiced today:</strong><br>
+            Threat modeling · Static code analysis · Buffer overflow exploitation ·<br>
+            Stack memory layout · Root cause analysis · CVSS scoring · Security ticketing · Patch verification
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  let currentPhase = 0;
+  let xp = 0;
+  let phasesCompleted = new Set();
+  let ticketSubmitted = false;
+  let exploitDone = false;
+  let quizAnswered = { q1: false, q2: false, q3: false, q4: false };
+
+  function addXP(amount) {
+    xp += amount;
+    document.getElementById('xp-display').textContent = `⬡ ${xp} XP`;
+  }
+
+  function goPhase(n) {
+    document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+    document.getElementById('phase-' + n).classList.add('active');
+    document.querySelectorAll('.sidebar-item').forEach((item, i) => {
+      item.classList.remove('active');
+      if (phasesCompleted.has(i)) item.classList.add('done');
+      else item.classList.remove('done');
+    });
+    document.getElementById('nav-' + n).classList.add('active');
+    document.getElementById('nav-' + n).classList.remove('done');
+    currentPhase = n;
+    document.getElementById('phase-indicator').textContent = `Phase ${n+1}/6`;
+    updateProgress();
+    document.querySelector('.main-content').scrollTo(0, 0);
+    updateSDLC(n);
+  }
+
+  function nextPhase(from) {
+    phasesCompleted.add(from);
+    if (!quizAnswered['q' + (from + 1)]) {
+      // let them proceed anyway but no XP bonus
+    }
+    addXP(50);
+    updateProgress();
+    goPhase(from + 1);
+  }
+
+  function updateProgress() {
+    const pct = Math.round((phasesCompleted.size / 6) * 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = pct + '% complete';
+  }
+
+  function updateSDLC(phase) {
+    const circles = document.querySelectorAll('.sdlc-circle');
+    const labels = document.querySelectorAll('.sdlc-label');
+    const lines = document.querySelectorAll('.sdlc-line');
+    circles.forEach((c, i) => {
+      c.classList.remove('active', 'done');
+      labels[i].classList.remove('active', 'done');
+      if (i < phase) { c.classList.add('done'); labels[i].classList.add('done'); }
+      else if (i === phase) { c.classList.add('active'); labels[i].classList.add('active'); }
+    });
+    lines.forEach((l, i) => {
+      l.classList.remove('done', 'active');
+      if (i < phase - 1) l.classList.add('done');
+      else if (i === phase - 1) l.classList.add('active');
+    });
+  }
+
+  // ---- Exploit Simulation ----
+  function runExploit() {
+    const input = document.getElementById('exploit-input').value;
+    const out = document.getElementById('exploit-output');
+    const len = input.length;
+
+    let html = out.innerHTML;
+    html += `\n<div><span class="t-prompt">$</span> <span class="t-cmd">echo "${escapeHtml(input.substring(0, 40))}${input.length > 40 ? '...' : ''}" | ./login_server</span></div>`;
+    html += `<div class="t-output">  [+] Input length: ${len} bytes</div>`;
+    html += `<div class="t-output">  [+] Buffer size:  64 bytes</div>`;
+
+    if (len === 0) {
+      html += `<div class="t-warn">  [!] No input provided. Enter a username.</div>`;
+    } else if (len <= 63) {
+      html += `<div class="t-output">  [+] strcpy: copying ${len} bytes into 64-byte buffer... OK</div>`;
+      html += `<div class="t-output">  [+] auth_flag remains: 0x00000000</div>`;
+      html += `<div class="t-error">  [-] [AUTH] Access DENIED for: ${escapeHtml(input.substring(0, 63))}</div>`;
+      html += `<div class="t-output">  ────────────────────────────────────</div>`;
+    } else if (len <= 71) {
+      const overflow = len - 64;
+      html += `<div class="t-warn">  [!] OVERFLOW: ${len} bytes written to 64-byte buffer!</div>`;
+      html += `<div class="t-warn">  [!] ${overflow} byte(s) written beyond buffer end</div>`;
+      html += `<div class="t-error">  [!] auth_flag OVERWRITTEN: 0x41 (non-zero!)</div>`;
+      html += `<div class="t-highlight">  [+] [AUTH] Access GRANTED for: [overflow payload]</div>`;
+      html += `<div class="t-highlight">  *** AUTHENTICATION BYPASSED via BUFFER OVERFLOW ***</div>`;
+      html += `<div class="t-output">  ────────────────────────────────────</div>`;
+      exploitDone = true;
+      setTimeout(() => {
+        document.getElementById('exploit-insight').style.display = 'block';
+        addXP(100);
+      }, 400);
+    } else {
+      const overflow = len - 64;
+      html += `<div class="t-error">  [!] CRITICAL OVERFLOW: ${overflow} bytes past buffer end!</div>`;
+      html += `<div class="t-error">  [!] auth_flag CORRUPTED ✓</div>`;
+      html += `<div class="t-error">  [!] Saved RBP may be corrupted!</div>`;
+      html += `<div class="t-error">  [!] Return address region reached!</div>`;
+      html += `<div class="t-highlight">  [+] [AUTH] Access GRANTED — Auth bypass successful!</div>`;
+      html += `<div class="t-crash">  *** SEGMENTATION FAULT (core dumped) ***</div>`;
+      html += `<div class="t-output">  ────────────────────────────────────</div>`;
+      exploitDone = true;
+      setTimeout(() => {
+        document.getElementById('exploit-insight').style.display = 'block';
+        addXP(100);
+      }, 400);
+    }
+
+    out.innerHTML = html;
+    out.scrollTop = out.scrollHeight;
+    document.getElementById('exploit-input').value = '';
+  }
+
+  function clearExploit() {
+    document.getElementById('exploit-output').innerHTML = '<div><span class="t-prompt">$</span> <span class="t-cmd">./login_server</span></div><div class="t-output">Terminal cleared. Program ready.</div>';
+  }
+
+  // ---- Verify Simulation ----
+  function runVerify() {
+    const input = document.getElementById('verify-input').value;
+    const out = document.getElementById('verify-output');
+    const len = input.length;
+
+    let html = out.innerHTML;
+    html += `\n<div><span class="t-prompt">$</span> <span class="t-cmd">echo "${escapeHtml(input.substring(0, 40))}${input.length > 40 ? '...' : ''}" | ./login_server_v2</span></div>`;
+    html += `<div class="t-output">  [+] Input length: ${len} bytes | Max allowed: 63 bytes</div>`;
+
+    if (len === 0) {
+      html += `<div class="t-warn">  [!] No input. Enter a username.</div>`;
+    } else if (len > 63) {
+      html += `<div class="t-highlight">  [+] FIX WORKING: Input exceeds MAX_USERNAME (63)</div>`;
+      html += `<div class="t-highlight">  [+] Length check triggered BEFORE strcpy</div>`;
+      html += `<div class="t-error">  [-] [ERROR] Input too long. Rejecting.</div>`;
+      html += `<div class="t-highlight">  ✓ Overflow attempt BLOCKED. Buffer safe!</div>`;
+      html += `<div class="t-output">  ────────────────────────────────────</div>`;
+      addXP(75);
+    } else {
+      html += `<div class="t-output">  [+] Length OK: ${len} ≤ 63 bytes</div>`;
+      html += `<div class="t-output">  [+] strncpy: safely copying with size limit...</div>`;
+      html += `<div class="t-output">  [+] auth_flag: 0x00000000 (untouched)</div>`;
+      html += `<div class="t-error">  [-] [AUTH] Access DENIED for: ${escapeHtml(input.substring(0, 63))}</div>`;
+      html += `<div class="t-output">  ✓ Normal behavior confirmed</div>`;
+      html += `<div class="t-output">  ────────────────────────────────────</div>`;
+    }
+
+    out.innerHTML = html;
+    out.scrollTop = out.scrollHeight;
+    document.getElementById('verify-input').value = '';
+  }
+
+  function clearVerify() {
+    document.getElementById('verify-output').innerHTML = '<div><span class="t-prompt">$</span> <span class="t-cmd">./login_server_v2</span></div><div class="t-output">Terminal cleared.</div>';
+  }
+
+  // ---- Ticket ----
+  function autoFill() {
+    // already pre-filled; just a UX affordance
+    document.getElementById('t-title').value = 'Stack Buffer Overflow in authenticate() — login_server.c';
+    document.getElementById('t-severity').value = 'CRITICAL';
+    document.getElementById('t-cvss').value = '9.8';
+  }
+
+  function submitTicket() {
+    const title = document.getElementById('t-title').value.trim();
+    const severity = document.getElementById('t-severity').value;
+    const cvss = document.getElementById('t-cvss').value;
+    const cwe = document.getElementById('t-cwe').value.trim();
+    const priority = document.getElementById('t-priority').value;
+    const impact = document.getElementById('t-impact').value;
+    const fix = document.getElementById('t-fix').value.trim();
+    const component = document.getElementById('t-component').value.trim();
+
+    if (!title || !severity || !cvss) {
+      alert('Please fill in Title, Severity, and CVSS Score before submitting.');
+      return;
+    }
+
+    const ticketId = 'SEC-2024-' + String(Math.floor(Math.random() * 900) + 100);
+    document.getElementById('ticket-id').textContent = ticketId;
+    document.getElementById('preview-title').textContent = title;
+    document.getElementById('preview-component').textContent = component || 'login_server';
+    document.getElementById('preview-cvss').textContent = cvss + ' / 10.0 — ' + severity;
+    document.getElementById('preview-cwe').textContent = cwe;
+    document.getElementById('preview-priority').textContent = priority;
+    document.getElementById('preview-impact').textContent = impact;
+    document.getElementById('preview-fix').textContent = fix;
+    document.getElementById('preview-date').textContent = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+
+    const severityTag = document.getElementById('ticket-severity-tag');
+    severityTag.textContent = severity;
+    severityTag.className = 'tag ' + (severity === 'CRITICAL' ? 'tag-critical' : severity === 'HIGH' ? 'tag-high' : 'tag-feature');
+
+    document.getElementById('ticket-preview').style.display = 'block';
+    document.getElementById('btn-phase4-next').style.display = 'inline-flex';
+    ticketSubmitted = true;
+    addXP(150);
+    document.getElementById('ticket-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ---- Quizzes ----
+  function checkQ1(idx) {
+    if (quizAnswered.q1) return;
+    const opts = document.querySelectorAll('#q1-opts .quiz-option');
+    opts[idx].classList.add(idx === 1 ? 'correct' : 'wrong');
+    if (idx !== 1) opts[1].classList.add('correct');
+    const res = document.getElementById('q1-result');
+    if (idx === 1) {
+      res.innerHTML = '<span style="color:var(--green)">✓ Correct!</span> Local variables and function call information are stored on the <strong>stack</strong>. The heap is for dynamic allocations (malloc/new).';
+      addXP(25);
+    } else {
+      res.innerHTML = '<span style="color:var(--red)">✗ Not quite.</span> The correct answer is the <strong>Stack</strong>. Local variables declared inside a function live on the stack frame for that function call.';
+    }
+    res.style.display = 'block';
+    quizAnswered.q1 = true;
+  }
+
+  function checkQ2(idx) {
+    if (quizAnswered.q2) return;
+    const opts = document.querySelectorAll('#q2-opts .quiz-option');
+    opts[idx].classList.add(idx === 1 ? 'correct' : 'wrong');
+    if (idx !== 1) opts[1].classList.add('correct');
+    const res = document.getElementById('q2-result');
+    if (idx === 1) {
+      res.innerHTML = '<span style="color:var(--green)">✓ Correct!</span> <code>strcpy()</code> copies until it finds a null byte, with zero knowledge of the destination buffer\'s size. This makes overflow trivial.';
+      addXP(25);
+    } else {
+      res.innerHTML = '<span style="color:var(--red)">✗ Incorrect.</span> The answer is <strong>no bounds checking</strong>. <code>strcpy</code> will write past the end of the destination buffer without any warning or error.';
+    }
+    res.style.display = 'block';
+    quizAnswered.q2 = true;
+  }
+
+  function checkQ3(idx) {
+    if (quizAnswered.q3) return;
+    const opts = document.querySelectorAll('#q3-opts .quiz-option');
+    opts[idx].classList.add(idx === 1 ? 'correct' : 'wrong');
+    if (idx !== 1) opts[1].classList.add('correct');
+    const res = document.getElementById('q3-result');
+    if (idx === 1) {
+      res.innerHTML = '<span style="color:var(--green)">✓ Correct!</span> The <strong>saved return address</strong> on the stack tells the CPU where to jump back after a function returns. Overwriting it redirects execution to attacker-controlled code — classic RCE!';
+      addXP(25);
+    } else {
+      res.innerHTML = '<span style="color:var(--red)">✗ Not right.</span> The target is the <strong>saved return address</strong> on the stack. When the function returns, the CPU pops this value and jumps to it — if an attacker controls it, they control execution.';
+    }
+    res.style.display = 'block';
+    quizAnswered.q3 = true;
+  }
+
+  function checkQ4(idx) {
+    if (quizAnswered.q4) return;
+    const opts = document.querySelectorAll('#q4-opts .quiz-option');
+    opts[idx].classList.add(idx === 2 ? 'correct' : 'wrong');
+    if (idx !== 2) opts[2].classList.add('correct');
+    const res = document.getElementById('q4-result');
+    if (idx === 2) {
+      res.innerHTML = '<span style="color:var(--green)">✓ Correct!</span> The "Rule of Ten" — fixing a bug during <strong>requirements & design</strong> costs ~$1. In production it can cost $30,000+. This is why "Shift Left" security matters: find bugs earlier!';
+      addXP(25);
+    } else {
+      res.innerHTML = '<span style="color:var(--red)">✗ Incorrect.</span> The cheapest time to fix is during <strong>requirements & design</strong>, before any code exists. This is why Secure SDLC emphasizes threat modeling at the start of a project.';
+    }
+    res.style.display = 'block';
+    quizAnswered.q4 = true;
+  }
+
+  // ---- Completion ----
+  function completeLab() {
+    phasesCompleted.add(5);
+    addXP(200);
+    updateProgress();
+    document.querySelectorAll('.sidebar-item').forEach(item => item.classList.add('done'));
+    document.getElementById('completion-section').style.display = 'block';
+    document.getElementById('cert-date').textContent = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('final-xp-display').textContent = `⬡ ${xp} XP Earned`;
+    document.getElementById('completion-section').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Enter key for terminals
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      const exploitInput = document.getElementById('exploit-input');
+      const verifyInput = document.getElementById('verify-input');
+      if (document.activeElement === exploitInput) runExploit();
+      if (document.activeElement === verifyInput) runVerify();
+    }
+  });
+
+  // Init
+  updateSDLC(0);
+</script>
+
+</body>
+</html>

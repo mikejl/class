@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Security Lab — Student Exercise</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --green: #3fb950;
+    --green-dim: #1a4a22;
+    --red: #f85149;
+    --red-dim: #4a1a1a;
+    --yellow: #d29922;
+    --yellow-dim: #3a2a00;
+    --blue: #58a6ff;
+    --blue-dim: #0d2147;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --font-mono: 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+  }
+
+  .logo { font-size: 20px; font-weight: bold; color: var(--green); letter-spacing: 2px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; }
+  .badge {
+    margin-left: auto;
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    flex: 1;
+    gap: 0;
+  }
+
+  /* LEFT PANEL — Device Network */
+  .panel-left {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .device-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .device-card:hover { border-color: var(--blue); background: #1c2230; }
+  .device-card.selected { border-color: var(--blue); background: var(--blue-dim); }
+  .device-card.compromised { border-color: var(--red) !important; background: var(--red-dim) !important; }
+  .device-card.patched { border-color: var(--green) !important; background: var(--green-dim) !important; }
+
+  .device-name { font-size: 13px; font-weight: bold; }
+  .device-ip { font-size: 11px; color: var(--text-dim); }
+  .device-status {
+    font-size: 10px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-ok { background: var(--green); }
+  .dot-warn { background: var(--yellow); }
+  .dot-danger { background: var(--red); animation: blink 1s infinite; }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* CENTER PANEL — Terminal */
+  .panel-center {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+
+  .terminal-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .td-red { background: #ff5f57; }
+  .td-yellow { background: #ffbd2e; }
+  .td-green { background: #28ca41; }
+
+  .terminal-output {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.7;
+    min-height: 300px;
+    max-height: 420px;
+  }
+
+  .terminal-output .line { margin: 1px 0; white-space: pre-wrap; word-break: break-all; }
+  .line-prompt { color: var(--green); }
+  .line-output { color: var(--text); }
+  .line-error { color: var(--red); }
+  .line-warn { color: var(--yellow); }
+  .line-info { color: var(--blue); }
+  .line-success { color: var(--green); }
+  .line-dim { color: var(--text-dim); }
+
+  .terminal-input-row {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+  }
+
+  .prompt-label { color: var(--green); font-size: 13px; white-space: nowrap; }
+  .terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    caret-color: var(--green);
+  }
+
+  /* Hint bar */
+  .hint-bar {
+    background: var(--yellow-dim);
+    border-top: 1px solid var(--yellow);
+    padding: 8px 16px;
+    font-size: 11px;
+    color: var(--yellow);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hint-bar span { opacity: 0.7; }
+  .hint-bar b { opacity: 1; }
+
+  /* RIGHT PANEL — Mission + Score */
+  .panel-right {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .score-board {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .score-num { font-size: 32px; font-weight: bold; color: var(--green); }
+  .score-label { font-size: 11px; color: var(--text-dim); }
+
+  .mission-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .mission-title { font-size: 12px; font-weight: bold; color: var(--purple); margin-bottom: 8px; }
+  .mission-item {
+    font-size: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+  }
+  .mission-item.done { color: var(--green); text-decoration: line-through; opacity: 0.7; }
+  .mission-item:last-child { border-bottom: none; }
+  .check { font-size: 14px; }
+
+  .vuln-legend {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 11px;
+  }
+  .vuln-row { display: flex; align-items: flex-start; gap: 8px; margin: 5px 0; color: var(--text-dim); }
+  .vuln-tag {
+    padding: 1px 6px; border-radius: 3px;
+    font-size: 10px; font-weight: bold;
+    white-space: nowrap;
+  }
+  .tag-crit { background: var(--red); color: #fff; }
+  .tag-high { background: var(--yellow); color: #000; }
+  .tag-med { background: var(--blue); color: #000; }
+
+  /* Progress bar */
+  .progress-wrap { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.5s; }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .panel-left, .panel-right { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">⚡ IoT-SEC-LAB</div>
+    <div class="subtitle">Simulated Network Security Exercise — Educational Use Only</div>
+  </div>
+  <div class="badge">🔒 SANDBOX</div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: Device Network -->
+  <div class="panel-left">
+    <div class="panel-title">📡 Network Devices</div>
+    <div id="device-list"></div>
+    <div style="margin-top:16px;">
+      <div class="panel-title">Network Map</div>
+      <div style="font-size:11px; color:var(--text-dim); line-height:1.8;">
+        Gateway: <span style="color:var(--blue)">192.168.1.1</span><br>
+        Subnet: <span style="color:var(--blue)">192.168.1.0/24</span><br>
+        Active: <span id="active-count" style="color:var(--green)">0</span> devices
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Terminal -->
+  <div class="panel-center">
+    <div class="terminal-header">
+      <div class="term-dot td-red"></div>
+      <div class="term-dot td-yellow"></div>
+      <div class="term-dot td-green"></div>
+      <span style="margin-left:8px;">student@iot-lab:~$</span>
+      <span style="margin-left:auto;" id="target-label">No target selected</span>
+    </div>
+    <div class="terminal-output" id="terminal"></div>
+    <div class="terminal-input-row">
+      <span class="prompt-label" id="prompt-text">student@iot-lab:~$</span>
+      <input class="terminal-input" id="cmd-input" type="text" placeholder="Type a command... (try: help)" autocomplete="off" spellcheck="false" autofocus>
+    </div>
+    <div class="hint-bar">
+      <span>Commands: </span>
+      <b>help</b> <b>scan</b> <b>connect [ip]</b> <b>enum</b> <b>vuln-scan</b> <b>exploit [vuln]</b> <b>patch [vuln]</b> <b>reset</b>
+    </div>
+  </div>
+
+  <!-- RIGHT: Mission + Score -->
+  <div class="panel-right">
+    <div class="score-board">
+      <div class="score-label">SECURITY SCORE</div>
+      <div class="score-num" id="score-display">0</div>
+      <div style="margin-top:6px;">
+        <div class="progress-wrap">
+          <div class="progress-bar" id="score-bar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mission-card">
+      <div class="mission-title">🎯 MISSION OBJECTIVES</div>
+      <div class="mission-item" id="obj-scan"><span class="check">○</span> Scan the network</div>
+      <div class="mission-item" id="obj-enum"><span class="check">○</span> Enumerate a device</div>
+      <div class="mission-item" id="obj-vuln"><span class="check">○</span> Run vulnerability scan</div>
+      <div class="mission-item" id="obj-exploit"><span class="check">○</span> Identify an exploit</div>
+      <div class="mission-item" id="obj-patch"><span class="check">○</span> Patch 3 vulnerabilities</div>
+      <div class="mission-item" id="obj-all"><span class="check">○</span> Secure all devices</div>
+    </div>
+
+    <div class="vuln-legend">
+      <div class="panel-title" style="margin-bottom:8px;">Vulnerability Types</div>
+      <div class="vuln-row"><span class="vuln-tag tag-crit">CRIT</span> Default credentials, open Telnet</div>
+      <div class="vuln-row"><span class="vuln-tag tag-high">HIGH</span> Unencrypted MQTT, outdated firmware</div>
+      <div class="vuln-row"><span class="vuln-tag tag-med">MED</span> Weak TLS, exposed debug ports</div>
+    </div>
+
+    <div class="mission-card" id="log-card">
+      <div class="mission-title">📋 ACTIVITY LOG</div>
+      <div id="activity-log" style="font-size:11px; color:var(--text-dim); max-height:200px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const state = {
+  score: 0,
+  target: null,
+  scanned: false,
+  patchCount: 0,
+  objectives: { scan:false, enum:false, vuln:false, exploit:false, patch:false, all:false },
+  history: [],
+  histIdx: -1,
+};
+
+const devices = [
+  {
+    id: 'd1', name: 'Smart Thermostat', ip: '192.168.1.10', type: 'Thermostat',
+    firmware: 'v1.2.0 (2019)', ports: [80, 8883, 23],
+    status: 'online', compromised: false, patched: false,
+    vulns: [
+      { id:'v1', name:'Default Credentials', severity:'CRIT', desc:'Admin login uses admin/admin. Full device takeover possible.', patched:false },
+      { id:'v2', name:'Telnet Open (Port 23)', severity:'CRIT', desc:'Telnet service exposed on LAN. No encryption, plaintext auth.', patched:false },
+      { id:'v3', name:'Outdated Firmware', severity:'HIGH', desc:'Firmware v1.2.0 (2019) has 14 known CVEs.', patched:false },
+    ]
+  },
+  {
+    id: 'd2', name: 'IP Camera #1', ip: '192.168.1.20', type: 'Camera',
+    firmware: 'v2.4.1 (2020)', ports: [80, 554, 8080],
+    status: 'online', compromised: false, patched: false,
+    vulns: [
+      { id:'v4', name:'Unencrypted RTSP Stream', severity:'HIGH', desc:'Video feed streams over RTSP without authentication or TLS.', patched:false },
+      { id:'v5', name:'Debug Port Exposed (8080)', severity:'MED', desc:'HTTP debug interface accessible without auth. Leaks config.', patched:false },
+    ]
+  },
+  {
+    id: 'd3', name: 'Smart Door Lock', ip: '192.168.1.30', type: 'Lock',
+    firmware: 'v3.0.2 (2021)', ports: [443, 1883],
+    status: 'online', compromised: false, patched: false,
+    vulns: [
+      { id:'v6', name:'MQTT Unencrypted (Port 1883)', severity:'HIGH', desc:'Lock commands sent over plaintext MQTT. Commands can be sniffed/replayed.', patched:false },
+      { id:'v7', name:'Weak TLS Configuration', severity:'MED', desc:'TLS 1.0 enabled, uses deprecated cipher suites (RC4, DES).', patched:false },
+    ]
+  },
+  {
+    id: 'd4', name: 'Smart Hub / Gateway', ip: '192.168.1.1', type: 'Hub',
+    firmware: 'v5.1.0 (2022)', ports: [80, 443, 22, 9999],
+    status: 'online', compromised: false, patched: false,
+    vulns: [
+      { id:'v8', name:'SSH Weak Password', severity:'CRIT', desc:'SSH on port 22 uses password "hub123". Brute-forceable.', patched:false },
+      { id:'v9', name:'Unauthenticated API (9999)', severity:'HIGH', desc:'REST API port 9999 has no authentication. Device commands exposed.', patched:false },
+    ]
+  },
+  {
+    id: 'd5', name: 'Environmental Sensor', ip: '192.168.1.40', type: 'Sensor',
+    firmware: 'v1.0.0 (2018)', ports: [1883, 80],
+    status: 'online', compromised: false, patched: false,
+    vulns: [
+      { id:'v10', name:'Hardcoded API Key', severity:'HIGH', desc:'Firmware contains a hardcoded cloud API key in plaintext.', patched:false },
+    ]
+  },
+];
+
+// ─── TERMINAL ─────────────────────────────────────────────────────────────────
+const term = document.getElementById('terminal');
+const input = document.getElementById('cmd-input');
+const promptLabel = document.getElementById('prompt-text');
+const targetLabel = document.getElementById('target-label');
+
+function print(text, cls='line-output') {
+  const div = document.createElement('div');
+  div.className = 'line ' + cls;
+  div.textContent = text;
+  term.appendChild(div);
+  term.scrollTop = term.scrollHeight;
+}
+
+function printBlank() { print(''); }
+
+function printBanner() {
+  print('╔══════════════════════════════════════════════════════╗', 'line-info');
+  print('║         IoT SECURITY EXERCISE  —  SANDBOX LAB        ║', 'line-info');
+  print('║         All devices are simulated. Educational use.   ║', 'line-info');
+  print('╚══════════════════════════════════════════════════════╝', 'line-info');
+  printBlank();
+  print('Welcome, student! Your mission: audit and secure the IoT network.', 'line-output');
+  print('Type  help  for available commands.', 'line-dim');
+  printBlank();
+}
+
+function logActivity(msg) {
+  const log = document.getElementById('activity-log');
+  const t = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d = document.createElement('div');
+  d.style.cssText = 'padding:2px 0; border-bottom:1px solid var(--border);';
+  d.textContent = `[${t}] ${msg}`;
+  log.prepend(d);
+}
+
+// ─── DEVICES UI ───────────────────────────────────────────────────────────────
+function renderDevices() {
+  const list = document.getElementById('device-list');
+  const active = document.getElementById('active-count');
+  list.innerHTML = '';
+  active.textContent = devices.length;
+
+  devices.forEach(dev => {
+    const card = document.createElement('div');
+    card.className = 'device-card' +
+      (state.target?.id === dev.id ? ' selected' : '') +
+      (dev.compromised ? ' compromised' : '') +
+      (dev.vulns.every(v=>v.patched) ? ' patched' : '');
+    card.innerHTML = `
+      <div class="device-name">${dev.name}</div>
+      <div class="device-ip">${dev.ip}</div>
+      <div class="device-status">
+        <span class="dot ${dev.compromised ? 'dot-danger' : dev.vulns.every(v=>v.patched) ? 'dot-ok' : 'dot-warn'}"></span>
+        <span style="color:var(--text-dim)">${dev.compromised ? 'COMPROMISED' : dev.vulns.every(v=>v.patched) ? 'SECURED' : 'VULNERABLE'}</span>
+      </div>`;
+    card.onclick = () => cmdConnect(dev.ip);
+    list.appendChild(card);
+  });
+}
+
+// ─── SCORE ────────────────────────────────────────────────────────────────────
+function addScore(pts, reason) {
+  state.score += pts;
+  document.getElementById('score-display').textContent = state.score;
+  document.getElementById('score-bar').style.width = Math.min(state.score, 100) + '%';
+  if (reason) {
+    print(`  [+${pts} pts] ${reason}`, 'line-success');
+    logActivity(`+${pts}pts — ${reason}`);
+  }
+}
+
+function completeObjective(key) {
+  if (state.objectives[key]) return;
+  state.objectives[key] = true;
+  const el = document.getElementById('obj-' + key);
+  if (el) {
+    el.classList.add('done');
+    el.querySelector('.check').textContent = '✓';
+  }
+}
+
+// ─── COMMANDS ─────────────────────────────────────────────────────────────────
+const COMMANDS = {
+  help() {
+    print('Available commands:', 'line-info');
+    printBlank();
+    const cmds = [
+      ['scan',           'Discover all devices on the network'],
+      ['connect <ip>',   'Connect to a device by IP address'],
+      ['enum',           'Enumerate open ports & services on target'],
+      ['vuln-scan',      'Run vulnerability assessment on target'],
+      ['exploit <id>',   'Demonstrate an exploit (educational only)'],
+      ['patch <id>',     'Apply security fix to vulnerability'],
+      ['patch-all',      'Patch all known vulnerabilities on target'],
+      ['status',         'Show current target and security status'],
+      ['devices',        'List all known devices'],
+      ['clear',          'Clear the terminal'],
+      ['reset',          'Reset the entire lab exercise'],
+    ];
+    cmds.forEach(([cmd, desc]) => {
+      print(`  ${cmd.padEnd(20)} ${desc}`, 'line-output');
+    });
+    printBlank();
+    print('TIP: Start with  scan  then  connect <ip>  to begin.', 'line-dim');
+  },
+
+  scan() {
+    print('$ nmap -sn 192.168.1.0/24', 'line-prompt');
+    print('Starting Nmap scan...', 'line-dim');
+    printBlank();
+    const delay = (ms) => new Promise(r => setTimeout(r, ms));
+    (async () => {
+      for (const dev of devices) {
+        await delay(180);
+        print(`  Host: ${dev.ip.padEnd(16)} (${dev.name}) — Status: UP`, 'line-output');
+      }
+      await delay(200);
+      printBlank();
+      print(`Scan complete: ${devices.length} hosts found on 192.168.1.0/24`, 'line-success');
+      printBlank();
+      print('Use  connect <ip>  to target a specific device.', 'line-dim');
+      state.scanned = true;
+      completeObjective('scan');
+      addScore(5, 'Network scan completed');
+      renderDevices();
+    })();
+  },
+
+  devices() {
+    print('Known devices:', 'line-info');
+    devices.forEach(dev => {
+      const secured = dev.vulns.every(v=>v.patched);
+      const label = dev.compromised ? '⚠ COMPROMISED' : secured ? '✓ SECURED' : '! VULNERABLE';
+      const col = dev.compromised ? 'line-error' : secured ? 'line-success' : 'line-warn';
+      print(`  ${dev.ip.padEnd(16)} ${dev.name.padEnd(24)} ${label}`, col);
+    });
+  },
+};
+
+function cmdConnect(ip) {
+  const dev = devices.find(d => d.ip === ip);
+  if (!dev) { print(`connect: no device found at ${ip}`, 'line-error'); return; }
+  state.target = dev;
+  promptLabel.textContent = `student@${ip}:~$`;
+  targetLabel.textContent = `Target: ${dev.name} (${ip})`;
+  print(`$ connect ${ip}`, 'line-prompt');
+  print(`Connecting to ${dev.name} at ${ip}...`, 'line-dim');
+  print(`Connection established. Device: ${dev.name} [${dev.type}]`, 'line-success');
+  print(`Firmware: ${dev.firmware}`, 'line-output');
+  printBlank();
+  renderDevices();
+  logActivity(`Connected to ${dev.name} (${ip})`);
+}
+
+function cmdEnum() {
+  if (!state.target) { print('No target selected. Use  connect <ip>  first.', 'line-error'); return; }
+  const dev = state.target;
+  print(`$ nmap -sV -p- ${dev.ip}`, 'line-prompt');
+  print(`Enumerating ${dev.name}...`, 'line-dim');
+  printBlank();
+  (async () => {
+    const delay = ms => new Promise(r=>setTimeout(r,ms));
+    for (const port of dev.ports) {
+      await delay(150);
+      const services = {
+        80:'http (Apache/nginx)', 443:'https (TLS)', 22:'ssh (OpenSSH)',
+        23:'telnet (!!! UNENCRYPTED !!!)', 554:'rtsp (video stream)',
+        1883:'mqtt (UNENCRYPTED)', 8080:'http-alt (debug interface)',
+        8883:'mqtt-ssl', 9999:'unknown (unauthenticated API)',
+      };
+      const svc = services[port] || 'unknown';
+      const warn = [23,1883,8080,9999].includes(port);
+      print(`  PORT ${String(port).padEnd(6)} OPEN   ${svc}`, warn ? 'line-warn' : 'line-output');
+    }
+    await delay(200);
+    printBlank();
+    print(`Enumeration complete. ${dev.ports.length} open ports found.`, 'line-success');
+    print('Run  vuln-scan  to identify vulnerabilities.', 'line-dim');
+    completeObjective('enum');
+    addScore(10, `Enumerated ${dev.name}`);
+    logActivity(`Enumerated ${dev.name}`);
+  })();
+}
+
+function cmdVulnScan() {
+  if (!state.target) { print('No target selected. Use  connect <ip>  first.', 'line-error'); return; }
+  const dev = state.target;
+  print(`$ vuln-scan ${dev.ip}`, 'line-prompt');
+  print(`Running vulnerability assessment on ${dev.name}...`, 'line-dim');
+  printBlank();
+  (async () => {
+    const delay = ms => new Promise(r=>setTimeout(r,ms));
+    for (const v of dev.vulns) {
+      await delay(200);
+      const col = v.severity==='CRIT' ? 'line-error' : v.severity==='HIGH' ? 'line-warn' : 'line-info';
+      const status = v.patched ? '[PATCHED]' : '[VULNERABLE]';
+      print(`  [${v.severity}] ${v.id.toUpperCase()} — ${v.name} ${v.patched ? '✓' : ''}`, v.patched ? 'line-success' : col);
+      print(`         ${v.desc}`, 'line-dim');
+      printBlank();
+    }
+    print(`Scan complete: ${dev.vulns.filter(v=>!v.patched).length} active vulnerabilities found.`, 'line-output');
+    const unpatched = dev.vulns.filter(v=>!v.patched);
+    if (unpatched.length) {
+      print(`Use  exploit <id>  (e.g. exploit ${unpatched[0].id}) to demonstrate risk.`, 'line-dim');
+      print(`Use  patch <id>    (e.g. patch ${unpatched[0].id}) to fix vulnerabilities.`, 'line-dim');
+    }
+    completeObjective('vuln');
+    addScore(10, `Vulnerability scan on ${dev.name}`);
+    logActivity(`Vuln scan on ${dev.name}: ${dev.vulns.filter(v=>!v.patched).length} vulns`);
+  })();
+}
+
+function cmdExploit(vulnId) {
+  if (!state.target) { print('No target selected.', 'line-error'); return; }
+  const dev = state.target;
+  if (!vulnId) { print('Usage: exploit <vuln-id>  (e.g. exploit v1)', 'line-warn'); return; }
+  const vuln = dev.vulns.find(v => v.id === vulnId.toLowerCase());
+  if (!vuln) { print(`Vulnerability "${vulnId}" not found on this device. Run  vuln-scan  first.`, 'line-error'); return; }
+  if (vuln.patched) { print(`[${vulnId.toUpperCase()}] is already patched. No exploit possible.`, 'line-success'); return; }
+
+  print(`$ exploit ${vulnId} --target ${dev.ip}`, 'line-prompt');
+  print('⚠  EDUCATIONAL DEMO — No actual exploit executed ⚠', 'line-warn');
+  printBlank();
+
+  const demos = {
+    v1: ['Attempting login with default credentials admin:admin...', 'AUTH SUCCESS — Full admin access granted via HTTP.', '> Device config, logs, and controls fully accessible.'],
+    v2: ['Connecting to Telnet on port 23...', 'Connection established (plaintext).', '> All traffic visible: username=admin password=admin123', '> Remote shell access obtained.'],
+    v3: ['Searching CVE database for firmware v1.2.0...', 'Found 14 CVEs including CVE-2019-9082 (RCE, CVSS 9.8).', '> Remote code execution possible without authentication.'],
+    v4: ['Connecting to RTSP stream...', 'rtsp://192.168.1.20:554/stream — NO AUTH REQUIRED', '> Live video feed captured without credentials.'],
+    v5: ['GET http://192.168.1.20:8080/config', '200 OK — device configuration exposed:', '> wifi_ssid=HomeNetwork wifi_pass=MyPassword123'],
+    v6: ['Subscribing to MQTT topic #...', 'Captured: lock/command {"action":"unlock","device":"front-door"}', '> Replay attack: sending unlock command...', '> Door unlock command accepted!'],
+    v7: ['TLS handshake with TLS 1.0 + RC4...', 'Downgrade attack successful.', '> Traffic decrypted. Session hijack possible.'],
+    v8: ['SSH brute-force attempt...', 'Password "hub123" cracked in 2.3 seconds.', '> Full shell access to central hub obtained.', '> All connected devices now controllable.'],
+    v9: [`curl http://${dev.ip}:9999/api/devices`, '200 OK — All device commands listed, no auth required.', '> Arbitrary commands executable across the network.'],
+    v10: ['Extracted firmware binary...', 'grep -r "API_KEY" firmware.bin', '> FOUND: api_key="sk-prod-abc123xyz789secret"', '> Cloud account fully accessible.'],
+  };
+
+  const steps = demos[vuln.id] || [`[${vuln.id}] exploit demonstrated.`];
+  (async () => {
+    const delay = ms => new Promise(r=>setTimeout(r,ms));
+    for (const step of steps) {
+      await delay(300);
+      const isSuccess = step.startsWith('>');
+      print(`  ${step}`, isSuccess ? 'line-error' : 'line-dim');
+    }
+    await delay(200);
+    printBlank();
+    print(`IMPACT: ${vuln.desc}`, 'line-warn');
+    print(`FIX: Use  patch ${vulnId}  to remediate this vulnerability.`, 'line-info');
+    dev.compromised = true;
+    renderDevices();
+    completeObjective('exploit');
+    addScore(5, `Demonstrated exploit for ${vuln.name}`);
+    logActivity(`Exploit demo: ${vuln.name} on ${dev.name}`);
+  })();
+}
+
+function cmdPatch(vulnId) {
+  if (!state.target) { print('No target selected.', 'line-error'); return; }
+  const dev = state.target;
+  if (!vulnId) { print('Usage: patch <vuln-id>  (e.g. patch v1)', 'line-warn'); return; }
+  const vuln = dev.vulns.find(v => v.id === vulnId.toLowerCase());
+  if (!vuln) { print(`Vulnerability "${vulnId}" not found. Run  vuln-scan  first.`, 'line-error'); return; }
+  if (vuln.patched) { print(`[${vulnId.toUpperCase()}] already patched.`, 'line-success'); return; }
+
+  print(`$ patch ${vulnId} --target ${dev.ip}`, 'line-prompt');
+
+  const fixes = {
+    v1: ['Disabling default account...', 'Generating strong random password...', 'Enforcing password change on next login...', 'Default credentials patched ✓'],
+    v2: ['Stopping Telnet service...', 'Disabling Telnet from startup...', 'Enabling SSH instead...', 'Telnet disabled, SSH enforced ✓'],
+    v3: ['Downloading latest firmware...', 'Verifying signature...', 'Applying firmware update...', 'Firmware updated to v2.1.0 (2024) ✓'],
+    v4: ['Enabling RTSP authentication...', 'Configuring TLS for video stream...', 'Generating stream credentials...', 'Video stream secured ✓'],
+    v5: ['Disabling debug HTTP interface...', 'Removing debug startup entry...', 'Debug port 8080 closed ✓'],
+    v6: ['Enabling MQTT TLS (port 8883)...', 'Configuring client certificates...', 'Closing unencrypted port 1883...', 'MQTT encrypted ✓'],
+    v7: ['Disabling TLS 1.0/1.1...', 'Removing RC4, DES cipher suites...', 'Enabling TLS 1.3 only...', 'TLS hardened ✓'],
+    v8: ['Generating 20-char SSH password...', 'Enabling SSH key authentication...', 'Disabling password auth...', 'SSH secured ✓'],
+    v9: ['Adding JWT authentication to API...', 'Enabling rate limiting...', 'Logging all API requests...', 'API authentication enforced ✓'],
+    v10: ['Removing hardcoded API key from firmware...', 'Moving key to secure encrypted vault...', 'Rotating compromised key...', 'Hardcoded secret removed ✓'],
+  };
+
+  const steps = fixes[vuln.id] || ['Applying patch...', 'Patched ✓'];
+  (async () => {
+    const delay = ms => new Promise(r=>setTimeout(r,ms));
+    for (const step of steps) {
+      await delay(250);
+      print(`  ${step}`, step.includes('✓') ? 'line-success' : 'line-dim');
+    }
+    vuln.patched = true;
+    state.patchCount++;
+    dev.compromised = dev.vulns.some(v=>!v.patched) ? dev.compromised : false;
+    printBlank();
+    print(`✓ [${vulnId.toUpperCase()}] "${vuln.name}" — PATCHED`, 'line-success');
+    addScore(15, `Patched: ${vuln.name}`);
+    logActivity(`Patched ${vuln.name} on ${dev.name}`);
+
+    if (state.patchCount >= 3) completeObjective('patch');
+
+    // Check if all devices secured
+    const allSecured = devices.every(d => d.vulns.every(v=>v.patched));
+    if (allSecured) {
+      completeObjective('all');
+      addScore(50, '🎉 All devices fully secured!');
+      printBlank();
+      print('╔══════════════════════════════════════╗', 'line-success');
+      print('║  🎉 ALL DEVICES SECURED! LAB COMPLETE ║', 'line-success');
+      print('╚══════════════════════════════════════╝', 'line-success');
+    }
+    renderDevices();
+  })();
+}
+
+function cmdPatchAll() {
+  if (!state.target) { print('No target selected.', 'line-error'); return; }
+  const unpatched = state.target.vulns.filter(v=>!v.patched);
+  if (!unpatched.length) { print('All vulnerabilities on this device are already patched.', 'line-success'); return; }
+  (async () => {
+    for (const v of unpatched) {
+      await new Promise(r=>setTimeout(r,100));
+      cmdPatch(v.id);
+      await new Promise(r=>setTimeout(r,1200));
+    }
+  })();
+}
+
+function cmdStatus() {
+  if (!state.target) {
+    print('No target selected.', 'line-dim');
+  } else {
+    const dev = state.target;
+    const unpatched = dev.vulns.filter(v=>!v.patched);
+    print(`Target: ${dev.name} (${dev.ip})`, 'line-info');
+    print(`Status: ${dev.compromised ? 'COMPROMISED ⚠' : unpatched.length ? 'VULNERABLE' : 'SECURED ✓'}`,
+      dev.compromised ? 'line-error' : unpatched.length ? 'line-warn' : 'line-success');
+    print(`Vulns remaining: ${unpatched.length}`, unpatched.length ? 'line-warn' : 'line-success');
+  }
+  printBlank();
+  print(`Score: ${state.score} pts`, 'line-info');
+  const total = devices.reduce((a,d) => a + d.vulns.length, 0);
+  const patched = devices.reduce((a,d) => a + d.vulns.filter(v=>v.patched).length, 0);
+  print(`Global progress: ${patched}/${total} vulnerabilities patched`, 'line-output');
+}
+
+function cmdReset() {
+  devices.forEach(dev => {
+    dev.compromised = false;
+    dev.patched = false;
+    dev.vulns.forEach(v => v.patched = false);
+  });
+  state.score = 0; state.target = null; state.scanned = false; state.patchCount = 0;
+  Object.keys(state.objectives).forEach(k => state.objectives[k] = false);
+  document.getElementById('score-display').textContent = '0';
+  document.getElementById('score-bar').style.width = '0%';
+  promptLabel.textContent = 'student@iot-lab:~$';
+  targetLabel.textContent = 'No target selected';
+  ['scan','enum','vuln','exploit','patch','all'].forEach(k => {
+    const el = document.getElementById('obj-'+k);
+    if (el) { el.classList.remove('done'); el.querySelector('.check').textContent = '○'; }
+  });
+  document.getElementById('activity-log').innerHTML = '';
+  term.innerHTML = '';
+  printBanner();
+  renderDevices();
+}
+
+// ─── INPUT HANDLER ────────────────────────────────────────────────────────────
+input.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (state.histIdx < state.history.length - 1) {
+      state.histIdx++;
+      input.value = state.history[state.history.length - 1 - state.histIdx];
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (state.histIdx > 0) {
+      state.histIdx--;
+      input.value = state.history[state.history.length - 1 - state.histIdx];
+    } else {
+      state.histIdx = -1; input.value = '';
+    }
+  } else if (e.key === 'Enter') {
+    const raw = input.value.trim();
+    if (!raw) return;
+    state.history.push(raw);
+    state.histIdx = -1;
+    print(`$ ${raw}`, 'line-prompt');
+    printBlank();
+    const parts = raw.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const arg = parts[1];
+
+    if (cmd === 'help') COMMANDS.help();
+    else if (cmd === 'scan') COMMANDS.scan();
+    else if (cmd === 'devices') COMMANDS.devices();
+    else if (cmd === 'connect') {
+      if (!arg) { print('Usage: connect <ip>', 'line-warn'); }
+      else cmdConnect(arg);
+    }
+    else if (cmd === 'enum') cmdEnum();
+    else if (cmd === 'vuln-scan' || cmd === 'vulnscan') cmdVulnScan();
+    else if (cmd === 'exploit') cmdExploit(arg);
+    else if (cmd === 'patch') cmdPatch(arg);
+    else if (cmd === 'patch-all' || cmd === 'patchall') cmdPatchAll();
+    else if (cmd === 'status') cmdStatus();
+    else if (cmd === 'clear') { term.innerHTML = ''; }
+    else if (cmd === 'reset') cmdReset();
+    else {
+      print(`Command not found: ${cmd}. Type  help  for commands.`, 'line-error');
+    }
+    printBlank();
+    input.value = '';
+  }
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+renderDevices();
+printBanner();
+</script>
+</body>
+</html>
