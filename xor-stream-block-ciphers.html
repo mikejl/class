@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream &amp; Block Ciphers — XOR Lecture Demo</title>
+<style>
+  :root{
+    --bg:            #0a0f11;
+    --bg-panel:      #10171a;
+    --bg-panel-raised:#141d21;
+    --border:        #1f2c30;
+    --border-soft:   #182226;
+    --text:          #d9e4e4;
+    --text-dim:      #7d9093;
+    --text-faint:    #4d5c5f;
+    --cyan:          #2dd4bf;
+    --cyan-dim:      #164e48;
+    --amber:         #f2a93b;
+    --amber-dim:     #4a3813;
+    --red:           #ef5b5b;
+    --red-dim:       #4a1e1e;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+  }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:15px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{ color:var(--cyan); }
+
+  ::selection{ background:var(--cyan-dim); color:#fff; }
+
+  :focus-visible{
+    outline:2px solid var(--cyan);
+    outline-offset:2px;
+  }
+
+  .wrap{
+    max-width:880px;
+    margin:0 auto;
+    padding:0 24px 90px;
+  }
+
+  /* ---------- NAV ---------- */
+  .nav{
+    position:sticky; top:0; z-index:20;
+    background:rgba(10,15,17,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-inner{
+    max-width:880px; margin:0 auto;
+    padding:12px 24px;
+    display:flex; gap:18px; flex-wrap:wrap;
+    align-items:center;
+  }
+  .nav-tag{
+    font-family:var(--sans); font-weight:700; font-size:13px;
+    color:var(--cyan); letter-spacing:0.02em;
+    margin-right:auto;
+  }
+  .nav a{
+    color:var(--text-dim); text-decoration:none; font-size:13px;
+    padding:4px 2px; border-bottom:1px solid transparent;
+  }
+  .nav a:hover{ color:var(--text); border-bottom-color:var(--border); }
+
+  /* ---------- HEADER / HERO ---------- */
+  header.hero{
+    position:relative;
+    overflow:hidden;
+    border-bottom:1px solid var(--border);
+    padding:56px 24px 40px;
+    background:
+      radial-gradient(ellipse 700px 300px at 15% -20%, rgba(45,212,191,0.09), transparent 60%),
+      radial-gradient(ellipse 700px 300px at 100% 0%, rgba(242,169,59,0.06), transparent 60%);
+  }
+  .bitstream{
+    position:absolute; inset:0;
+    display:flex; align-items:center;
+    white-space:nowrap;
+    font-size:13px;
+    color:var(--cyan);
+    opacity:0.08;
+    letter-spacing:0.35em;
+    pointer-events:none;
+    user-select:none;
+  }
+  .bitstream span{
+    display:inline-block;
+    animation:drift 38s linear infinite;
+  }
+  @keyframes drift{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+  .hero-inner{ position:relative; max-width:832px; margin:0 auto; }
+  .hero h1{
+    font-family:var(--sans);
+    font-weight:800;
+    font-size:clamp(26px, 4vw, 38px);
+    letter-spacing:-0.01em;
+    margin:0 0 14px;
+    color:#fff;
+  }
+  .hero p.lede{
+    max-width:60ch;
+    color:var(--text-dim);
+    font-size:15px;
+    margin:0;
+  }
+  .course-line{
+    font-family:var(--sans);
+    font-size:12.5px;
+    color:var(--text-faint);
+    margin-top:22px;
+    display:flex; gap:10px; align-items:center;
+  }
+  .course-line .dot{ width:6px; height:6px; border-radius:50%; background:var(--cyan); display:inline-block; }
+
+  /* ---------- SECTIONS ---------- */
+  section{
+    padding:52px 0 8px;
+    border-bottom:1px solid var(--border-soft);
+    scroll-margin-top:64px;
+  }
+  section:last-of-type{ border-bottom:none; }
+
+  .section-head{ margin-bottom:26px; }
+  .section-head h2{
+    font-family:var(--sans);
+    font-weight:700;
+    font-size:21px;
+    color:#fff;
+    margin:0 0 8px;
+  }
+  .section-head p{
+    color:var(--text-dim);
+    max-width:64ch;
+    margin:0;
+    font-size:14px;
+  }
+
+  p{ color:var(--text); }
+  .dim{ color:var(--text-dim); }
+
+  code, .mono{ font-family:var(--mono); }
+
+  /* ---------- XOR GATE WIDGET ---------- */
+  .gate-panel{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    gap:28px;
+    align-items:start;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:24px;
+    margin-top:8px;
+  }
+  @media (max-width:640px){ .gate-panel{ grid-template-columns:1fr; } }
+
+  .gate-controls{ display:flex; flex-direction:column; gap:16px; }
+
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .toggle-row .name{ font-family:var(--sans); font-size:13px; color:var(--text-dim); }
+
+  .switch{
+    position:relative; width:52px; height:28px;
+    background:var(--bg-panel-raised);
+    border:1px solid var(--border);
+    border-radius:99px;
+    cursor:pointer;
+  }
+  .switch input{
+    position:absolute; inset:0; opacity:0; margin:0; cursor:pointer;
+  }
+  .switch .knob{
+    position:absolute; top:2px; left:2px;
+    width:22px; height:22px;
+    border-radius:50%;
+    background:var(--text-faint);
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  .switch input:checked + .knob{
+    transform:translateX(24px);
+    background:var(--cyan);
+  }
+  .switch input:focus-visible + .knob{ outline:2px solid var(--cyan); outline-offset:2px; }
+
+  .bit-value{ font-family:var(--mono); font-size:13px; width:14px; text-align:center; color:var(--text); }
+
+  .gate-diagram{
+    display:flex; align-items:center; justify-content:center;
+    gap:0;
+  }
+  .gate-svg-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .led{
+    width:46px; height:46px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:17px; font-weight:600;
+    border:1px solid var(--border);
+    background:var(--bg-panel-raised);
+    color:var(--text-faint);
+    transition:background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .led.on{
+    background:rgba(45,212,191,0.12);
+    color:var(--cyan);
+    box-shadow:0 0 18px rgba(45,212,191,0.25);
+    border-color:var(--cyan);
+  }
+  .led-label{ font-family:var(--sans); font-size:11px; color:var(--text-faint); }
+
+  table.truth{
+    border-collapse:collapse;
+    margin-top:18px;
+    font-size:13px;
+    width:100%;
+    max-width:280px;
+  }
+  table.truth th, table.truth td{
+    border:1px solid var(--border);
+    padding:6px 12px;
+    text-align:center;
+  }
+  table.truth th{
+    font-family:var(--sans); font-size:11px; color:var(--text-faint);
+    background:var(--bg-panel-raised);
+  }
+  table.truth tr.active td{
+    background:rgba(45,212,191,0.09);
+    color:var(--cyan);
+    font-weight:600;
+  }
+
+  /* ---------- COMPARISON CARDS ---------- */
+  .compare{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-top:8px;
+  }
+  @media (max-width:640px){ .compare{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:20px;
+  }
+  .card.cyan{ border-top:2px solid var(--cyan); }
+  .card.amber{ border-top:2px solid var(--amber); }
+
+  .card h3{
+    font-family:var(--sans);
+    font-size:15px;
+    margin:0 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h3 .chip{
+    font-size:10.5px;
+    font-family:var(--sans);
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:99px;
+  }
+  .card.cyan h3{ color:var(--cyan); }
+  .card.cyan .chip{ background:var(--cyan-dim); color:var(--cyan); }
+  .card.amber h3{ color:var(--amber); }
+  .card.amber .chip{ background:var(--amber-dim); color:var(--amber); }
+
+  .card ul{ margin:12px 0 0; padding-left:18px; color:var(--text-dim); font-size:13.5px; }
+  .card ul li{ margin-bottom:6px; }
+  .card ul li b{ color:var(--text); font-weight:600; }
+
+  /* stream visual — interactive */
+  .stream-visual{
+    margin-top:16px; padding:14px;
+    background:var(--bg-panel-raised);
+    border:1px solid var(--border-soft);
+    border-radius:5px;
+  }
+  .stream-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .stream-row:last-child{ margin-bottom:0; }
+  .stream-row .row-label{
+    font-family:var(--sans); font-size:10.5px; color:var(--text-faint);
+    width:64px; flex:none;
+  }
+  .stream-bits{ display:flex; gap:5px; }
+  .bit{
+    width:24px; height:24px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:3px;
+    background:rgba(45,212,191,0.08);
+    color:var(--cyan);
+    flex:none;
+    font-size:12px;
+    border:1px solid transparent;
+  }
+  .bit.key-bit{
+    cursor:pointer;
+    background:rgba(242,169,59,0.08);
+    color:var(--amber);
+    border-color:rgba(242,169,59,0.3);
+  }
+  .bit.key-bit:hover{ border-color:var(--amber); }
+  .bit.out-bit{ background:rgba(45,212,191,0.14); font-weight:600; }
+  .stream-caption{ margin-top:12px; font-size:11.5px; color:var(--text-faint); }
+  .stream-btn-row{ margin-top:12px; }
+
+  /* block visual — interactive */
+  .block-visual{
+    margin-top:16px; padding:14px;
+    background:var(--bg-panel-raised);
+    border:1px solid var(--border-soft);
+    border-radius:5px;
+  }
+  .block-controls{ display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; }
+  .block-field{ flex:1; min-width:150px; }
+  .block-field label{
+    display:block; font-family:var(--sans); font-size:10.5px;
+    color:var(--text-faint); margin-bottom:5px;
+  }
+  .block-field input{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13px;
+    padding:7px 9px;
+    border-radius:4px;
+  }
+  .size-btns{ display:flex; gap:6px; }
+  .size-btn{
+    font-family:var(--sans); font-size:12px; font-weight:600;
+    padding:7px 12px; border-radius:4px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .size-btn.active{ border-color:var(--amber); color:var(--amber); background:rgba(242,169,59,0.08); }
+  .block-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .block{
+    border:1px solid rgba(242,169,59,0.4);
+    background:rgba(242,169,59,0.06);
+    border-radius:4px;
+    padding:8px 10px;
+    font-size:12px;
+    color:var(--amber);
+    min-width:64px;
+    text-align:center;
+  }
+  .block.pad{
+    border-style:dashed;
+    color:var(--text-faint);
+    background:transparent;
+  }
+  .block .label{ display:block; font-size:9.5px; color:var(--text-faint); margin-top:4px; font-family:var(--sans); }
+  .block-caption{ margin-top:12px; font-size:11.5px; color:var(--text-faint); }
+
+  .bridge-note{
+    margin-top:16px; padding:12px 14px;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-left:2px solid var(--cyan);
+    border-radius:4px;
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .bridge-note b{ color:var(--text); }
+
+  /* ---------- KEYSTREAM DEMO ---------- */
+  .demo-panel{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:24px;
+    margin-top:8px;
+  }
+
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media (max-width:640px){ .field-row{ grid-template-columns:1fr; } }
+
+  .field label{
+    display:block; font-family:var(--sans); font-size:11.5px;
+    color:var(--text-faint); margin-bottom:6px;
+    text-transform:none;
+  }
+  .field input{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:14px;
+    padding:9px 11px;
+    border-radius:4px;
+  }
+  .field input:focus{ border-color:var(--cyan); }
+  .field .hint{ font-size:11px; color:var(--text-faint); margin-top:5px; }
+
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  button.btn{
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:4px;
+    border:1px solid var(--cyan);
+    background:transparent;
+    color:var(--cyan);
+    cursor:pointer;
+    transition:background 0.12s ease, color 0.12s ease;
+  }
+  button.btn:hover{ background:var(--cyan); color:#04231f; }
+  button.btn.ghost{
+    border-color:var(--border);
+    color:var(--text-dim);
+  }
+  button.btn.ghost:hover{ background:var(--bg-panel-raised); color:var(--text); }
+
+  .result-block{ margin-top:22px; }
+  .result-block h4{
+    font-family:var(--sans); font-size:12px; color:var(--text-faint);
+    margin:0 0 8px; font-weight:600;
+  }
+  .hex-output{
+    font-family:var(--mono); font-size:14px;
+    background:var(--bg);
+    border:1px solid var(--border-soft);
+    border-radius:4px;
+    padding:12px 14px;
+    color:var(--cyan);
+    word-break:break-all;
+    letter-spacing:0.03em;
+  }
+  .hex-output.recovered{ color:var(--amber); }
+
+  .table-scroll{ overflow-x:auto; margin-top:14px; }
+  table.byte-table{
+    border-collapse:collapse;
+    font-size:12px;
+    width:100%;
+    min-width:520px;
+  }
+  table.byte-table th, table.byte-table td{
+    border:1px solid var(--border-soft);
+    padding:6px 9px;
+    text-align:center;
+    white-space:nowrap;
+  }
+  table.byte-table th{
+    font-family:var(--sans); font-size:10px; color:var(--text-faint);
+    background:var(--bg-panel-raised);
+    font-weight:600;
+  }
+  table.byte-table td.plain{ color:var(--text); }
+  table.byte-table td.key{ color:var(--amber); }
+  table.byte-table td.xor{ color:var(--cyan); }
+
+  .placeholder-msg{
+    color:var(--text-faint); font-size:13px; padding:12px 0;
+  }
+
+  /* ---------- QUICK CHECK ---------- */
+  .check{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:20px 22px;
+    margin-top:8px;
+  }
+  .check p.q{ font-family:var(--sans); font-weight:600; font-size:14px; margin:0 0 12px; }
+  .check-opts{ display:flex; flex-direction:column; gap:8px; }
+  .check-opt{
+    text-align:left;
+    background:var(--bg);
+    border:1px solid var(--border-soft);
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:13px;
+    padding:9px 12px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .check-opt:hover{ border-color:var(--cyan); }
+  .check-opt.correct{ border-color:var(--cyan); color:var(--cyan); background:rgba(45,212,191,0.07); }
+  .check-opt.wrong{ border-color:var(--red); color:var(--red); background:rgba(239,91,91,0.07); }
+  .check-feedback{ margin-top:12px; font-size:13px; color:var(--text-dim); min-height:1.6em; }
+
+  footer{
+    max-width:880px; margin:0 auto; padding:36px 24px 10px;
+    color:var(--text-faint); font-size:11.5px;
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-tag">XOR // CIPHERS</span>
+    <a href="#logicgates">AND / OR</a>
+    <a href="#xorgate">XOR Gate</a>
+    <a href="#families">Stream vs Block</a>
+    <a href="#keystream">Sample Test</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="bitstream" aria-hidden="true">
+    <span>01001000 01000101 01001100 01001100 01001111 00100000 01011000 01001111 01010010 00100000 01000011 01001001 01010000 01001000 01000101 01010010 00100000 01001000 01000101 01001100 01001100 01001111 00100000 01011000 01001111 01010010 00100000 01000011 01001001 01010000 01001000 01000101 01010010 00100000 </span>
+  </div>
+  <div class="hero-inner">
+    <h1>Stream &amp; Block Ciphers, One Gate at a Time</h1>
+    <p class="lede">Every symmetric cipher scrambles data with a key. The difference between a stream cipher and a block cipher is really a difference in <em>how much data</em> gets combined with the key at once — and the XOR gate is where that combination actually happens.</p>
+    <div class="course-line"><span class="dot"></span> CIT 2640 — Network Security · Module 2: Cryptography Concepts · Offline lecture demo</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ AND / OR GATES ============ -->
+  <section id="logicgates" style="padding-top:44px;">
+    <div class="section-head">
+      <h2>Two Familiar Gates First</h2>
+      <p>Before XOR, a quick refresher on the two basic logic gates it's usually taught alongside. Both take two bits and produce one — the difference is in which combinations of inputs produce a 1.</p>
+    </div>
+
+    <div class="compare">
+      <div class="card">
+        <h3 style="color:var(--text);">AND Gate <span class="chip" style="background:var(--bg-panel-raised); color:var(--text-dim);">both must be 1</span></h3>
+        <p class="dim" style="font-size:13.5px;">Output is 1 only when A and B are both 1.</p>
+        <div class="gate-diagram" style="justify-content:flex-start; margin-top:14px;">
+          <div class="gate-svg-wrap">
+            <svg width="180" height="120" viewBox="0 0 180 120" aria-hidden="true">
+              <line x1="10" y1="35" x2="55" y2="35" stroke="#7d9093" stroke-width="2"/>
+              <line x1="10" y1="85" x2="55" y2="85" stroke="#7d9093" stroke-width="2"/>
+              <path d="M55,20 L95,20 A40,40 0 0 1 95,100 L55,100 Z" fill="none" stroke="#7d9093" stroke-width="2"/>
+              <line x1="135" y1="60" x2="170" y2="60" stroke="#7d9093" stroke-width="2"/>
+              <text x="66" y="64" font-family="ui-monospace, monospace" font-size="10" fill="#7d9093">AND</text>
+            </svg>
+          </div>
+        </div>
+        <table class="truth" style="max-width:220px;">
+          <thead><tr><th>A</th><th>B</th><th>A AND B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3 style="color:var(--text);">OR Gate <span class="chip" style="background:var(--bg-panel-raised); color:var(--text-dim);">either can be 1</span></h3>
+        <p class="dim" style="font-size:13.5px;">Output is 1 when A or B (or both) is 1.</p>
+        <div class="gate-diagram" style="justify-content:flex-start; margin-top:14px;">
+          <div class="gate-svg-wrap">
+            <svg width="180" height="120" viewBox="0 0 180 120" aria-hidden="true">
+              <line x1="10" y1="35" x2="58" y2="35" stroke="#7d9093" stroke-width="2"/>
+              <line x1="10" y1="85" x2="58" y2="85" stroke="#7d9093" stroke-width="2"/>
+              <path d="M55,20 Q80,20 95,35 Q115,60 95,85 Q80,100 55,100 Q72,60 55,20 Z" fill="none" stroke="#7d9093" stroke-width="2"/>
+              <line x1="135" y1="60" x2="170" y2="60" stroke="#7d9093" stroke-width="2"/>
+              <text x="70" y="64" font-family="ui-monospace, monospace" font-size="10" fill="#7d9093">OR</text>
+            </svg>
+          </div>
+        </div>
+        <table class="truth" style="max-width:220px;">
+          <thead><tr><th>A</th><th>B</th><th>A OR B</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>0</td><td>0</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ XOR GATE ============ -->
+  <section id="xorgate">
+    <div class="section-head">
+      <h2>The XOR Gate</h2>
+      <p>XOR ("exclusive or") outputs 1 when its two inputs differ, and 0 when they match. That single rule is the engine behind most symmetric ciphers: it's cheap to compute, and — critically — applying the same key bits a second time undoes the first pass.</p>
+    </div>
+
+    <div class="gate-panel">
+      <div class="gate-controls">
+        <div class="toggle-row">
+          <span class="name">Input A</span>
+          <label class="switch">
+            <input type="checkbox" id="bitA" onchange="updateGate()">
+            <span class="knob"></span>
+          </label>
+          <span class="bit-value" id="bitAVal">0</span>
+        </div>
+        <div class="toggle-row">
+          <span class="name">Input B</span>
+          <label class="switch">
+            <input type="checkbox" id="bitB" onchange="updateGate()">
+            <span class="knob"></span>
+          </label>
+          <span class="bit-value" id="bitBVal">0</span>
+        </div>
+
+        <table class="truth" id="truthTable">
+          <thead><tr><th>A</th><th>B</th><th>A XOR B</th></tr></thead>
+          <tbody>
+            <tr data-a="0" data-b="0"><td>0</td><td>0</td><td>0</td></tr>
+            <tr data-a="0" data-b="1"><td>0</td><td>1</td><td>1</td></tr>
+            <tr data-a="1" data-b="0"><td>1</td><td>0</td><td>1</td></tr>
+            <tr data-a="1" data-b="1"><td>1</td><td>1</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gate-diagram">
+        <div class="gate-svg-wrap">
+          <svg width="180" height="120" viewBox="0 0 180 120" aria-hidden="true">
+            <line x1="10" y1="35" x2="55" y2="35" stroke="#2dd4bf" stroke-width="2" id="wireA"/>
+            <line x1="10" y1="85" x2="55" y2="85" stroke="#2dd4bf" stroke-width="2" id="wireB"/>
+            <path d="M55,20 C80,20 80,35 95,35 C80,35 80,50 55,50 C68,50 68,70 55,70 C80,70 80,85 95,85 C80,85 80,100 55,100"
+                  fill="none" stroke="#7d9093" stroke-width="2"/>
+            <path d="M55,20 Q95,20 95,60 Q95,100 55,100" fill="none" stroke="#7d9093" stroke-width="2"/>
+            <line x1="134" y1="60" x2="170" y2="60" stroke="#2dd4bf" stroke-width="2" id="wireOut"/>
+            <text x="112" y="64" font-family="ui-monospace, monospace" font-size="10" fill="#7d9093">XOR</text>
+          </svg>
+          <div class="led" id="ledOut">0</div>
+          <div class="led-label">A XOR B</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STREAM VS BLOCK ============ -->
+  <section id="families">
+    <div class="section-head">
+      <h2>Two Ways to Encrypt a Message</h2>
+      <p>Both approaches use a secret key to turn plaintext into ciphertext. They differ in whether they process the message continuously or in fixed-size chunks. Try both panels below.</p>
+    </div>
+
+    <div class="compare">
+      <div class="card cyan">
+        <h3>Stream Cipher <span class="chip">bit by bit</span></h3>
+        <p class="dim" style="font-size:13.5px;">A keystream generator produces an endless run of pseudorandom bits from the key. Each bit of plaintext is combined with the matching keystream bit — usually with XOR — the instant it arrives.</p>
+
+        <div class="stream-visual">
+          <div class="stream-row">
+            <span class="row-label">Plaintext</span>
+            <div class="stream-bits" id="streamPlain"></div>
+          </div>
+          <div class="stream-row">
+            <span class="row-label">Keystream</span>
+            <div class="stream-bits" id="streamKey"></div>
+          </div>
+          <div class="stream-row">
+            <span class="row-label">XOR output</span>
+            <div class="stream-bits" id="streamOut"></div>
+          </div>
+          <div class="stream-btn-row">
+            <button class="btn" style="padding:7px 14px; font-size:12px;" onclick="randomizeKeystream()">Randomize keystream</button>
+          </div>
+          <div class="stream-caption">Click any keystream bit to flip it — the output updates instantly, one position at a time.</div>
+        </div>
+
+        <ul>
+          <li><b>Examples:</b> RC4, ChaCha20, Salsa20</li>
+          <li><b>Good for:</b> real-time data — voice, video, network links</li>
+        </ul>
+      </div>
+
+      <div class="card amber">
+        <h3>Block Cipher <span class="chip">fixed chunks</span></h3>
+        <p class="dim" style="font-size:13.5px;">The message is split into fixed-size blocks. Each full block is transformed through several rounds of substitution and permutation, keyed by the secret. Short final blocks get padded.</p>
+
+        <div class="block-visual">
+          <div class="block-controls">
+            <div class="block-field">
+              <label for="blockMsgInput">Message</label>
+              <input type="text" id="blockMsgInput" value="NETWORKSECURITY" maxlength="32" oninput="renderBlocks()">
+            </div>
+            <div class="block-field" style="flex:0 0 auto;">
+              <label>Block size</label>
+              <div class="size-btns" id="blockSizeBtns">
+                <button class="size-btn" data-size="4" onclick="setBlockSize(4)">4B</button>
+                <button class="size-btn active" data-size="8" onclick="setBlockSize(8)">8B</button>
+                <button class="size-btn" data-size="16" onclick="setBlockSize(16)">16B</button>
+              </div>
+            </div>
+          </div>
+          <div class="block-row" id="blockRow"></div>
+          <div class="block-caption" id="blockCaption"></div>
+        </div>
+
+        <ul>
+          <li><b>Examples:</b> AES, DES, Blowfish</li>
+          <li><b>Good for:</b> files, storage, anything not streaming live</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="bridge-note">
+      <b>Where they meet:</b> a block cipher run in <b>CTR mode</b> uses the block cipher only to generate a keystream from a counter — then XORs that keystream with the plaintext, exactly like a stream cipher. The XOR step above is the same operation either way.
+    </div>
+  </section>
+
+  <!-- ============ KEYSTREAM / SAMPLE TEST ============ -->
+  <section id="keystream">
+    <div class="section-head">
+      <h2>Sample Test: XOR as a Stream Cipher</h2>
+      <p>Repeat the key to match the length of the message, XOR each character byte-for-byte, and the result is your ciphertext. Run the exact same XOR a second time with the same key, and you get the plaintext back — that's what "symmetric" means in practice.</p>
+    </div>
+
+    <div class="demo-panel">
+      <div class="field-row">
+        <div class="field">
+          <label for="plainInput">Plaintext message</label>
+          <input type="text" id="plainInput" value="MEET AT DAWN" maxlength="40">
+          <div class="hint">Try changing this and re-running.</div>
+        </div>
+        <div class="field">
+          <label for="keyInput">Key (repeats to fill the message)</label>
+          <input type="text" id="keyInput" value="KEY" maxlength="20">
+          <div class="hint">Sample key — short on purpose, so the repetition is visible.</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="runEncrypt()">Encrypt with XOR</button>
+        <button class="btn ghost" onclick="runDecrypt()">Decrypt ciphertext back</button>
+      </div>
+
+      <div class="table-scroll">
+        <table class="byte-table" id="byteTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Plain char</th>
+              <th>Plain (bin)</th>
+              <th>Key char</th>
+              <th>Key (bin)</th>
+              <th>XOR (bin)</th>
+              <th>XOR (hex)</th>
+            </tr>
+          </thead>
+          <tbody id="byteTableBody"></tbody>
+        </table>
+        <div class="placeholder-msg" id="tablePlaceholder">Click "Encrypt with XOR" to see the byte-by-byte breakdown.</div>
+      </div>
+
+      <div class="result-block">
+        <h4>Ciphertext (hex bytes — mostly unprintable, so hex is how you'd actually transmit this)</h4>
+        <div class="hex-output" id="cipherOutput">—</div>
+      </div>
+
+      <div class="result-block" id="recoveredBlock" style="display:none;">
+        <h4>Recovered plaintext (same XOR, same key, applied to the ciphertext)</h4>
+        <div class="hex-output recovered" id="recoveredOutput">—</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Offline lecture demo · no external dependencies, no network calls · runs entirely in the browser.
+</footer>
+
+<script>
+  // ---------- helpers ----------
+  function toBinary8(n){ return n.toString(2).padStart(8,'0'); }
+  function toHex2(n){ return n.toString(16).padStart(2,'0').toUpperCase(); }
+  function byteAt(str, i){ return str.charCodeAt(i) & 0xFF; }
+
+  function xorBytes(plainStr, keyStr){
+    const out = [];
+    for(let i=0;i<plainStr.length;i++){
+      const p = byteAt(plainStr, i);
+      const k = byteAt(keyStr, i % keyStr.length);
+      out.push(p ^ k);
+    }
+    return out;
+  }
+
+  function bytesToHex(bytes){ return bytes.map(toHex2).join(' '); }
+
+  // ---------- XOR gate widget ----------
+  function updateGate(){
+    const a = document.getElementById('bitA').checked ? 1 : 0;
+    const b = document.getElementById('bitB').checked ? 1 : 0;
+    const out = a ^ b;
+
+    document.getElementById('bitAVal').textContent = a;
+    document.getElementById('bitBVal').textContent = b;
+
+    const led = document.getElementById('ledOut');
+    led.textContent = out;
+    led.classList.toggle('on', out === 1);
+
+    document.querySelectorAll('#truthTable tbody tr').forEach(row => {
+      const match = (row.dataset.a == a) && (row.dataset.b == b);
+      row.classList.toggle('active', match);
+    });
+  }
+  updateGate();
+
+  // ---------- interactive stream visual ----------
+  let streamPlainBits = [1,0,1,1,0,0,1,0];
+  let streamKeyBits = [];
+
+  function randomizeKeystream(){
+    streamKeyBits = streamPlainBits.map(() => Math.round(Math.random()));
+    renderStream();
+  }
+
+  function renderStream(){
+    const plainEl = document.getElementById('streamPlain');
+    const keyEl = document.getElementById('streamKey');
+    const outEl = document.getElementById('streamOut');
+
+    plainEl.innerHTML = streamPlainBits.map(b => `<span class="bit">${b}</span>`).join('');
+    keyEl.innerHTML = streamKeyBits.map((b,i) => `<span class="bit key-bit" data-idx="${i}" onclick="toggleKeyBit(${i})">${b}</span>`).join('');
+    const outBits = streamPlainBits.map((p,i) => p ^ streamKeyBits[i]);
+    outEl.innerHTML = outBits.map(b => `<span class="bit out-bit">${b}</span>`).join('');
+  }
+
+  function toggleKeyBit(i){
+    streamKeyBits[i] = streamKeyBits[i] ? 0 : 1;
+    renderStream();
+  }
+
+  randomizeKeystream();
+
+  // ---------- interactive block visual ----------
+  let currentBlockSize = 8;
+
+  function setBlockSize(size){
+    currentBlockSize = size;
+    document.querySelectorAll('#blockSizeBtns .size-btn').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.size) === size);
+    });
+    renderBlocks();
+  }
+
+  function renderBlocks(){
+    const msg = document.getElementById('blockMsgInput').value || '';
+    const size = currentBlockSize;
+    const blockRow = document.getElementById('blockRow');
+    const caption = document.getElementById('blockCaption');
+
+    if(!msg){
+      blockRow.innerHTML = '';
+      caption.textContent = 'Type a message to see it split into blocks.';
+      return;
+    }
+
+    const totalBlocks = Math.ceil(msg.length / size);
+    let html = '';
+    for(let i=0;i<totalBlocks;i++){
+      const chunk = msg.slice(i*size, i*size+size);
+      const isLast = i === totalBlocks - 1;
+      const needsPad = isLast && chunk.length < size;
+      const displayChunk = needsPad ? chunk + '·'.repeat(size - chunk.length) : chunk;
+      html += `<div class="block${needsPad ? ' pad' : ''}">${displayChunk}<span class="label">${needsPad ? (size - chunk.length) + ' bytes padded' : 'block ' + (i+1)}</span></div>`;
+    }
+    blockRow.innerHTML = html;
+    caption.textContent = `${msg.length} characters split into ${totalBlocks} block(s) of ${size} bytes each.`;
+  }
+
+  renderBlocks();
+
+  // ---------- keystream demo ----------
+  function runEncrypt(){
+    const plain = document.getElementById('plainInput').value;
+    const key = document.getElementById('keyInput').value;
+
+    if(!plain || !key){
+      document.getElementById('tablePlaceholder').textContent = 'Enter both a message and a key first.';
+      document.getElementById('tablePlaceholder').style.display = 'block';
+      document.getElementById('byteTable').style.display = 'none';
+      return;
+    }
+
+    const cipherBytes = xorBytes(plain, key);
+
+    let rows = '';
+    for(let i=0;i<plain.length;i++){
+      const p = byteAt(plain, i);
+      const k = byteAt(key, i % key.length);
+      const x = cipherBytes[i];
+      const pChar = plain[i] === ' ' ? '␠' : plain[i];
+      const kChar = key[i % key.length] === ' ' ? '␠' : key[i % key.length];
+      rows += `<tr>
+        <td class="plain">${pChar}</td>
+        <td class="plain">${toBinary8(p)}</td>
+        <td class="key">${kChar}</td>
+        <td class="key">${toBinary8(k)}</td>
+        <td class="xor">${toBinary8(x)}</td>
+        <td class="xor">${toHex2(x)}</td>
+      </tr>`;
+    }
+    document.getElementById('byteTableBody').innerHTML = rows;
+    document.getElementById('byteTable').style.display = 'table';
+    document.getElementById('tablePlaceholder').style.display = 'none';
+
+    document.getElementById('cipherOutput').textContent = bytesToHex(cipherBytes);
+    document.getElementById('recoveredBlock').style.display = 'none';
+
+    window.__lastCipherBytes = cipherBytes;
+    window.__lastKey = key;
+  }
+
+  function runDecrypt(){
+    if(!window.__lastCipherBytes){
+      runEncrypt();
+    }
+    const cipherBytes = window.__lastCipherBytes;
+    const key = window.__lastKey;
+    if(!cipherBytes) return;
+
+    const recoveredBytes = cipherBytes.map((c, i) => c ^ byteAt(key, i % key.length));
+    const recoveredText = recoveredBytes.map(b => String.fromCharCode(b)).join('');
+
+    document.getElementById('recoveredOutput').textContent = recoveredText;
+    document.getElementById('recoveredBlock').style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
