@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RSA Calculator</title>
+<style>
+  :root {
+    --bg: #0a0e0f;
+    --panel: #0f1719;
+    --panel-alt: #10181a;
+    --border: #1e2b2e;
+    --text: #c9d6d6;
+    --text-dim: #7f9294;
+    --cyan: #2de2e6;
+    --amber: #ffb84d;
+    --red: #ff4d5e;
+    --green: #3ddc84;
+    --mono: 'Consolas', 'SF Mono', 'Cascadia Code', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: radial-gradient(circle at top, #0d1416 0%, #080c0d 100%);
+    color: var(--text);
+    font-family: var(--mono);
+    margin: 0;
+    padding: 32px 16px 80px;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 900px; margin: 0 auto; }
+
+  h1 {
+    color: var(--cyan);
+    font-size: 1.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    text-shadow: 0 0 12px rgba(45, 226, 230, 0.35);
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .intro {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cyan);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 0.92rem;
+    color: var(--text-dim);
+  }
+
+  /* Summary of steps */
+  .summary {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin-bottom: 32px;
+  }
+
+  .summary h2 {
+    color: var(--amber);
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 14px 0;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+  }
+
+  .summary-step {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    position: relative;
+  }
+
+  .summary-step .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(45, 226, 230, 0.12);
+    color: var(--cyan);
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .summary-step .title {
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
+  .summary-step .desc {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  /* Step panels */
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel-alt);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+  }
+
+  .step-badge {
+    background: var(--cyan);
+    color: #041012;
+    font-weight: bold;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    padding: 2px 9px;
+  }
+
+  .step-header h2 {
+    font-size: 1rem;
+    margin: 0;
+    color: var(--text);
+    text-transform: none;
+  }
+
+  .step-body {
+    padding: 18px 22px 22px;
+  }
+
+  .step-body p {
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    margin-top: 0;
+  }
+
+  .field-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+  }
+
+  .field-row label {
+    min-width: 210px;
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+
+  input[type="text"] {
+    background: #060a0b;
+    border: 1px solid var(--border);
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    padding: 7px 10px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 2px rgba(45, 226, 230, 0.15);
+  }
+
+  textarea {
+    background: #060a0b;
+    border: 1px solid var(--border);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    padding: 10px;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 560px;
+    resize: vertical;
+    outline: none;
+  }
+
+  textarea:focus { border-color: var(--cyan); }
+
+  button {
+    background: transparent;
+    color: var(--amber);
+    border: 1px solid var(--amber);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    letter-spacing: 0.5px;
+  }
+
+  button:hover {
+    background: var(--amber);
+    color: #1a0f00;
+    box-shadow: 0 0 14px rgba(255, 184, 77, 0.4);
+  }
+
+  hr.divider {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 16px 0;
+  }
+
+  .hint {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+  }
+
+  .formula {
+    color: var(--red);
+    font-size: 0.85rem;
+    margin-left: 4px;
+  }
+
+  a { color: var(--cyan); }
+
+  .converter {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: 6px;
+    padding: 14px 18px 16px;
+    margin: 16px 0 20px;
+  }
+
+  .converter-title {
+    color: var(--amber);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .ascii-section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px 24px;
+    margin-top: 8px;
+  }
+
+  .ascii-section h2 {
+    color: var(--cyan);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 6px 0;
+  }
+
+  .ascii-section .hint { margin-bottom: 14px; }
+
+  .ascii-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 6px;
+  }
+
+  .ascii-cell {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 4px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ascii-dec {
+    color: var(--text-dim);
+    font-size: 0.68rem;
+  }
+
+  .ascii-char {
+    color: var(--green);
+    font-size: 0.95rem;
+    font-weight: bold;
+    word-break: break-all;
+  }
+
+  .bitview {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 6px;
+    padding: 14px 18px 16px;
+    margin: 16px 0 20px;
+  }
+
+  .bitview-title {
+    color: var(--red);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .bit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+
+  .bit-row label {
+    min-width: 130px;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+
+  .bit-row input[type="text"] {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    min-width: 220px;
+  }
+
+  .bit-row input.xor-out { color: var(--red); }
+
+  footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    margin-top: 40px;
+    letter-spacing: 1px;
+    opacity: 0.6;
+  }
+</style>
+
+<script language="JavaScript">
+<!-- Hide from uneducated browsers
+	//----------------------------------------------------------------------
+
+		function mod( m, n )
+		{
+			return m - n*Math.floor(m/n)
+		}
+
+	//----------------------------------------------------------------------
+
+		function OldPowerMod(x,n,m)
+		// Compute x^n mod m
+		{
+			var p = 1
+			for ( i=0; i<n; i++ )
+				p = mod( (p*x),m )
+			return p
+		}
+
+	//----------------------------------------------------------------------
+
+		function PowerMod(x,p,N)
+		// Compute x^p mod N
+		{
+			var A = 1
+			var m = p
+			var t = x
+
+			while( m > 0 )
+			{
+				k = Math.floor( m/2 )
+				r = m - 2*k
+				if( r == 1 )
+					A = mod( A*t, N )
+				t = mod( t*t, N )
+				m = k
+			}
+			return A
+		}
+
+	//----------------------------------------------------------------------
+
+		function Factorize(n)
+		{
+			var temp = ""
+			var T = n
+			var PRIME = 1
+
+			var i=1
+			while( (T>1) && ( ++i < Math.sqrt(n)+1 ) )
+			{
+				while ( mod(T,i)==0 )
+				{
+					T = T/i
+					if( PRIME == 0 ) temp += "*"
+					if( PRIME == 1 ) PRIME = 0
+					temp += i
+				}
+			}
+
+			if( PRIME == 1 )
+				temp = " is prime."
+			else if( T>1 )
+				temp += "*" + T
+
+			return temp
+		}
+
+	//----------------------------------------------------------------------
+
+		function GCD(m,n)
+		{
+			while( m != n )
+			{
+				if( m == 1 || n == 1)
+					return 1
+				else if ( m < n )
+					n = mod(n,m)
+				else
+					m = mod(m,n)
+			}
+			return m
+		}
+
+	//----------------------------------------------------------------------
+
+		function Candidates(form)
+		{
+			var temp = ""           // Arithmetic is done with -r rather
+			var r = -form.r.value   // than r since "+" gets interpreted
+			var n = - (r-1)         // as a string operator, not arithmetic.
+			var line = ""
+
+			for( i=0; i<30; i++ )
+			{
+				if (line.length > 50)
+				{
+					temp += line + "\n"
+					line = ""
+				}
+				line += n + " "
+				n = n - r
+			}
+
+			return temp + line
+		}
+
+	//----------------------------------------------------------------------
+
+		function ComputeNr(form)
+		{
+			var p = form.p.value
+			var q = form.q.value
+			form.N.value = p*q
+			form.r.value = (p-1)*(q-1)
+			form.ed.value = Candidates(form)
+			return ""
+		}
+
+	//----------------------------------------------------------------------
+
+		function ComputeED(form)
+		{
+			form.factors.value = Factorize(form.K.value)
+			return ""
+		}
+
+	//----------------------------------------------------------------------
+
+		function CheckED(form)
+		{
+			var temp = ""
+			var e = form.e.value
+			var d = form.d.value
+			var r = form.r.value
+			var N = form.N.value
+
+			temp += "      e   = " + e + "\n"
+			temp += "      d   = " + d + "\n"
+			temp += "      N   = " + N + "\n"
+			temp += "      r   = " + r + "\n"
+			temp += "      e*d = " + eval(e*d) + "\n"
+			temp += "e*d mod r = " + mod((e*d),r) + "\n"
+
+			if( GCD(e,r) == 1 )
+				temp += "e and r are relatively prime\n"
+			else
+				temp += "e and r are not relatively prime; gcd(e,r) = " + GCD(e,r) + "\n"
+
+			if( GCD(d,r) == 1 )
+				temp += "d and r are relatively prime\n"
+			else
+				temp += "d and r are not relatively prime; gcd(d,r) = " + GCD(d,r) + "\n"
+
+			form.checker.value = temp
+			return ""
+		}
+
+		function CheckCode(form)
+		{
+			var temp = ""
+			var e = form.e.value
+			var d = form.d.value
+			var N = form.N.value
+			var M = form.Msg.value
+
+			form.Cipher.value = PowerMod(M,e,N)
+
+			var C = form.Cipher.value
+			form.Decipher.value = PowerMod(C,d,N)
+
+			return ""
+		}
+
+	//----------------------------------------------------------------------
+
+		function TextToNumeric(form)
+		// Convert each character of plainText into its ASCII decimal code
+		{
+			var text = form.plainText.value
+			var codes = []
+
+			for( var i=0; i<text.length; i++ )
+				codes.push( text.charCodeAt(i) )
+
+			form.numericOutput.value = codes.join(" ")
+			return ""
+		}
+
+	//----------------------------------------------------------------------
+
+		function padBits(str,len)
+		{
+			while( str.length < len )
+				str = "0" + str
+			return str
+		}
+
+		function ShowBits(form)
+		// Display the binary form of Msg and e (the key), and their bitwise XOR,
+		// purely as a side-by-side reference. Actual RSA encryption below uses
+		// modular exponentiation (Cipher = Msg^e mod N), NOT XOR.
+		{
+			var M = parseInt(form.Msg.value,10)
+			var K = parseInt(form.e.value,10)
+
+			if( isNaN(M) || isNaN(K) )
+			{
+				form.msgBits.value = ""
+				form.keyBits.value = ""
+				form.xorBits.value = ""
+				return ""
+			}
+
+			var Mbits = M.toString(2)
+			var Kbits = K.toString(2)
+			var len = Math.max(Mbits.length, Kbits.length)
+
+			Mbits = padBits(Mbits,len)
+			Kbits = padBits(Kbits,len)
+			var Xbits = padBits( (M ^ K).toString(2), len )
+
+			form.msgBits.value = Mbits
+			form.keyBits.value = Kbits
+			form.xorBits.value = Xbits + "  (decimal " + (M ^ K) + ")"
+			return ""
+		}
+
+	// end hiding from uneducated browsers -->
+</script>
+</head>
+
+<body>
+<div class="wrap">
+
+  <h1>RSA Calculator</h1>
+  <div class="subtitle">Interactive walkthrough of RSA public-key encryption and decryption</div>
+
+  <div class="intro">
+    This tool walks through the mechanics of RSA encryption step by step. It uses small numbers
+    for clarity — no provisions are made for high-precision arithmetic or efficient handling of
+    large values, so keep your choices modest.
+  </div>
+
+  <div class="summary">
+    <h2>Summary of Steps</h2>
+    <div class="summary-grid">
+      <div class="summary-step">
+        <span class="num">1</span>
+        <div class="title">Generate N and r</div>
+        <div class="desc">Pick two primes p and q. N = p&times;q becomes the modulus; r = (p&minus;1)(q&minus;1) is used to find valid key pairs.</div>
+      </div>
+      <div class="summary-step">
+        <span class="num">2</span>
+        <div class="title">Find a factorable K</div>
+        <div class="desc">From the list of candidates equal to 1 mod r, pick one (K) that factors into two usable numbers.</div>
+      </div>
+      <div class="summary-step">
+        <span class="num">3</span>
+        <div class="title">Choose e and d</div>
+        <div class="desc">Split K's factors into e and d, both relatively prime to r, so that e&times;d &equiv; 1 (mod r).</div>
+      </div>
+      <div class="summary-step">
+        <span class="num">4</span>
+        <div class="title">Encrypt / decrypt</div>
+        <div class="desc">Use e and N to encrypt a numeric message, then d and N to decrypt the ciphertext back to the original.</div>
+      </div>
+    </div>
+  </div>
+
+  <form action="https://www.cs.drexel.edu/~jpopyack/IntroCS/HW/RSAWorksheet.html" method="POST">
+
+    <div class="step">
+      <div class="step-header">
+        <span class="step-badge">1</span>
+        <h2>Compute N as the product of two prime numbers p and q</h2>
+      </div>
+      <div class="step-body">
+        <div class="field-row">
+          <label for="p">p</label>
+          <input type="text" name="p" id="p" value="" size="15">
+        </div>
+        <div class="field-row">
+          <label for="q">q</label>
+          <input type="text" name="q" id="q" value="" size="15">
+        </div>
+        <div class="field-row">
+          <button type="button" name="pqNr" onclick="ComputeNr(this.form)">Set p, q</button>
+          <span class="hint">Enter values for p and q, then click to compute N and r.</span>
+        </div>
+
+        <hr class="divider">
+
+        <p>The values of p and q you provided yield a modulus N, and also a number
+        r = (p&minus;1)(q&minus;1), which is very important. You will need to find two
+        numbers e and d whose product is a number equal to 1 mod r. Below appears a list
+        of some numbers which equal 1 mod r. You will use this list in Step 2.</p>
+
+        <div class="field-row">
+          <label for="N">N = p&times;q</label>
+          <input type="text" name="N" id="N" value="" size="15">
+        </div>
+        <div class="field-row">
+          <label for="r">r = (p&minus;1)&times;(q&minus;1)</label>
+          <input type="text" name="r" id="r" value="" size="15">
+        </div>
+        <div class="field-row" style="align-items:flex-start;">
+          <label>Candidates (1 mod r)</label>
+          <textarea name="ed" id="ed" rows="4" cols="60"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <span class="step-badge">2</span>
+        <h2>Find a number equal to 1 mod r which can be factored</h2>
+      </div>
+      <div class="step-body">
+        <div class="field-row">
+          <label for="K">K</label>
+          <input type="text" name="K" id="K" value="" size="15">
+        </div>
+        <div class="field-row">
+          <button type="button" name="ed2" onclick="ComputeED(this.form)">Factor K</button>
+          <span class="hint">Enter a candidate value K, then click to factor it.</span>
+        </div>
+
+        <hr class="divider">
+
+        <div class="field-row">
+          <label for="factors">Factors of K</label>
+          <input type="text" name="factors" id="factors" value="" size="25">
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <span class="step-badge">3</span>
+        <h2>Find two numbers e and d that are relatively prime to N and for which e&times;d &equiv; 1 mod r</h2>
+      </div>
+      <div class="step-body">
+        <p>Use the factorization info above to split K into two numbers, e and d.
+        Click the button to check correctness.</p>
+
+        <div class="field-row">
+          <button type="button" name="ed3" onclick="CheckED(this.form)">Check e &amp; d</button>
+        </div>
+
+        <div class="field-row">
+          <label for="e">e</label>
+          <input type="text" name="e" id="e" value="" size="15">
+        </div>
+        <div class="field-row">
+          <label for="d">d</label>
+          <input type="text" name="d" id="d" value="" size="15">
+        </div>
+        <div class="field-row" style="align-items:flex-start;">
+          <label>Consistency check</label>
+          <textarea name="checker" id="checker" rows="9" cols="60"></textarea>
+        </div>
+
+        <p class="hint">If your choices of e and d are acceptable, you should see the messages
+        "e*d mod r = 1", "e and r are relatively prime", and "d and r are relatively prime"
+        at the end of this box.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <span class="step-badge">4</span>
+        <h2>Use e and d to encode and decode messages</h2>
+      </div>
+      <div class="step-body">
+        <p>Enter a message in numeric form. Click the button to encode and decode it.
+        Break your message into small chunks so that the Msg codes are not larger than N.
+        (See the <a href="#ascii-table">ASCII Reference Table</a> below for ASCII code equivalences.)</p>
+
+        <div class="converter">
+          <div class="converter-title">Message &rarr; Numeric Converter</div>
+          <p class="hint">Type text below to see its ASCII codes. Copy one value at a time into the Msg field &mdash; each chunk must be smaller than N.</p>
+          <div class="field-row">
+            <label for="plainText">Text message</label>
+            <input type="text" name="plainText" id="plainText" value="" size="25">
+          </div>
+          <div class="field-row">
+            <button type="button" name="convert" onclick="TextToNumeric(this.form)">Convert to Numeric</button>
+          </div>
+          <div class="field-row" style="align-items:flex-start;">
+            <label>ASCII codes</label>
+            <input type="text" name="numericOutput" id="numericOutput" value="" size="45">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <button type="button" name="ed4" onclick="CheckCode(this.form); ShowBits(this.form)">Encode/Decode</button>
+        </div>
+
+        <div class="field-row">
+          <label for="Msg">Msg</label>
+          <input type="text" name="Msg" id="Msg" value="" size="15">
+        </div>
+
+        <div class="bitview">
+          <div class="bitview-title">Bit-Level View (for comparison, not part of RSA math)</div>
+          <p class="hint">RSA itself encrypts using modular exponentiation (Cipher = Msg<sup>e</sup> mod N), not XOR.
+          This panel just shows what a simple XOR cipher would look like using Msg as plaintext and e as the key,
+          so you can see how it differs from RSA.</p>
+          <div class="bit-row">
+            <label for="msgBits">Plaintext bits (Msg)</label>
+            <input type="text" name="msgBits" id="msgBits" value="" size="30" readonly>
+          </div>
+          <div class="bit-row">
+            <label for="keyBits">Key bits (e)</label>
+            <input type="text" name="keyBits" id="keyBits" value="" size="30" readonly>
+          </div>
+          <div class="bit-row">
+            <label for="xorBits">Msg &oplus; e (XOR)</label>
+            <input type="text" name="xorBits" id="xorBits" value="" size="30" class="xor-out" readonly>
+          </div>
+        </div>
+        <div class="field-row">
+          <label for="Cipher">Encrypted <span class="formula">Cipher = (Msg)<sup>e</sup> mod N</span></label>
+          <input type="text" name="Cipher" id="Cipher" value="" size="15">
+        </div>
+        <div class="field-row">
+          <label for="Decipher">Decrypted <span class="formula">Msg = (Cipher)<sup>d</sup> mod N</span></label>
+          <input type="text" name="Decipher" id="Decipher" value="" size="15">
+        </div>
+      </div>
+    </div>
+
+  </form>
+
+  <div class="ascii-section" id="ascii-table">
+    <h2>ASCII Reference Table</h2>
+    <p class="hint">Printable characters 32&ndash;126 with their decimal codes. Use these values when converting a message character by character, or with the Message &rarr; Numeric converter above.</p>
+    <div class="ascii-grid">
+      <div class="ascii-cell"><span class="ascii-dec">32</span><span class="ascii-char">Space</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">33</span><span class="ascii-char">!</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">34</span><span class="ascii-char">&quot;</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">35</span><span class="ascii-char">#</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">36</span><span class="ascii-char">$</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">37</span><span class="ascii-char">%</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">38</span><span class="ascii-char">&amp;</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">39</span><span class="ascii-char">'</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">40</span><span class="ascii-char">(</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">41</span><span class="ascii-char">)</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">42</span><span class="ascii-char">*</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">43</span><span class="ascii-char">+</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">44</span><span class="ascii-char">,</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">45</span><span class="ascii-char">-</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">46</span><span class="ascii-char">.</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">47</span><span class="ascii-char">/</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">48</span><span class="ascii-char">0</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">49</span><span class="ascii-char">1</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">50</span><span class="ascii-char">2</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">51</span><span class="ascii-char">3</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">52</span><span class="ascii-char">4</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">53</span><span class="ascii-char">5</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">54</span><span class="ascii-char">6</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">55</span><span class="ascii-char">7</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">56</span><span class="ascii-char">8</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">57</span><span class="ascii-char">9</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">58</span><span class="ascii-char">:</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">59</span><span class="ascii-char">;</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">60</span><span class="ascii-char">&lt;</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">61</span><span class="ascii-char">=</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">62</span><span class="ascii-char">&gt;</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">63</span><span class="ascii-char">?</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">64</span><span class="ascii-char">@</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">65</span><span class="ascii-char">A</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">66</span><span class="ascii-char">B</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">67</span><span class="ascii-char">C</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">68</span><span class="ascii-char">D</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">69</span><span class="ascii-char">E</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">70</span><span class="ascii-char">F</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">71</span><span class="ascii-char">G</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">72</span><span class="ascii-char">H</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">73</span><span class="ascii-char">I</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">74</span><span class="ascii-char">J</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">75</span><span class="ascii-char">K</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">76</span><span class="ascii-char">L</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">77</span><span class="ascii-char">M</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">78</span><span class="ascii-char">N</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">79</span><span class="ascii-char">O</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">80</span><span class="ascii-char">P</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">81</span><span class="ascii-char">Q</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">82</span><span class="ascii-char">R</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">83</span><span class="ascii-char">S</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">84</span><span class="ascii-char">T</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">85</span><span class="ascii-char">U</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">86</span><span class="ascii-char">V</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">87</span><span class="ascii-char">W</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">88</span><span class="ascii-char">X</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">89</span><span class="ascii-char">Y</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">90</span><span class="ascii-char">Z</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">91</span><span class="ascii-char">[</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">92</span><span class="ascii-char">\</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">93</span><span class="ascii-char">]</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">94</span><span class="ascii-char">^</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">95</span><span class="ascii-char">_</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">96</span><span class="ascii-char">`</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">97</span><span class="ascii-char">a</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">98</span><span class="ascii-char">b</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">99</span><span class="ascii-char">c</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">100</span><span class="ascii-char">d</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">101</span><span class="ascii-char">e</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">102</span><span class="ascii-char">f</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">103</span><span class="ascii-char">g</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">104</span><span class="ascii-char">h</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">105</span><span class="ascii-char">i</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">106</span><span class="ascii-char">j</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">107</span><span class="ascii-char">k</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">108</span><span class="ascii-char">l</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">109</span><span class="ascii-char">m</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">110</span><span class="ascii-char">n</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">111</span><span class="ascii-char">o</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">112</span><span class="ascii-char">p</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">113</span><span class="ascii-char">q</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">114</span><span class="ascii-char">r</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">115</span><span class="ascii-char">s</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">116</span><span class="ascii-char">t</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">117</span><span class="ascii-char">u</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">118</span><span class="ascii-char">v</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">119</span><span class="ascii-char">w</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">120</span><span class="ascii-char">x</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">121</span><span class="ascii-char">y</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">122</span><span class="ascii-char">z</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">123</span><span class="ascii-char">{</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">124</span><span class="ascii-char">|</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">125</span><span class="ascii-char">}</span></div>
+      <div class="ascii-cell"><span class="ascii-dec">126</span><span class="ascii-char">~</span></div>
+    </div>
+  </div>
+
+  <footer>RSA CALCULATOR &middot; CIT 2640 &middot; CRYPTOGRAPHY CONCEPTS</footer>
+</div>
+</body>
+</html>
