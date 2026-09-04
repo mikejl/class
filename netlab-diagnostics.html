@@ -4,31 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Netlab Reachability Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0e1720;
-    --panel:#14202b;
-    --panel-2:#182735;
-    --border:#25384a;
-    --text:#dbe6ee;
-    --text-dim:#8ca0b3;
-    --green:#37c07c;
-    --green-dim:#173a2a;
-    --red:#e5555f;
-    --red-dim:#3c1c20;
-    --amber:#e0ac3f;
-    --amber-dim:#3a2f18;
-    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --bg:#F5F5F5;
+    --panel:#FFFFFF;
+    --panel-2:#F5F5F5;
+    --border:#C7CDD1;
+    --text:#2D3B45;
+    --text-dim:#73818C;
+    --blue:#0374B5;
+    --blue-dim:#E5F1F8;
+    --green:#0B874B;
+    --green-dim:#E6F4EC;
+    --red:#E0061F;
+    --red-dim:#FCEAEB;
+    --amber:#C23C0D;
+    --amber-dim:#FDF0E8;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: 'Lato', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   }
 
   * { box-sizing: border-box; }
 
   body{
     margin:0;
-    background:
-      radial-gradient(circle at 15% 0%, #16232f 0%, transparent 45%),
-      var(--bg);
+    background: var(--bg);
     color: var(--text);
     font-family: var(--sans);
     min-height:100vh;
@@ -51,7 +54,7 @@
     letter-spacing: 0.2px;
   }
 
-  .target-line span{ color: #6fb8ff; }
+  .target-line span{ color: var(--blue); font-weight: 700; }
 
   h1{
     font-size: 28px;
@@ -71,9 +74,10 @@
   .card{
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 4px;
     padding: 22px 24px;
     margin-bottom: 18px;
+    box-shadow: 0 1px 2px rgba(45,59,69,0.06);
   }
 
   .card-title{
@@ -119,26 +123,26 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #3a4757;
+    background: #C7CDD1;
     flex: none;
-    box-shadow: 0 0 0 4px rgba(255,255,255,0.03);
+    box-shadow: 0 0 0 4px rgba(45,59,69,0.04);
     transition: background .25s ease, box-shadow .25s ease;
   }
 
   .light.pending{
     background: var(--amber);
-    box-shadow: 0 0 14px 2px rgba(224,172,63,0.45);
+    box-shadow: 0 0 0 5px var(--amber-dim);
     animation: pulse 1.3s ease-in-out infinite;
   }
 
   .light.pass{
     background: var(--green);
-    box-shadow: 0 0 14px 2px rgba(55,192,124,0.5);
+    box-shadow: 0 0 0 5px var(--green-dim);
   }
 
   .light.fail{
     background: var(--red);
-    box-shadow: 0 0 14px 2px rgba(229,85,95,0.5);
+    box-shadow: 0 0 0 5px var(--red-dim);
   }
 
   @keyframes pulse{
@@ -174,24 +178,25 @@
 
   .recheck{
     margin-top: 14px;
-    background: var(--panel-2);
+    background: #FFFFFF;
     border: 1px solid var(--border);
-    color: var(--text);
+    color: var(--blue);
     font-family: var(--sans);
+    font-weight: 700;
     font-size: 13px;
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
   }
-  .recheck:hover{ border-color: #3a4d61; }
-  .recheck:disabled{ opacity: .5; cursor: default; }
+  .recheck:hover{ background: var(--blue-dim); border-color: var(--blue); }
+  .recheck:disabled{ opacity: .5; cursor: default; background: #FFFFFF; }
 
   /* --- traceroute card --- */
   .notice{
-    background: var(--panel-2);
+    background: var(--amber-dim);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--amber);
-    border-radius: 6px;
+    border-left: 4px solid var(--amber);
+    border-radius: 4px;
     padding: 14px 16px;
     font-size: 13.5px;
     line-height: 1.6;
@@ -211,9 +216,9 @@
     display:flex;
     align-items:center;
     gap: 10px;
-    background: #0b141c;
+    background: #2D3B45;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 12px 14px;
     margin-bottom: 10px;
   }
@@ -221,25 +226,26 @@
   .cmd-box code{
     font-family: var(--mono);
     font-size: 14px;
-    color: #a9e6c4;
+    color: #C7E9D6;
     flex: 1;
     overflow-x: auto;
     white-space: pre;
   }
 
   .copy-btn{
-    background: var(--panel-2);
+    background: #FFFFFF;
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--sans);
+    font-weight: 700;
     font-size: 12px;
     padding: 6px 11px;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
     flex: none;
   }
-  .copy-btn:hover{ border-color: #3a4d61; }
-  .copy-btn.copied{ color: var(--green); border-color: var(--green-dim); }
+  .copy-btn:hover{ background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .copy-btn.copied{ color: var(--green); border-color: var(--green); background: var(--green-dim); }
 
   .online-alt{
     font-size: 13px;
@@ -249,8 +255,9 @@
   }
 
   .online-alt a{
-    color: #6fb8ff;
+    color: var(--blue);
     text-decoration: none;
+    font-weight: 700;
   }
   .online-alt a:hover{ text-decoration: underline; }
 
@@ -261,10 +268,11 @@
   }
 
   .os-tab{
-    background: transparent;
+    background: #FFFFFF;
     border: 1px solid var(--border);
     color: var(--text-dim);
     font-family: var(--sans);
+    font-weight: 700;
     font-size: 12.5px;
     padding: 6px 12px;
     border-radius: 999px;
@@ -272,9 +280,9 @@
   }
 
   .os-tab.active{
-    color: var(--bg);
-    background: var(--text);
-    border-color: var(--text);
+    color: #FFFFFF;
+    background: var(--blue);
+    border-color: var(--blue);
   }
 
   footer{
