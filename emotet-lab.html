@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIT 2640 — Emotet Malware Analysis Lab</title>
+<style>
+  :root{
+    --bg: #0b0e12;
+    --panel: #12161d;
+    --panel-2: #161b23;
+    --border: #232a35;
+    --text: #d7dee6;
+    --dim: #8592a3;
+    --cyan: #2ee6d6;
+    --red: #ff4757;
+    --amber: #ffb020;
+    --green: #35d07f;
+    --mono: 'Consolas','SFMono-Regular','Cascadia Mono','Courier New', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px;
+    background: radial-gradient(circle at top, #10141a 0%, #0b0e12 60%);
+    color:var(--text);
+    font-family: var(--mono);
+    line-height:1.55;
+  }
+  .wrap{max-width:920px; margin:0 auto;}
+  header{
+    border:1px solid var(--border);
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border-radius:10px;
+    padding:22px 26px;
+    margin-bottom:22px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg,var(--red),var(--amber),var(--cyan));
+  }
+  .tag{
+    display:inline-block; font-size:11px; letter-spacing:2px; color:var(--red);
+    border:1px solid var(--red); padding:3px 8px; border-radius:4px; margin-bottom:10px;
+  }
+  h1{margin:0 0 6px 0; font-size:24px; color:#fff; letter-spacing:0.5px;}
+  .sub{color:var(--dim); font-size:13px;}
+  .meta-row{display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--dim);}
+  .meta-row b{color:var(--cyan);}
+  section{
+    border:1px solid var(--border);
+    background:var(--panel);
+    border-radius:10px;
+    padding:20px 24px;
+    margin-bottom:18px;
+  }
+  h2{
+    color:var(--cyan); font-size:16px; margin-top:0;
+    border-bottom:1px solid var(--border); padding-bottom:10px;
+    letter-spacing:0.5px;
+  }
+  h3{color:var(--amber); font-size:14px; margin-bottom:6px;}
+  p{color:var(--text); font-size:14px;}
+  .dim{color:var(--dim);}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; margin:12px 0;}
+  th,td{border:1px solid var(--border); padding:7px 10px; text-align:left; vertical-align:top;}
+  th{background:#171d26; color:var(--cyan); font-weight:600;}
+  tr:nth-child(even) td{background:#0f131a;}
+  code, .mono-inline{font-family:var(--mono); color:var(--amber); font-size:12.5px;}
+  pre.snippet{
+    font-family:var(--mono); font-size:11.5px; color:var(--cyan);
+    background:#0a0d12; border:1px solid var(--border); border-radius:5px;
+    padding:8px 10px; margin:4px 0 0 0; white-space:pre-wrap; word-break:break-word;
+  }
+  td.snippet-cell{min-width:220px;}
+  .attempts-left{font-size:11px; color:var(--dim); margin-top:6px; display:block;}
+  .flow{
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0;
+  }
+  .flow span.step{
+    background:#171d26; border:1px solid var(--border); border-radius:6px;
+    padding:8px 12px; font-size:12px; color:var(--text);
+  }
+  .flow span.arrow{color:var(--dim);}
+  .badge{
+    display:inline-block; font-size:10.5px; padding:2px 7px; border-radius:4px;
+    border:1px solid; margin-left:6px;
+  }
+  .badge.evasion{color:var(--red); border-color:var(--red);}
+  .badge.c2{color:var(--cyan); border-color:var(--cyan);}
+  .badge.persist{color:var(--amber); border-color:var(--amber);}
+
+  .question{
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    border-radius:8px;
+    padding:18px 20px;
+    margin-bottom:16px;
+  }
+  .q-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
+  .q-title{color:#fff; font-size:14.5px; font-weight:600;}
+  .points{color:var(--amber); font-size:12px; border:1px solid var(--amber); padding:2px 8px; border-radius:4px;}
+  .q-prompt{font-size:13.5px; margin-bottom:12px; color:var(--text);}
+  .options label{
+    display:block; padding:9px 12px; margin-bottom:7px;
+    border:1px solid var(--border); border-radius:6px; cursor:pointer;
+    font-size:13px; background:#0f131a; transition:border-color .15s;
+  }
+  .options label:hover{border-color:var(--cyan);}
+  .options input{margin-right:9px;}
+  .feedback{
+    display:none; margin-top:10px; padding:10px 12px; border-radius:6px;
+    font-size:13px; border:1px solid;
+  }
+  .feedback.correct{display:block; color:var(--green); border-color:var(--green); background:rgba(53,208,127,0.08);}
+  .feedback.incorrect{display:block; color:var(--red); border-color:var(--red); background:rgba(255,71,87,0.08);}
+  .locked label{opacity:0.55; pointer-events:none;}
+  .locked label.right-answer{opacity:1; border-color:var(--green); background:rgba(53,208,127,0.08);}
+  .locked label.wrong-picked{opacity:1; border-color:var(--red); background:rgba(255,71,87,0.08);}
+
+  button{
+    font-family:var(--mono); font-size:13px; letter-spacing:0.5px;
+    background:linear-gradient(180deg,#1c2632,#151c25);
+    color:var(--cyan); border:1px solid var(--cyan);
+    padding:10px 18px; border-radius:6px; cursor:pointer;
+  }
+  button:hover{background:var(--cyan); color:#0b0e12;}
+  button:disabled{opacity:0.4; cursor:not-allowed; background:#171d26; color:var(--dim); border-color:var(--border);}
+  button.danger{border-color:var(--red); color:var(--red);}
+  button.danger:hover{background:var(--red); color:#0b0e12;}
+
+  .scorebar{
+    display:flex; align-items:center; gap:14px; margin-top:16px;
+    padding-top:14px; border-top:1px dashed var(--border);
+  }
+  .scorebar .num{font-size:22px; color:#fff; font-weight:700;}
+  progress{width:100%; height:10px; accent-color:var(--cyan);}
+
+  .completion input[type=text]{
+    font-family:var(--mono); background:#0f131a; border:1px solid var(--border);
+    color:var(--text); padding:10px 12px; border-radius:6px; width:100%; font-size:13px;
+  }
+  .completion label.field-label{display:block; font-size:12px; color:var(--dim); margin-bottom:6px; margin-top:12px;}
+  .cert{
+    display:none; margin-top:18px; border:1px solid var(--cyan); border-radius:8px;
+    padding:20px; background:rgba(46,230,214,0.05);
+  }
+  .cert h3{color:var(--cyan); margin-top:0;}
+  .cert .row{display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dotted var(--border);}
+  .cert .row:last-child{border-bottom:none;}
+  .footer-note{text-align:center; color:var(--dim); font-size:11px; margin-top:24px;}
+
+  @media print{
+    body{background:#fff; color:#000;}
+    button, .options{display:none !important;}
+    section{border:1px solid #ccc; background:#fff;}
+    .cert{display:block !important; border-color:#333;}
+    header::before{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="tag">CIT 2640 · MALWARE ANALYSIS · OFFLINE LAB</div>
+    <h1>Emotet: Fileless Loader, Flattened Control Flow &amp; ECDH C2</h1>
+    <div class="sub">Case study lab — analyzing a real, documented post-takedown Emotet loader chain. No live malware execution required. All content below is for educational analysis only.</div>
+    <div class="meta-row">
+      <div>Total value: <b>20 points</b></div>
+      <div>Questions: <b>4 (5 pts each)</b></div>
+      <div>Format: <b>Self-contained, offline, auto-graded</b></div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Briefing</h2>
+    <p>Emotet began as a banking trojan in 2014 and has since evolved into a modular loader used to hand off follow-on payloads for other criminal groups, including operators behind Trickbot and Ryuk. It spreads mainly through phishing documents and malicious links, and it has repeatedly resurfaced after law-enforcement takedowns with retooled evasion techniques.</p>
+    <p>A researcher recently reverse-engineered a post-takedown Emotet sample end-to-end: the initial script dropper, the fileless in-memory payload, its anti-analysis tricks, and its encrypted command-and-control channel. This lab walks through the key stages of that analysis. Read each briefing panel carefully — the quiz below tests whether you understand <em>why</em> each technique works, not just that it exists.</p>
+
+    <h3>Attack chain overview</h3>
+    <div class="flow">
+      <span class="step">Phishing doc / VBS script</span><span class="arrow">→</span>
+      <span class="step">2nd-stage VBS in %temp% (.txt)</span><span class="arrow">→</span>
+      <span class="step">rundll32.exe loads Emotet DLL</span><span class="arrow">→</span>
+      <span class="step">X.dll decrypted into RWX memory</span><span class="arrow">→</span>
+      <span class="step">Relocate to %AppData% (.xnj)</span><span class="arrow">→</span>
+      <span class="step">ECDH/AES key exchange</span><span class="arrow">→</span>
+      <span class="step">HTTP C2 via Cookie header</span>
+    </div>
+
+    <h3>Key findings from the analysis <span class="badge evasion">Evasion</span><span class="badge c2">C2</span><span class="badge persist">Persistence</span></h3>
+    <table>
+      <tr><th>#</th><th>Finding</th><th>Snippet / Indicator</th><th>Category</th></tr>
+      <tr>
+        <td>1</td>
+        <td>A two-stage VBS dropper writes its second-stage script into <code>%temp%</code> disguised as a <code>.txt</code> file, then executes it directly as VBScript regardless of extension.</td>
+        <td class="snippet-cell"><pre class="snippet">cscript //E:vbscript /x extracted_script.txt</pre></td>
+        <td><span class="badge evasion">Evasion</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>The real payload, nicknamed <code>X.dll</code>, is stored encrypted inside a bitmap resource of the outer DLL and is decrypted straight into an executable (RWX) memory region — it never touches disk.</td>
+        <td class="snippet-cell"><pre class="snippet">rwx = VirtualAlloc(NULL, size,
+  MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+Decrypt(resourceBlob, rwx, size);</pre></td>
+        <td><span class="badge evasion">Evasion</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>The main routine uses control flow flattening, which defeated the public deobfuscation tools the researcher tried and forced manual, breakpoint-driven analysis.</td>
+        <td class="snippet-cell"><pre class="snippet">while (state != EXIT) {
+  switch (state) {
+    case S1: ...; state = S4; break;
+    case S4: ...; state = S2; break;
+    // dispatcher order != real order
+  }
+}</pre></td>
+        <td><span class="badge evasion">Evasion</span></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Every Windows API is resolved at runtime by comparing hashes rather than through a normal import table, so static analysis shows almost nothing about functionality.</td>
+        <td class="snippet-cell"><pre class="snippet">hLib = LoadLibraryW(DecryptStr(encName));
+fn = resolve_func(hLib, targetHash);
+fn(args);</pre></td>
+        <td><span class="badge evasion">Evasion</span></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>If not already running from <code>%AppData%</code>, the malware copies itself there under a randomized name with a <code>.xnj</code> extension, strips the Zone.Identifier (Mark-of-the-Web), and relaunches itself.</td>
+        <td class="snippet-cell"><pre class="snippet">SHGetFolderPathW(CSIDL_APPDATA, ...);
+SHFileOperationW(FO_COPY, self, dst);
+DeleteFileW(dst + ":Zone.Identifier");
+CreateProcessW(rundll32, dst, ...);</pre></td>
+        <td><span class="badge persist">Persistence</span></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>Once relocated, it deletes every other file in its own directory — collateral damage that happens to destroy analyst tooling like IDA database files.</td>
+        <td class="snippet-cell"><pre class="snippet">for f in ListDir(homeDir):
+  if f != selfName:
+    DeleteFileW(f)</pre></td>
+        <td><span class="badge evasion">Evasion</span></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>It generates an ECDH key pair, combines it with an embedded public key to derive a shared secret, and derives an AES key from that secret for encrypting C2 traffic.</td>
+        <td class="snippet-cell"><pre class="snippet">BCryptGenerateKeyPair(...);
+BCryptSecretAgreement(priv, embeddedPub, &secret);
+BCryptDeriveKey(secret, "AES", &aesKey);</pre></td>
+        <td><span class="badge c2">C2</span></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>Encrypted, base64-encoded data is transmitted inside a randomly named HTTP Cookie header to a randomly generated URI, switching to POST for larger payloads.</td>
+        <td class="snippet-cell"><pre class="snippet">Cookie: rXk3z9Qp=&lt;base64(pubKey
+  + AES_Encrypt(hostData, aesKey)
+  + randomPadding)&gt;</pre></td>
+        <td><span class="badge c2">C2</span></td>
+      </tr>
+    </table>
+
+    <h3>Selected MITRE ATT&amp;CK mapping</h3>
+    <table>
+      <tr><th>Tactic</th><th>Technique</th><th>ID</th></tr>
+      <tr><td>Execution</td><td>Command and Scripting Interpreter: Visual Basic</td><td>T1059.005</td></tr>
+      <tr><td>Defense Evasion</td><td>Reflective Code Loading</td><td>T1620</td></tr>
+      <tr><td>Defense Evasion</td><td>Obfuscated Files or Information: Dynamic API Resolution</td><td>T1027.007</td></tr>
+      <tr><td>Defense Evasion</td><td>Subvert Trust Controls: Mark-of-the-Web Bypass</td><td>T1553.005</td></tr>
+      <tr><td>Defense Evasion</td><td>Indicator Removal: File Deletion</td><td>T1070.004</td></tr>
+      <tr><td>Command &amp; Control</td><td>Encrypted Channel: Asymmetric Cryptography</td><td>T1573.002</td></tr>
+    </table>
+
+    <h3>Detection opportunities (behavioral, not signature-based)</h3>
+    <p>Because the payload is fileless and every API call is hash-resolved, the researcher notes that detection has to lean on behavior: <code>rundll32.exe</code> running a DLL from <code>%AppData%</code> with the export <code>Control_RunDLL</code>; a script host writing a <code>.txt</code> file to <code>%temp%</code> and immediately executing it as a script; Zone.Identifier deletion right after a copy into <code>%AppData%</code>; a process deleting every file in its own directory; and the specific API sequence <code>BCryptGenerateKeyPair</code> → <code>BCryptSecretAgreement</code> → <code>BCryptDeriveKey</code> followed by <code>wininet</code> traffic carrying a large base64 blob in a randomly named cookie.</p>
+  </section>
+
+  <section>
+    <h2>Assessment — 4 Questions, 20 Points Total</h2>
+    <p class="dim">Select one answer per question, then click "Check Answer." You get up to two attempts per question; answer order is randomized each time the page loads. Your running score updates below. Complete all four to unlock the completion step.</p>
+
+    <div class="question" id="q1"></div>
+    <div class="question" id="q2"></div>
+    <div class="question" id="q3"></div>
+    <div class="question" id="q4"></div>
+
+    <div class="scorebar">
+      <div>Score: <span class="num"><span id="scoreNum">0</span>/20</span></div>
+      <progress id="scoreBar" value="0" max="20"></progress>
+    </div>
+  </section>
+
+  <section class="completion">
+    <h2>Completion Step</h2>
+    <p class="dim">Once all four questions are checked, fill in your name and click "Finalize Lab" to generate your completion record. Print or screenshot this page to submit as your assignment record, per your instructor's instructions.</p>
+    <label class="field-label">Student Name</label>
+    <input type="text" id="studentName" placeholder="Type your full name here">
+    <div style="margin-top:16px;">
+      <button id="finalizeBtn" disabled>Finalize Lab (complete all questions first)</button>
+      <button id="resetBtn" class="danger" style="margin-left:10px;">Reset Lab</button>
+    </div>
+
+    <div class="cert" id="cert">
+      <h3>&#10003; Lab Completion Record</h3>
+      <div class="row"><span>Student Name</span><span id="certName">—</span></div>
+      <div class="row"><span>Assignment</span><span>Emotet Malware Analysis Lab — CIT 2640</span></div>
+      <div class="row"><span>Date / Time Completed</span><span id="certDate">—</span></div>
+      <div class="row"><span>Final Score</span><span id="certScore">—</span></div>
+    </div>
+  </section>
+
+  <div class="footer-note">CIT 2640 · Network Security &amp; Malware Analysis · Offline auto-graded lab · Source analysis: post-takedown Emotet loader case study, used for educational purposes only.</div>
+</div>
+
+<script>
+(function(){
+  // Correct answers are stored as 32-bit hashes of an internal option key,
+  // never as plain letters — the DOM order is also randomized per page load.
+  function _h(s){
+    var x = 0;
+    for (var i = 0; i < s.length; i++){ x = ((x * 31 + s.charCodeAt(i)) >>> 0); }
+    return x;
+  }
+
+  var Q = [
+    {
+      id: 'q1', pts: 5,
+      t: 'Question 1 — Two-Stage Dropper',
+      p: 'The first-stage VBS script writes a second obfuscated VBS payload into <code>%temp%</code> saved with a <code>.txt</code> extension, then executes it with <code>cscript //E:vbscript</code>. What is the primary purpose of saving it as <code>.txt</code> rather than <code>.vbs</code>?',
+      o: [
+        {k:'q1o0', x:'To reduce the file size of the payload before download'},
+        {k:'q1o1', x:"To evade extension-based detection and filtering while forcing the script engine to interpret the content as VBScript regardless of the file's extension"},
+        {k:'q1o2', x:'To register the file as a scheduled task automatically'},
+        {k:'q1o3', x:'To encrypt the file so antivirus engines cannot open it'}
+      ],
+      c: 3416962
+    },
+    {
+      id: 'q2', pts: 5,
+      t: 'Question 2 — Fileless X.dll',
+      p: 'The core payload, <code>X.dll</code>, is stored encrypted inside a bitmap resource of the outer DLL and is decrypted directly into an RWX memory region at runtime instead of being written to disk. Why does this specifically make signature-based antivirus detection harder?',
+      o: [
+        {k:'q2o0', x:"It disables Windows Defender's real-time protection service"},
+        {k:'q2o1', x:'It makes the DLL too large for antivirus engines to scan'},
+        {k:'q2o2', x:'There is no malicious file on disk for a signature scanner to hash or inspect — the code only exists in memory, so detection must shift to runtime/behavioral monitoring'},
+        {k:'q2o3', x:'It automatically deletes the antivirus signature database'}
+      ],
+      c: 3417924
+    },
+    {
+      id: 'q3', pts: 5,
+      t: 'Question 3 — Control Flow Flattening &amp; API Hashing',
+      p: "Emotet's main routine uses control flow flattening, and every Windows API it calls is resolved at runtime by comparing hashes rather than through a normal import table. What is the combined effect of these two techniques on an analyst's workflow?",
+      o: [
+        {k:'q3o0', x:'They defeat common automated deobfuscators and remove the normal import table an analyst relies on, forcing slower, manual, breakpoint-driven behavioral analysis'},
+        {k:'q3o1', x:'They make the malware execute faster on multi-core CPUs'},
+        {k:'q3o2', x:'They allow the malware to replicate itself over removable USB drives'},
+        {k:'q3o3', x:"They exist only to reduce the compiled binary's size on disk"}
+      ],
+      c: 3418883
+    },
+    {
+      id: 'q4', pts: 5,
+      t: 'Question 4 — C2 Encryption &amp; ATT&amp;CK Mapping',
+      p: 'Emotet generates an ECDH key pair, combines it with an embedded public key via <code>BCryptSecretAgreement</code> to derive a shared secret, then derives an AES key from that secret to encrypt data carried in an HTTP Cookie header to its C2 server. Which MITRE ATT&amp;CK technique best matches this behavior?',
+      o: [
+        {k:'q4o0', x:'T1566.001 — Phishing: Spearphishing Attachment'},
+        {k:'q4o1', x:'T1070.004 — Indicator Removal: File Deletion'},
+        {k:'q4o2', x:'T1082 — System Information Discovery'},
+        {k:'q4o3', x:'T1573.002 — Encrypted Channel: Asymmetric Cryptography'}
+      ],
+      c: 3419847
+    }
+  ];
+
+  function shuffle(a){
+    var arr = a.slice();
+    for (var i = arr.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  var LETTERS = ['A','B','C','D'];
+  var MAX_ATTEMPTS = 2;
+  var totalScore = 0;
+  var answeredCount = 0;
+
+  function updateScoreDisplay(){
+    document.getElementById('scoreNum').textContent = totalScore;
+    document.getElementById('scoreBar').value = totalScore;
+    var fb = document.getElementById('finalizeBtn');
+    if (answeredCount === Q.length){
+      fb.disabled = false;
+      fb.textContent = 'Finalize Lab';
+    }
+  }
+
+  Q.forEach(function(q){
+    var host = document.getElementById(q.id);
+    var opts = shuffle(q.o);
+
+    var html = '<div class="q-head"><span class="q-title">' + q.t + '</span><span class="points">' + q.pts + ' pts</span></div>';
+    html += '<p class="q-prompt">' + q.p + '</p>';
+    html += '<div class="options">';
+    opts.forEach(function(o, idx){
+      html += '<label><input type="radio" name="' + q.id + '" value="' + o.k + '"> ' + LETTERS[idx] + ') ' + o.x + '</label>';
+    });
+    html += '</div>';
+    html += '<div class="feedback"></div>';
+    html += '<span class="attempts-left">Attempts remaining: ' + MAX_ATTEMPTS + '</span>';
+    html += '<button class="check-btn">Check Answer</button>';
+    host.innerHTML = html;
+
+    var btn = host.querySelector('.check-btn');
+    var feedback = host.querySelector('.feedback');
+    var optionsDiv = host.querySelector('.options');
+    var attemptsLabel = host.querySelector('.attempts-left');
+    var used = 0, settled = false;
+
+    btn.addEventListener('click', function(){
+      if (settled) return;
+      var sel = host.querySelector('input[name="' + q.id + '"]:checked');
+      if (!sel){
+        feedback.className = 'feedback incorrect';
+        feedback.style.display = 'block';
+        feedback.textContent = 'Select an answer before checking.';
+        return;
+      }
+      used += 1;
+      var ok = (_h(sel.value) === q.c);
+
+      if (ok){
+        settled = true;
+        optionsDiv.classList.add('locked');
+        feedback.className = 'feedback correct';
+        feedback.style.display = 'block';
+        feedback.textContent = 'Correct — +' + q.pts + ' points.';
+        totalScore += q.pts;
+        answeredCount += 1;
+        btn.disabled = true;
+        attemptsLabel.textContent = '';
+      } else if (used < MAX_ATTEMPTS){
+        feedback.className = 'feedback incorrect';
+        feedback.style.display = 'block';
+        feedback.textContent = 'Incorrect — try again.';
+        attemptsLabel.textContent = 'Attempts remaining: ' + (MAX_ATTEMPTS - used);
+      } else {
+        settled = true;
+        optionsDiv.classList.add('locked');
+        feedback.className = 'feedback incorrect';
+        feedback.style.display = 'block';
+        feedback.textContent = 'Incorrect. No attempts remaining — 0 points awarded for this question.';
+        answeredCount += 1;
+        btn.disabled = true;
+        attemptsLabel.textContent = 'Attempts remaining: 0';
+      }
+      updateScoreDisplay();
+    });
+  });
+
+  document.getElementById('finalizeBtn').addEventListener('click', function(){
+    var nameField = document.getElementById('studentName');
+    if (!nameField.value.trim()){
+      nameField.style.borderColor = 'var(--red)';
+      nameField.placeholder = 'Name required to finalize';
+      return;
+    }
+    var now = new Date();
+    document.getElementById('certName').textContent = nameField.value.trim();
+    document.getElementById('certDate').textContent = now.toLocaleString();
+    document.getElementById('certScore').textContent = totalScore + ' / 20';
+    document.getElementById('cert').style.display = 'block';
+    document.getElementById('finalizeBtn').disabled = true;
+    document.getElementById('finalizeBtn').textContent = 'Lab Finalized';
+    document.getElementById('cert').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    if (confirm('Reset the entire lab? This clears all answers and the completion record.')){
+      location.reload();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
