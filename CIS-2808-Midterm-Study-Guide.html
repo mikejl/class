@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIS-2808 Midterm Lab Study Guide</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --card-bg: #ffffff;
+    --border: #e2e5ea;
+    --text: #22262b;
+    --text-soft: #565d68;
+    --accent: #2a5db0;
+    --accent-soft: #eaf1fc;
+    --accent-2: #1f7a5c;
+    --accent-2-soft: #e7f6f0;
+    --warn: #a15c00;
+    --warn-soft: #fdf1de;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 16px 60px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header {
+    padding: 32px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 1.7rem;
+    color: var(--text);
+  }
+  header p.sub {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.98rem;
+  }
+  .banner {
+    background: var(--warn-soft);
+    border: 1px solid #f0d9ad;
+    color: var(--warn);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.92rem;
+    margin-bottom: 30px;
+  }
+  .banner strong { color: var(--warn); }
+  h2.case-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 1.25rem;
+    margin: 0 0 4px;
+    color: var(--accent);
+  }
+  .points-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 20px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+  section.case {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 26px 26px;
+    margin-bottom: 22px;
+    box-shadow: 0 1px 2px rgba(20,24,30,0.04);
+  }
+  .scenario {
+    font-size: 0.95rem;
+    color: var(--text-soft);
+    margin: 6px 0 16px;
+    font-style: italic;
+  }
+  h3.block-title {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-soft);
+    margin: 18px 0 8px;
+  }
+  ul.review-list, ol.review-list {
+    margin: 0 0 4px;
+    padding-left: 22px;
+  }
+  ul.review-list li, ol.review-list li {
+    margin-bottom: 6px;
+  }
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 8px 0 4px;
+  }
+  .concept-chip {
+    background: var(--accent-2-soft);
+    border: 1px solid #cdeadd;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.88rem;
+    color: #16543e;
+  }
+  .concept-chip strong { color: var(--accent-2); display: block; margin-bottom: 2px; font-size: 0.86rem; }
+  details.self-check {
+    margin-top: 16px;
+    background: var(--accent-soft);
+    border: 1px solid #cfe0f7;
+    border-radius: 10px;
+    padding: 10px 16px;
+  }
+  details.self-check summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.92rem;
+  }
+  details.self-check ul { margin-top: 10px; }
+  footer {
+    margin-top: 30px;
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 0.85rem;
+  }
+  .checklist-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 22px;
+  }
+  .checklist-box h2 { margin-top: 0; color: var(--accent); font-size: 1.25rem; }
+  .checklist-box label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 0.95rem;
+    border-bottom: 1px dashed var(--border);
+  }
+  .checklist-box label:last-child { border-bottom: none; }
+  .checklist-box input[type="checkbox"] { margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Digital Forensics Midterm Lab — Study Guide</h1>
+    <p class="sub">CIS-2808 · Homicide Case Evidence Analysis (100 points, 4 parts)</p>
+  </header>
+
+  <div class="banner">
+    <strong>How to use this guide:</strong> This is a review resource, not an answer key. It tells you which
+    concepts, tools, and procedures each part of the lab tests, and gives you practice questions to check your
+    own understanding. You'll still need to work through NETLAB #11 yourself to produce your screenshots and results.
+  </div>
+
+  <div class="checklist-box">
+    <h2>Before You Start the Lab</h2>
+    <label><input type="checkbox"> I can explain what "forensic copy" means and why we never work on original evidence</label>
+    <label><input type="checkbox"> I know what hashing is used for in forensics, and which algorithms are common (MD5, SHA-1, SHA-256)</label>
+    <label><input type="checkbox"> I know what EXIF metadata is and what kind of information it can contain</label>
+    <label><input type="checkbox"> I understand how GPS coordinates are stored in image metadata and how to convert them to a usable format</label>
+    <label><input type="checkbox"> I know what a Thumbs.db file is and why it matters even after a user deletes the original images</label>
+    <label><input type="checkbox"> I can view file properties (dates, size) in Windows File Explorer</label>
+    <label><input type="checkbox"> I have access to NETLAB #11 and a separate, non-NETLAB browser for Part 2</label>
+  </div>
+
+  <!-- CASE PART 1 -->
+  <section class="case">
+    <h2 class="case-title">Case Part 1 <span class="points-tag">25 points</span></h2>
+    <p class="scenario">A photo on the suspect's phone may place them near the homicide location. You need to confirm where and when it was taken.</p>
+
+    <h3 class="block-title">What this part is testing</h3>
+    <ul class="review-list">
+      <li>Creating a <strong>forensically sound copy</strong> of an image file before analysis</li>
+      <li><strong>Verifying integrity</strong> of that copy using a hash comparison</li>
+      <li>Extracting <strong>embedded metadata</strong> from a JPEG — specifically GPS coordinates and date/time stamps</li>
+    </ul>
+
+    <h3 class="block-title">Concepts to review</h3>
+    <div class="concept-grid">
+      <div class="concept-chip"><strong>Forensic imaging</strong>A bit-for-bit duplicate that preserves the original evidence untouched.</div>
+      <div class="concept-chip"><strong>Hashing for verification</strong>Comparing hash values of original vs. copy to prove they are identical.</div>
+      <div class="concept-chip"><strong>EXIF metadata</strong>Data embedded in a photo file describing when, where, and how it was captured.</div>
+      <div class="concept-chip"><strong>GPS tags in EXIF</strong>Latitude/Longitude and a separate GPS Date/Time stamp, distinct from the file's Create Date.</div>
+    </div>
+
+    <details class="self-check">
+      <summary>Self-check questions</summary>
+      <ul class="review-list">
+        <li>Why would an investigator hash <em>both</em> the original and the copy, rather than just the copy?</li>
+        <li>What's the difference between the image's "Create Date" and its "GPS Date/Time"? Could they ever disagree, and what would that mean for the case?</li>
+        <li>Which forensic tool(s) covered in class can display embedded EXIF fields, and what's the general workflow for pulling that info out?</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- CASE PART 2 -->
+  <section class="case">
+    <h2 class="case-title">Case Part 2 <span class="points-tag">25 points</span></h2>
+    <p class="scenario">A second photo shows a river/stream. Investigators want to know why the suspect photographed this location — which means finding out where it actually is.</p>
+
+    <h3 class="block-title">What this part is testing</h3>
+    <ul class="review-list">
+      <li>Repeating the forensic copy + hash verification workflow from Part 1</li>
+      <li>Extracting GPS coordinates from a second image</li>
+      <li>Converting raw GPS coordinates into a real-world map location using an <strong>outside (non-NETLAB) tool</strong></li>
+    </ul>
+
+    <h3 class="block-title">Concepts to review</h3>
+    <div class="concept-grid">
+      <div class="concept-chip"><strong>Coordinate formats</strong>GPS metadata is often stored in degrees/minutes/seconds — you may need to convert it to decimal degrees.</div>
+      <div class="concept-chip"><strong>Lab environment boundaries</strong>Why this step deliberately requires a browser outside the NETLAB sandbox.</div>
+      <div class="concept-chip"><strong>Geolocation tools</strong>Free coordinate-to-map lookup services and how to read their output.</div>
+    </div>
+
+    <details class="self-check">
+      <summary>Self-check questions</summary>
+      <ul class="review-list">
+        <li>If your extracted latitude/longitude are in DMS (degrees/minutes/seconds), how do you convert them to decimal degrees before plugging them into a map tool?</li>
+        <li>Why might an investigator need to look up a location using a tool outside the closed lab environment, rather than inside NETLAB?</li>
+        <li>What would it mean for the case if the photo's coordinates matched a location relevant to the homicide?</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- CASE PART 3 -->
+  <section class="case">
+    <h2 class="case-title">Case Part 3 <span class="points-tag">25 points</span></h2>
+    <p class="scenario">The suspect appears to have deleted images from their laptop. You need to recover evidence that Windows keeps around even after deletion.</p>
+
+    <h3 class="block-title">What this part is testing</h3>
+    <ul class="review-list">
+      <li>Creating a forensic copy of a <strong>Thumbs.db</strong> file and hash-verifying it</li>
+      <li>Understanding what Thumbs.db stores and why it can survive deletion of the source images</li>
+      <li><strong>Extracting embedded images</strong> from the Thumbs.db copy (a basic file carving task)</li>
+    </ul>
+
+    <h3 class="block-title">Concepts to review</h3>
+    <div class="concept-grid">
+      <div class="concept-chip"><strong>Thumbs.db</strong>A Windows thumbnail cache database that stores small preview images of files viewed in a folder.</div>
+      <div class="concept-chip"><strong>Data remanence</strong>Why deleting a photo doesn't necessarily delete every trace of it on the system.</div>
+      <div class="concept-chip"><strong>File carving</strong>Pulling embedded files (like JPEGs) out of a container/database file rather than the normal filesystem.</div>
+    </div>
+
+    <details class="self-check">
+      <summary>Self-check questions</summary>
+      <ul class="review-list">
+        <li>Why is Thumbs.db forensically valuable even after a suspect deletes the original photos?</li>
+        <li>What tool(s) from class can open or parse a Thumbs.db file, and what do they let you do with its contents?</li>
+        <li>What steps would you take to make sure the extraction was performed on the copy, not the original evidence file?</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- CASE PART 4 -->
+  <section class="case">
+    <h2 class="case-title">Case Part 4 <span class="points-tag">25 points</span></h2>
+    <p class="scenario">Now that an image has been recovered from Part 3, you need to document its properties as evidence.</p>
+
+    <h3 class="block-title">What this part is testing</h3>
+    <ul class="review-list">
+      <li>Viewing and documenting a recovered file's <strong>date/time and size properties</strong> in Windows File Explorer</li>
+      <li>Hashing the extracted file to establish its evidentiary integrity going forward</li>
+    </ul>
+
+    <h3 class="block-title">Concepts to review</h3>
+    <div class="concept-grid">
+      <div class="concept-chip"><strong>File Explorer properties</strong>Where to find created/modified/accessed dates and file size for a given file.</div>
+      <div class="concept-chip"><strong>Chain of custody</strong>Why every newly-extracted piece of evidence gets its own hash, even if it came from something already hashed.</div>
+    </div>
+
+    <details class="self-check">
+      <summary>Self-check questions</summary>
+      <ul class="review-list">
+        <li>Why would you hash a file that was carved out of Thumbs.db, even though you already hashed the Thumbs.db file itself?</li>
+        <li>What Windows File Explorer view or dialog shows you the date/time and size properties of a single file?</li>
+        <li>Could the recovered image's file dates tell you something different from its embedded EXIF dates (if it had any)? Why might they differ?</li>
+      </ul>
+    </details>
+  </section>
+
+  <div class="checklist-box">
+    <h2>Grading Reminders</h2>
+    <ul class="review-list">
+      <li>Each task step is graded on whether your screenshot is present, correct, and matches what was actually asked</li>
+      <li>Partial or incorrect screenshots earn partial credit — missing screenshots or answers earn none</li>
+      <li>Make sure every screen capture is <strong>clear and cropped</strong> to show only the relevant information</li>
+      <li>Double-check you're using the correct workstation (DEFT vs. WinOS) and browser (NETLAB vs. non-NETLAB) for each task</li>
+    </ul>
+  </div>
+
+  <footer>
+    Study guide generated for exam review purposes — refer to your course materials and lab environment for full task instructions.
+  </footer>
+
+</div>
+</body>
+</html>
