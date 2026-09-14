@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shor's Algorithm — Interactive Demo</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  .topbar nav a.active{color:var(--text-bright);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:center; gap:18px; overflow:hidden;
+  }
+  .hero-seq{display:flex; gap:10px; flex-wrap:wrap; font-size:20px;}
+  .hero-seq span{
+    color:var(--text-dim); padding:4px 10px; border:1px solid var(--border); border-radius:6px;
+    background:var(--panel-alt);
+  }
+  .hero-seq span.hit{color:#ffffff; background:var(--cyan); border-color:var(--cyan);}
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{
+    margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;
+  }
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* CLOCK / CYCLE VISUAL */
+  .clock-wrap{display:flex; gap:26px; align-items:center; flex-wrap:wrap; margin:22px 0;}
+  svg.clock{flex:none;}
+  .clock-node{transition:fill 0.25s ease, r 0.25s ease;}
+  .clock-node-label{font-size:11px; fill:var(--text-dim); font-family: ui-monospace, monospace;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .seq-track{display:flex; gap:8px; flex-wrap:wrap; min-height:44px; align-items:center;}
+  .seq-chip{
+    padding:8px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel-alt);
+    font-size:14px; color:var(--text-dim); opacity:0; transform:translateY(6px);
+    animation:pop 0.35s ease forwards;
+  }
+  .seq-chip .exp{color:var(--text-dim); font-size:11px;}
+  .seq-chip.repeat{border-color:var(--green); color:var(--green); background:rgba(21,122,74,0.08);}
+  @keyframes pop{ to{opacity:1; transform:translateY(0);} }
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-log{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .step-line{
+    font-size:12.5px; color:var(--text-dim); opacity:0; animation:fadeIn 0.3s ease forwards;
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+  @keyframes fadeIn{ to{opacity:1;} }
+
+  .factor-banner{
+    margin-top:18px; padding:20px; border-radius:10px; text-align:center; display:none;
+  }
+  .factor-banner.show{display:block;}
+  .factor-banner .big{font-size:26px; font-weight:750; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .factor-banner.ok{border:1px solid var(--green); background:rgba(21,122,74,0.06);}
+  .factor-banner.fail{border:1px solid var(--red); background:rgba(192,41,61,0.06);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px;}
+  .scale-bar.a{width:2%; background:var(--green);}
+  .scale-bar.b{width:100%; background:linear-gradient(90deg,var(--cyan),var(--amber));}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>SHOR'S ALGORITHM</b> :: interactive demo</div>
+  <nav>
+    <a href="#basics">RSA basics</a>
+    <a href="#period">Period finder</a>
+    <a href="#factors">Factors</a>
+    <a href="#scale">Real-world scale</a>
+    <a href="#defense">Defense</a>
+  </nav>
+</div>
+
+<main>
+
+  <section class="hero">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>Why a quantum computer can break RSA</h1>
+    <p class="lede">RSA encryption relies on one thing being hard for a classical computer: factoring a very large number <code>N</code> into its two secret primes. Shor's algorithm gives a quantum computer a way to find those primes efficiently — not by guessing, but by finding a hidden <span class="gterm" data-g="periodicity">repeating pattern</span> in a sequence of numbers.</p>
+    <div class="hero-visual">
+      <div>
+        <div class="hero-seq" id="heroSeq"></div>
+        <p class="hero-note">2¹, 2², 2³, 2⁴ … mod 15 — watch it repeat every 4 steps. That repeat length is the "period," and it's the key to everything below.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="basics">
+    <p class="eyebrow">01 &middot; Refresher</p>
+    <h2>The RSA pieces Shor's algorithm attacks</h2>
+    <p class="subhead">Click a term to see how it fits together. This is the same vocabulary from your course notes.</p>
+    <div class="term-grid" id="termGrid"></div>
+    <div class="keychain">
+      <div class="keybox pub"><div class="label">PUBLIC KEY</div>N = 15, e = 5 — shared with anyone who wants to send you an encrypted message.</div>
+      <div class="keybox priv"><div class="label">PRIVATE KEY</div>N = 15, d = 3 — kept secret. This is what Shor's algorithm is trying to expose.</div>
+    </div>
+  </section>
+
+  <section id="period">
+    <p class="eyebrow">02 &middot; The core idea</p>
+    <h2>Find the period, and the factors fall out</h2>
+    <p>Shor's algorithm doesn't factor <code>N</code> directly. Instead, it picks a random number <code>a</code> and looks at the sequence <code>a¹, a², a³, …</code>, each one reduced <span class="gterm" data-g="mod">mod</span> <code>N</code>. Because there are only a limited number of possible remainders, this sequence always eventually repeats. The length of that repeat is called the <span class="gterm" data-g="periodicity">period</span>, written <code>r</code>. A quantum computer finds <code>r</code> almost instantly using superposition — a step that would take a classical computer a very long time for large <code>N</code>.</p>
+    <div class="gpop" id="gpop-periodicity"><b>Periodicity</b> — how often a repeating sequence cycles back to its starting value. Here, it's how many multiplications it takes before <code>aˣ mod N</code> returns to 1.</div>
+    <div class="gpop" id="gpop-mod">"mod N" means "the remainder after dividing by N." <code>17 mod 15 = 2</code>, because 17 divided by 15 leaves a remainder of 2.</div>
+    <div class="gpop" id="gpop-gcd"><b>Greatest Common Divisor (GCD)</b> — the largest number that divides evenly into two other numbers. <code>gcd(12, 18) = 6</code>. The Euclidean algorithm finds it quickly by repeated division.</div>
+
+    <div class="panel">
+      <h3>Try it: pick a starting number and watch the period appear</h3>
+      <p class="subhead" style="margin-bottom:16px;">We'll keep N = 15 (the same example from your notes, factors 3 &times; 5) so you can check the math by hand. Not every choice of <code>a</code> works on the first try — that's part of the real algorithm too.</p>
+      <div class="sim-controls">
+        <label class="inline">a =
+          <select id="aSelect">
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="11">11</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+          </select>
+        </label>
+        <button class="btn primary" id="runBtn">Run Shor's algorithm</button>
+        <button class="btn" id="resetBtn" disabled>Reset</button>
+      </div>
+      <div class="seq-track" id="seqTrack"></div>
+      <div class="result-line" id="periodResult"></div>
+    </div>
+  </section>
+
+  <section id="factors">
+    <p class="eyebrow">03 &middot; From period to factors</p>
+    <h2>Turning r into the actual primes</h2>
+    <p>Once the period <code>r</code> is known, ordinary classical math finishes the job. If <code>r</code> is even, compute <code>a<sup>r/2</sup> mod N</code>, then take the <span class="gterm" data-g="gcd">GCD</span> of that value ±1 with <code>N</code>. Those two GCDs are usually the hidden prime factors.</p>
+    <div class="panel">
+      <h3>Step-by-step factor extraction</h3>
+      <p class="subhead" style="margin-bottom:16px;">This fills in automatically once you've run the simulator above.</p>
+      <div class="step-log" id="stepLog">
+        <div class="step-line">Run the period finder above to populate this section.</div>
+      </div>
+      <div class="factor-banner" id="factorBanner">
+        <div class="big" id="factorBig"></div>
+        <div id="factorSub" style="margin-top:6px; font-size:13px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="scale">
+    <p class="eyebrow">04 &middot; Why this actually matters</p>
+    <h2>From N = 15 to a real RSA key</h2>
+    <p>Factoring 15 is something you could do in your head. RSA in the real world uses numbers that are hundreds of digits long — and that gap in scale is the entire reason quantum computing is a cybersecurity concern rather than a party trick.</p>
+    <div class="scale">
+      <div class="scale-row">
+        <div class="scale-label"><span>This demo — N = 15</span><span>trivial, even by hand</span></div>
+        <div class="scale-bar-bg"><div class="scale-bar a"></div></div>
+      </div>
+      <div class="scale-row">
+        <div class="scale-label"><span>Real-world RSA-2048</span><span>far beyond today's hardware</span></div>
+        <div class="scale-bar-bg"><div class="scale-bar b"></div></div>
+      </div>
+    </div>
+    <p style="margin-top:6px;">A widely cited 2019 estimate (Gidney &amp; Ekerå) put the requirement to break a 2048-bit RSA key at roughly <b>20 million error-corrected qubits</b> running for about <b>8 hours</b>. Today's largest quantum processors have on the order of a few thousand physical qubits, and none yet have the error correction Shor's algorithm needs at that scale — which is why RSA is still considered safe for now, but not indefinitely.</p>
+  </section>
+
+  <section id="defense">
+    <p class="eyebrow">05 &middot; The defense</p>
+    <h2>Fighting quantum with quantum-resistant math</h2>
+    <p>If a large enough quantum computer eventually makes Shor's algorithm practical, the fix isn't to abandon math-based security — it's to stop relying on problems that <em>quantum</em> computers happen to be good at. That's the idea behind <span class="gterm" data-g="pqc">post-quantum cryptography (PQC)</span>: new algorithms built on math problems that stay hard even for a quantum computer.</p>
+    <div class="gpop" id="gpop-pqc"><b>Post-quantum cryptography</b> — cryptography designed to run on today's ordinary (classical) computers, but built on problems believed to resist attack from quantum computers too, unlike factoring or discrete log.</div>
+
+    <div class="term-grid" id="pqcGrid"></div>
+
+    <p style="margin-top:20px;">In 2024, <a href="https://csrc.nist.gov/pubs/fips/203/final" target="_blank" rel="noopener">NIST finalized its first PQC standards</a>, expected to gradually replace RSA and elliptic-curve cryptography across the internet over the next decade.</p>
+
+    <div class="callout">
+      <b>A different approach — QKD:</b> instead of a new hard math problem, Quantum Key Distribution (QKD) protocols like <b>BB84</b> use quantum mechanics itself for security — measuring a quantum-encoded key reveals any eavesdropper by disturbing the system. See the BB84 QKD simulation for a hands-on look at how that works.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Interactive demo &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">Shor's Algorithm</span>
+</footer>
+
+<script>
+// ---------- utility math ----------
+function modpow(base, exp, mod){
+  let result = 1; base = base % mod;
+  for(let i=0;i<exp;i++){ result = (result*base) % mod; }
+  return result;
+}
+function gcd(a,b){ while(b){ [a,b] = [b, a%b]; } return a; }
+
+const N = 15;
+
+// ---------- hero ambient sequence ----------
+(function heroAnim(){
+  const seq = [2,4,8,1];
+  const el = document.getElementById('heroSeq');
+  let labels = ['2¹','2²','2³','2⁴'];
+  seq.forEach((v,i)=>{
+    const s = document.createElement('span');
+    s.textContent = v;
+    el.appendChild(s);
+  });
+  let i = 0;
+  setInterval(()=>{
+    [...el.children].forEach(c=>c.classList.remove('hit'));
+    el.children[i].classList.add('hit');
+    i = (i+1) % seq.length;
+  }, 900);
+})();
+
+// ---------- glossary popovers ----------
+document.querySelectorAll('.gterm').forEach(g=>{
+  g.addEventListener('click', ()=>{
+    const key = g.dataset.g;
+    const pop = document.getElementById('gpop-'+key);
+    if(!pop) return;
+    const isShown = pop.classList.contains('show');
+    document.querySelectorAll('.gpop').forEach(p=>p.classList.remove('show'));
+    if(!isShown){ pop.classList.add('show'); }
+  });
+});
+
+// ---------- term grid ----------
+function buildTermGrid(gridId, items, prefix){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  items.forEach((t,idx)=>{
+    const card = document.createElement('div');
+    card.className='term-card';
+    card.innerHTML = `<div class="term-sym">${t.sym}</div><div class="term-name">${t.name}</div>`;
+    card.addEventListener('click', ()=>{
+      let def = document.getElementById(prefix+'-def-'+idx);
+      if(def){ def.remove(); card.classList.remove('open'); return; }
+      grid.querySelectorAll('.term-def').forEach(d=>d.remove());
+      grid.querySelectorAll('.term-card').forEach(c=>c.classList.remove('open'));
+      def = document.createElement('div');
+      def.className='term-def show';
+      def.id=prefix+'-def-'+idx;
+      def.textContent = t.def;
+      card.classList.add('open');
+      card.after(def);
+    });
+    grid.appendChild(card);
+  });
+}
+
+const terms = [
+  {sym:'p', name:'prime #1', def:'A randomly chosen prime number. Kept secret.'},
+  {sym:'q', name:'prime #2', def:'A second randomly chosen prime number. Kept secret.'},
+  {sym:'N', name:'modulus', def:'N = p × q. This is the number that gets published as part of the public key — and the number Shor\'s algorithm is trying to factor back into p and q.'},
+  {sym:'r', name:'totient', def:'r = (p − 1) × (q − 1). Used to generate the key pair. (Note: this is a different "r" than the period found during Shor\'s algorithm — they play related but distinct roles, which your instructor can expand on.)'},
+  {sym:'e', name:'encryption exp.', def:'A factor of the key-generating value that shares no common factors with N. Part of the public key.'},
+  {sym:'d', name:'decryption exp.', def:'The counterpart to e, kept secret. Part of the private key — this is what an attacker ultimately wants.'},
+];
+buildTermGrid('termGrid', terms, 'rsa');
+
+const pqcTerms = [
+  {sym:'ML-KEM', name:'lattice key exchange', def:'(Formerly CRYSTALS-Kyber.) A lattice-based method for two parties to agree on a shared secret key. Finalized by NIST in 2024 as FIPS 203 — the leading replacement for RSA/Diffie-Hellman key exchange.'},
+  {sym:'ML-DSA', name:'lattice signatures', def:'(Formerly CRYSTALS-Dilithium.) A lattice-based digital signature scheme, finalized by NIST as FIPS 204 — a quantum-resistant replacement for RSA and ECDSA signatures.'},
+  {sym:'SLH-DSA', name:'hash-based signatures', def:'(Formerly SPHINCS+.) A signature scheme built only from hash functions rather than lattices — a conservative backup approach, standardized as FIPS 205.'},
+  {sym:'QKD', name:'quantum key distribution', def:'A different strategy entirely: instead of a hard math problem, use the physics of quantum measurement to detect eavesdroppers. BB84 is the classic example.'},
+];
+buildTermGrid('pqcGrid', pqcTerms, 'pqc');
+
+// ---------- period finder simulator ----------
+const aSelect = document.getElementById('aSelect');
+const runBtn = document.getElementById('runBtn');
+const resetBtn = document.getElementById('resetBtn');
+const seqTrack = document.getElementById('seqTrack');
+const periodResult = document.getElementById('periodResult');
+const stepLog = document.getElementById('stepLog');
+const factorBanner = document.getElementById('factorBanner');
+const factorBig = document.getElementById('factorBig');
+const factorSub = document.getElementById('factorSub');
+
+function resetSim(){
+  seqTrack.innerHTML='';
+  periodResult.className='result-line';
+  periodResult.textContent='';
+  stepLog.innerHTML = '<div class="step-line">Run the period finder above to populate this section.</div>';
+  factorBanner.className='factor-banner';
+  runBtn.disabled = false;
+  resetBtn.disabled = true;
+  aSelect.disabled = false;
+}
+resetBtn.addEventListener('click', resetSim);
+
+runBtn.addEventListener('click', async ()=>{
+  runBtn.disabled = true;
+  aSelect.disabled = true;
+  resetBtn.disabled = true;
+  seqTrack.innerHTML = '';
+  periodResult.className = 'result-line';
+  stepLog.innerHTML = '';
+  factorBanner.className = 'factor-banner';
+
+  const a = parseInt(aSelect.value, 10);
+  let r = 0;
+  let val = 1;
+  const seen = [];
+  for(let x=1; x<=N; x++){
+    val = modpow(a, x, N);
+    seen.push(val);
+    const chip = document.createElement('div');
+    chip.className = 'seq-chip';
+    chip.innerHTML = `${a}<span class="exp">^${x}</span> mod 15 = <b>${val}</b>`;
+    seqTrack.appendChild(chip);
+    await sleep(420);
+    if(val === 1){
+      r = x;
+      chip.classList.add('repeat');
+      break;
+    }
+  }
+
+  periodResult.classList.add('show', 'ok');
+  periodResult.textContent = `Period found: r = ${r}  (a=${a} returns to 1 after ${r} steps)`;
+  resetBtn.disabled = false;
+  await sleep(300);
+  runFactorStep(a, r);
+});
+
+function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+function logStep(text, hi=false){
+  const line = document.createElement('div');
+  line.className = 'step-line' + (hi ? ' hi' : '');
+  line.textContent = text;
+  stepLog.appendChild(line);
+}
+
+async function runFactorStep(a, r){
+  stepLog.innerHTML = '';
+  logStep(`Period r = ${r} found for a = ${a}.`);
+  await sleep(300);
+
+  if(r % 2 !== 0){
+    logStep(`r is odd — this choice of a can't be used to extract factors. Try a different a.`, true);
+    factorBanner.classList.add('show','fail');
+    factorBig.textContent = 'No factors this time';
+    factorSub.textContent = `Pick a different value of a and run again — this is a normal part of the real algorithm.`;
+    return;
+  }
+
+  const half = r/2;
+  const mid = modpow(a, half, N);
+  logStep(`r is even. Compute a^(r/2) mod N = ${a}^${half} mod 15 = ${mid}.`);
+  await sleep(400);
+
+  if(mid === N-1){
+    logStep(`a^(r/2) ≡ −1 mod N (that's ${mid} ≡ -1 mod 15) — this is the "trivial" case where no useful factor appears.`, true);
+    factorBanner.classList.add('show','fail');
+    factorBig.textContent = 'No factors this time';
+    factorSub.textContent = `This a happened to land on the trivial square root of 1. Try a different a — most choices work.`;
+    return;
+  }
+
+  const g1 = gcd(mid - 1, N);
+  const g2 = gcd(mid + 1, N);
+  logStep(`gcd(${mid} − 1, 15) = gcd(${mid-1}, 15) = ${g1}`);
+  await sleep(350);
+  logStep(`gcd(${mid} + 1, 15) = gcd(${mid+1}, 15) = ${g2}`);
+  await sleep(350);
+
+  if(g1>1 && g1<N && g2>1 && g2<N){
+    factorBanner.classList.add('show','ok');
+    factorBig.textContent = `15 = ${g1} × ${g2}`;
+    factorSub.textContent = `Factors found. In the RSA example from your notes, this maps to private key d = 3 and public key e = 5.`;
+  } else {
+    factorBanner.classList.add('show','fail');
+    factorBig.textContent = 'No factors this time';
+    factorSub.textContent = `That combination didn't split N cleanly — try another a.`;
+  }
+}
+
+resetSim();
+</script>
+
+</body>
+</html>
