@@ -68,6 +68,8 @@
   th,td{border:1px solid var(--border); padding:7px 10px; text-align:left; vertical-align:top;}
   th{background:#171d26; color:var(--cyan); font-weight:600;}
   tr:nth-child(even) td{background:#0f131a;}
+  a{color:var(--cyan);}
+  a:hover{color:var(--amber);}
   code, .mono-inline{font-family:var(--mono); color:var(--amber); font-size:12.5px;}
   pre.snippet{
     font-family:var(--mono); font-size:11.5px; color:var(--cyan);
@@ -84,6 +86,28 @@
     padding:8px 12px; font-size:12px; color:var(--text);
   }
   .flow span.arrow{color:var(--dim);}
+  .step-btn{
+    font-family:var(--mono); background:#171d26; border:1px solid var(--border);
+    border-radius:6px; padding:8px 12px; font-size:12px; color:var(--text);
+    cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .step-btn:hover{border-color:var(--cyan);}
+  .step-btn.active{
+    border-color:var(--cyan); background:rgba(46,230,214,0.12); color:#fff;
+  }
+  .flow-arrow{color:var(--dim); font-size:13px;}
+  .stage-panel{
+    border:1px solid var(--border); border-radius:8px; background:var(--panel-2);
+    padding:16px 18px; margin:6px 0 18px 0; min-height:40px;
+  }
+  .stage-panel h4{margin:0 0 10px 0; color:var(--cyan); font-size:13.5px;}
+  .finding-item{
+    border:1px solid var(--border); background:#0f131a; border-radius:8px;
+    padding:12px 14px; margin-bottom:10px;
+  }
+  .finding-item:last-child{margin-bottom:0;}
+  .finding-item .fi-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+  .finding-item p{margin:0 0 8px 0; font-size:13px; color:var(--text);}
   .badge{
     display:inline-block; font-size:10.5px; padding:2px 7px; border-radius:4px;
     border:1px solid; margin-left:6px;
@@ -181,97 +205,21 @@
     <p>A researcher recently reverse-engineered a post-takedown Emotet sample end-to-end: the initial script dropper, the fileless in-memory payload, its anti-analysis tricks, and its encrypted command-and-control channel. This lab walks through the key stages of that analysis. Read each briefing panel carefully — the quiz below tests whether you understand <em>why</em> each technique works, not just that it exists.</p>
 
     <h3>Attack chain overview</h3>
-    <div class="flow">
-      <span class="step">Phishing doc / VBS script</span><span class="arrow">→</span>
-      <span class="step">2nd-stage VBS in %temp% (.txt)</span><span class="arrow">→</span>
-      <span class="step">rundll32.exe loads Emotet DLL</span><span class="arrow">→</span>
-      <span class="step">X.dll decrypted into RWX memory</span><span class="arrow">→</span>
-      <span class="step">Relocate to %AppData% (.xnj)</span><span class="arrow">→</span>
-      <span class="step">ECDH/AES key exchange</span><span class="arrow">→</span>
-      <span class="step">HTTP C2 via Cookie header</span>
+    <p class="dim">Click a stage to reveal the key findings the analysis recorded at that point in the chain.</p>
+    <div class="flow" id="flowChain"></div>
+    <div class="stage-panel" id="stagePanel">
+      <p class="dim">Select a stage above to see its findings.</p>
     </div>
-
-    <h3>Key findings from the analysis <span class="badge evasion">Evasion</span><span class="badge c2">C2</span><span class="badge persist">Persistence</span></h3>
-    <table>
-      <tr><th>#</th><th>Finding</th><th>Snippet / Indicator</th><th>Category</th></tr>
-      <tr>
-        <td>1</td>
-        <td>A two-stage VBS dropper writes its second-stage script into <code>%temp%</code> disguised as a <code>.txt</code> file, then executes it directly as VBScript regardless of extension.</td>
-        <td class="snippet-cell"><pre class="snippet">cscript //E:vbscript /x extracted_script.txt</pre></td>
-        <td><span class="badge evasion">Evasion</span></td>
-      </tr>
-      <tr>
-        <td>2</td>
-        <td>The real payload, nicknamed <code>X.dll</code>, is stored encrypted inside a bitmap resource of the outer DLL and is decrypted straight into an executable (RWX) memory region — it never touches disk.</td>
-        <td class="snippet-cell"><pre class="snippet">rwx = VirtualAlloc(NULL, size,
-  MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-Decrypt(resourceBlob, rwx, size);</pre></td>
-        <td><span class="badge evasion">Evasion</span></td>
-      </tr>
-      <tr>
-        <td>3</td>
-        <td>The main routine uses control flow flattening, which defeated the public deobfuscation tools the researcher tried and forced manual, breakpoint-driven analysis.</td>
-        <td class="snippet-cell"><pre class="snippet">while (state != EXIT) {
-  switch (state) {
-    case S1: ...; state = S4; break;
-    case S4: ...; state = S2; break;
-    // dispatcher order != real order
-  }
-}</pre></td>
-        <td><span class="badge evasion">Evasion</span></td>
-      </tr>
-      <tr>
-        <td>4</td>
-        <td>Every Windows API is resolved at runtime by comparing hashes rather than through a normal import table, so static analysis shows almost nothing about functionality.</td>
-        <td class="snippet-cell"><pre class="snippet">hLib = LoadLibraryW(DecryptStr(encName));
-fn = resolve_func(hLib, targetHash);
-fn(args);</pre></td>
-        <td><span class="badge evasion">Evasion</span></td>
-      </tr>
-      <tr>
-        <td>5</td>
-        <td>If not already running from <code>%AppData%</code>, the malware copies itself there under a randomized name with a <code>.xnj</code> extension, strips the Zone.Identifier (Mark-of-the-Web), and relaunches itself.</td>
-        <td class="snippet-cell"><pre class="snippet">SHGetFolderPathW(CSIDL_APPDATA, ...);
-SHFileOperationW(FO_COPY, self, dst);
-DeleteFileW(dst + ":Zone.Identifier");
-CreateProcessW(rundll32, dst, ...);</pre></td>
-        <td><span class="badge persist">Persistence</span></td>
-      </tr>
-      <tr>
-        <td>6</td>
-        <td>Once relocated, it deletes every other file in its own directory — collateral damage that happens to destroy analyst tooling like IDA database files.</td>
-        <td class="snippet-cell"><pre class="snippet">for f in ListDir(homeDir):
-  if f != selfName:
-    DeleteFileW(f)</pre></td>
-        <td><span class="badge evasion">Evasion</span></td>
-      </tr>
-      <tr>
-        <td>7</td>
-        <td>It generates an ECDH key pair, combines it with an embedded public key to derive a shared secret, and derives an AES key from that secret for encrypting C2 traffic.</td>
-        <td class="snippet-cell"><pre class="snippet">BCryptGenerateKeyPair(...);
-BCryptSecretAgreement(priv, embeddedPub, &secret);
-BCryptDeriveKey(secret, "AES", &aesKey);</pre></td>
-        <td><span class="badge c2">C2</span></td>
-      </tr>
-      <tr>
-        <td>8</td>
-        <td>Encrypted, base64-encoded data is transmitted inside a randomly named HTTP Cookie header to a randomly generated URI, switching to POST for larger payloads.</td>
-        <td class="snippet-cell"><pre class="snippet">Cookie: rXk3z9Qp=&lt;base64(pubKey
-  + AES_Encrypt(hostData, aesKey)
-  + randomPadding)&gt;</pre></td>
-        <td><span class="badge c2">C2</span></td>
-      </tr>
-    </table>
 
     <h3>Selected MITRE ATT&amp;CK mapping</h3>
     <table>
       <tr><th>Tactic</th><th>Technique</th><th>ID</th></tr>
-      <tr><td>Execution</td><td>Command and Scripting Interpreter: Visual Basic</td><td>T1059.005</td></tr>
-      <tr><td>Defense Evasion</td><td>Reflective Code Loading</td><td>T1620</td></tr>
-      <tr><td>Defense Evasion</td><td>Obfuscated Files or Information: Dynamic API Resolution</td><td>T1027.007</td></tr>
-      <tr><td>Defense Evasion</td><td>Subvert Trust Controls: Mark-of-the-Web Bypass</td><td>T1553.005</td></tr>
-      <tr><td>Defense Evasion</td><td>Indicator Removal: File Deletion</td><td>T1070.004</td></tr>
-      <tr><td>Command &amp; Control</td><td>Encrypted Channel: Asymmetric Cryptography</td><td>T1573.002</td></tr>
+      <tr><td>Execution</td><td>Command and Scripting Interpreter: Visual Basic</td><td><a href="https://attack.mitre.org/techniques/T1059/005/" target="_blank" rel="noopener">T1059.005</a></td></tr>
+      <tr><td>Defense Evasion</td><td>Reflective Code Loading</td><td><a href="https://attack.mitre.org/techniques/T1620/" target="_blank" rel="noopener">T1620</a></td></tr>
+      <tr><td>Defense Evasion</td><td>Obfuscated Files or Information: Dynamic API Resolution</td><td><a href="https://attack.mitre.org/techniques/T1027/007/" target="_blank" rel="noopener">T1027.007</a></td></tr>
+      <tr><td>Defense Evasion</td><td>Subvert Trust Controls: Mark-of-the-Web Bypass</td><td><a href="https://attack.mitre.org/techniques/T1553/005/" target="_blank" rel="noopener">T1553.005</a></td></tr>
+      <tr><td>Defense Evasion</td><td>Indicator Removal: File Deletion</td><td><a href="https://attack.mitre.org/techniques/T1070/004/" target="_blank" rel="noopener">T1070.004</a></td></tr>
+      <tr><td>Command &amp; Control</td><td>Encrypted Channel: Asymmetric Cryptography</td><td><a href="https://attack.mitre.org/techniques/T1573/002/" target="_blank" rel="noopener">T1573.002</a></td></tr>
     </table>
 
     <h3>Detection opportunities (behavioral, not signature-based)</h3>
@@ -316,6 +264,115 @@ BCryptDeriveKey(secret, "AES", &aesKey);</pre></td>
 </div>
 
 <script>
+(function(){
+  var STAGES = [
+    'Phishing doc / VBS script',
+    '2nd-stage VBS in %temp% (.txt)',
+    'rundll32.exe loads Emotet DLL',
+    'X.dll decrypted into RWX memory',
+    'Relocate to %AppData% (.xnj)',
+    'ECDH/AES key exchange',
+    'HTTP C2 via Cookie header'
+  ];
+
+  var FINDINGS = [
+    {
+      stage: 0, cat: 'evasion', catLabel: 'Evasion',
+      text: 'Initial access rides on a phishing document or malicious link, which is what actually delivers the first-stage VBS dropper analyzed at the next stage.',
+      snippet: null
+    },
+    {
+      stage: 1, cat: 'evasion', catLabel: 'Evasion',
+      text: 'A two-stage VBS dropper writes its second-stage script into %temp% disguised as a .txt file, then executes it directly as VBScript regardless of extension.',
+      snippet: 'cscript //E:vbscript /x extracted_script.txt'
+    },
+    {
+      stage: 2, cat: 'evasion', catLabel: 'Evasion',
+      text: "The main routine uses control flow flattening, which defeated the public deobfuscation tools the researcher tried and forced manual, breakpoint-driven analysis.",
+      snippet: 'while (state != EXIT) {\n  switch (state) {\n    case S1: ...; state = S4; break;\n    case S4: ...; state = S2; break;\n    // dispatcher order != real order\n  }\n}'
+    },
+    {
+      stage: 2, cat: 'evasion', catLabel: 'Evasion',
+      text: 'Every Windows API is resolved at runtime by comparing hashes rather than through a normal import table, so static analysis shows almost nothing about functionality.',
+      snippet: 'hLib = LoadLibraryW(DecryptStr(encName));\nfn = resolve_func(hLib, targetHash);\nfn(args);'
+    },
+    {
+      stage: 3, cat: 'evasion', catLabel: 'Evasion',
+      text: 'The real payload, nicknamed X.dll, is stored encrypted inside a bitmap resource of the outer DLL and is decrypted straight into an executable (RWX) memory region — it never touches disk.',
+      snippet: 'rwx = VirtualAlloc(NULL, size,\n  MEM_COMMIT, PAGE_EXECUTE_READWRITE);\nDecrypt(resourceBlob, rwx, size);'
+    },
+    {
+      stage: 4, cat: 'persist', catLabel: 'Persistence',
+      text: 'If not already running from %AppData%, the malware copies itself there under a randomized name with a .xnj extension, strips the Zone.Identifier (Mark-of-the-Web), and relaunches itself.',
+      snippet: 'SHGetFolderPathW(CSIDL_APPDATA, ...);\nSHFileOperationW(FO_COPY, self, dst);\nDeleteFileW(dst + ":Zone.Identifier");\nCreateProcessW(rundll32, dst, ...);'
+    },
+    {
+      stage: 4, cat: 'evasion', catLabel: 'Evasion',
+      text: 'Once relocated, it deletes every other file in its own directory — collateral damage that happens to destroy analyst tooling like IDA database files.',
+      snippet: 'for f in ListDir(homeDir):\n  if f != selfName:\n    DeleteFileW(f)'
+    },
+    {
+      stage: 5, cat: 'c2', catLabel: 'C2',
+      text: 'It generates an ECDH key pair, combines it with an embedded public key to derive a shared secret, and derives an AES key from that secret for encrypting C2 traffic.',
+      snippet: 'BCryptGenerateKeyPair(...);\nBCryptSecretAgreement(priv, embeddedPub, &secret);\nBCryptDeriveKey(secret, "AES", &aesKey);'
+    },
+    {
+      stage: 6, cat: 'c2', catLabel: 'C2',
+      text: 'Encrypted, base64-encoded data is transmitted inside a randomly named HTTP Cookie header to a randomly generated URI, switching to POST for larger payloads.',
+      snippet: 'Cookie: rXk3z9Qp=<base64(pubKey\n  + AES_Encrypt(hostData, aesKey)\n  + randomPadding)>'
+    }
+  ];
+
+  var flowHost = document.getElementById('flowChain');
+  var panel = document.getElementById('stagePanel');
+  var buttons = [];
+
+  STAGES.forEach(function(label, i){
+    if (i > 0){
+      var arrow = document.createElement('span');
+      arrow.className = 'flow-arrow';
+      arrow.textContent = '→';
+      flowHost.appendChild(arrow);
+    }
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'step-btn';
+    b.textContent = label;
+    b.setAttribute('data-stage', i);
+    b.addEventListener('click', function(){ selectStage(i); });
+    flowHost.appendChild(b);
+    buttons.push(b);
+  });
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function selectStage(i){
+    buttons.forEach(function(b, idx){
+      b.classList.toggle('active', idx === i);
+    });
+    var matches = FINDINGS.filter(function(f){ return f.stage === i; });
+    var html = '<h4>' + escapeHtml(STAGES[i]) + '</h4>';
+    if (matches.length === 0){
+      html += '<p class="dim">No standalone finding recorded at this stage — see the neighboring stages.</p>';
+    } else {
+      matches.forEach(function(f){
+        html += '<div class="finding-item">';
+        html += '<div class="fi-head"><span class="badge ' + f.cat + '">' + f.catLabel + '</span></div>';
+        html += '<p>' + escapeHtml(f.text) + '</p>';
+        if (f.snippet){
+          html += '<pre class="snippet">' + escapeHtml(f.snippet) + '</pre>';
+        }
+        html += '</div>';
+      });
+    }
+    panel.innerHTML = html;
+  }
+
+  selectStage(0);
+})();
+
 (function(){
   // Correct answers are stored as 32-bit hashes of an internal option key,
   // never as plain letters — the DOM order is also randomized per page load.
