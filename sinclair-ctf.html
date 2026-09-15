@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SINCLAIR CTF // GHOST PROTOCOL</title>
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#11161f;
+    --panel-alt:#161c27;
+    --border:#232c3a;
+    --border-bright:#324158;
+    --text:#c9d3de;
+    --text-dim:#647087;
+    --cyan:#00e5ff;
+    --amber:#ffb100;
+    --red:#ff4757;
+    --green:#39ff88;
+    --mono: ui-monospace, "Cascadia Code", "Roboto Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top, #0d1420 0%, var(--bg) 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    line-height:1.55;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+
+  /* ---------- Header ---------- */
+  .boot{
+    font-size:12px;
+    color:var(--green);
+    white-space:pre-wrap;
+    min-height:100px;
+    margin-bottom:18px;
+  }
+  .boot .cursor{display:inline-block;width:7px;background:var(--green);animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  header.hero{display:none;margin-bottom:28px;}
+  header.hero.show{display:block;}
+  .title-row{
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;
+    border-bottom:1px solid var(--border);padding-bottom:16px;
+  }
+  h1{
+    font-size:26px;letter-spacing:2px;margin:0;font-weight:700;
+    color:#eef3f8;
+    animation:flicker 2.4s ease-out 1;
+  }
+  @keyframes flicker{
+    0%{opacity:0; text-shadow:0 0 2px var(--cyan),0 0 14px var(--cyan);}
+    8%{opacity:1;}
+    10%{opacity:.3;}
+    14%{opacity:1;}
+    40%{text-shadow:0 0 2px var(--cyan),0 0 14px var(--cyan);}
+    100%{opacity:1;text-shadow:none;}
+  }
+  h1 span{color:var(--cyan);}
+  .tagline{color:var(--text-dim);font-size:13px;margin-top:6px;}
+  .stat{text-align:right;font-size:12px;color:var(--text-dim);}
+  .stat b{display:block;font-size:20px;color:var(--amber);font-weight:700;}
+
+  .briefing-panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:4px;
+    padding:20px;margin-top:20px;font-size:14px;
+  }
+  .briefing-panel p{margin:0 0 12px;}
+  .briefing-panel p:last-child{margin-bottom:0;}
+  .team-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  input[type=text]{
+    background:var(--panel-alt);border:1px solid var(--border-bright);color:var(--text);
+    font-family:var(--mono);padding:10px 12px;border-radius:3px;font-size:14px;flex:1;min-width:160px;
+  }
+  input[type=text]:focus{outline:none;border-color:var(--cyan);}
+  button{
+    font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.5px;
+    padding:10px 18px;border-radius:3px;border:1px solid var(--cyan);background:transparent;
+    color:var(--cyan);cursor:pointer;transition:background .15s,color .15s;
+  }
+  button:hover{background:var(--cyan);color:#04121a;}
+  button.secondary{border-color:var(--border-bright);color:var(--text-dim);}
+  button.secondary:hover{background:var(--panel-alt);color:var(--text);}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  button:disabled:hover{background:transparent;color:var(--cyan);}
+
+  /* ---------- Network map ---------- */
+  .map{display:none;margin:30px 0 26px;}
+  .map.show{display:block;}
+  .map-track{display:flex;align-items:center;overflow-x:auto;padding-bottom:6px;}
+  .node{
+    flex:0 0 auto;width:42px;height:42px;border-radius:50%;
+    border:2px solid var(--border-bright);display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;color:var(--text-dim);background:var(--panel);
+    position:relative;cursor:default;
+  }
+  .node.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 0 4px rgba(0,229,255,.12);animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(0,229,255,.10);}50%{box-shadow:0 0 0 8px rgba(0,229,255,.16);}}
+  .node.done{border-color:var(--green);color:var(--green);background:rgba(57,255,136,.08);}
+  .node.locked{color:var(--text-dim);}
+  .connector{flex:1 1 20px;height:2px;background:var(--border-bright);min-width:16px;}
+  .connector.done{background:var(--green);}
+  .map-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:6px;letter-spacing:.5px;}
+
+  /* ---------- Station panel ---------- */
+  .station{
+    display:none;border:1px solid var(--border);border-radius:6px;overflow:hidden;
+    background:var(--panel);margin-bottom:20px;
+  }
+  .station.current{display:block;border-color:var(--border-bright);}
+  .term-bar{
+    background:var(--panel-alt);padding:9px 14px;display:flex;align-items:center;gap:8px;
+    border-bottom:1px solid var(--border);
+  }
+  .dot{width:10px;height:10px;border-radius:50%;}
+  .dot.r{background:var(--red);} .dot.a{background:var(--amber);} .dot.g{background:var(--green);}
+  .term-title{margin-left:6px;font-size:12px;color:var(--text-dim);letter-spacing:.5px;}
+  .station-body{padding:22px;}
+  .station-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .station-head h2{font-size:18px;margin:0;color:#eef3f8;}
+  .badge{font-size:11px;color:var(--amber);border:1px solid var(--amber);border-radius:20px;padding:2px 10px;white-space:nowrap;}
+  .briefing-text{font-size:13.5px;color:var(--text);margin-bottom:16px;}
+  .briefing-text em{color:var(--amber);font-style:normal;}
+  .puzzle-block{
+    background:#04070c;border:1px solid var(--border);border-radius:4px;
+    padding:16px;font-size:14px;letter-spacing:1px;color:var(--cyan);
+    overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin-bottom:16px;
+  }
+  .wordlist{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .wordlist span{
+    background:#04070c;border:1px solid var(--border);border-radius:3px;padding:6px 10px;font-size:13px;color:var(--cyan);
+  }
+  .answer-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .answer-row input{flex:1;min-width:180px;}
+  .feedback{margin-top:12px;font-size:13px;min-height:18px;}
+  .feedback.ok{color:var(--green);}
+  .feedback.bad{color:var(--red);}
+  .hints{margin-top:14px;}
+  .hint-btn{font-size:11px;padding:6px 12px;border-color:var(--border-bright);color:var(--text-dim);margin-right:8px;margin-bottom:8px;}
+  .hint-btn:hover{color:var(--amber);border-color:var(--amber);background:transparent;}
+  .hint-text{
+    font-size:12.5px;color:var(--amber);background:rgba(255,177,0,.07);border:1px solid rgba(255,177,0,.3);
+    border-radius:3px;padding:8px 10px;margin-top:8px;
+  }
+  .locked-msg{color:var(--text-dim);font-size:13px;padding:22px;}
+
+  /* ---------- Key ring ---------- */
+  .keyring{display:none;margin:8px 0 26px;}
+  .keyring.show{display:block;}
+  .keyring-label{font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    font-size:12px;border:1px solid var(--green);color:var(--green);border-radius:20px;padding:4px 12px;
+    background:rgba(57,255,136,.06);
+  }
+  .chip.empty{border-color:var(--border);color:var(--text-dim);background:transparent;}
+
+  /* ---------- Completion ---------- */
+  .complete{display:none;text-align:center;border:1px solid var(--green);border-radius:6px;padding:34px 22px;background:rgba(57,255,136,.04);}
+  .complete.show{display:block;}
+  .complete h2{color:var(--green);font-size:22px;margin:0 0 6px;letter-spacing:1px;}
+  .complete .score-big{font-size:44px;color:var(--amber);font-weight:700;margin:14px 0 4px;}
+  .complete p{color:var(--text-dim);font-size:13px;}
+  .complete .actions{margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+  footer{text-align:center;margin-top:36px;}
+  footer button{font-size:11px;}
+  .print-only{display:none;}
+
+  @media print{
+    body *{visibility:hidden;}
+    .complete, .complete *{visibility:visible;}
+    .complete{position:absolute;top:0;left:0;width:100%;border:none;}
+    .print-only{display:block;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    h1{animation:none;}
+    .node.active{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="boot" id="boot"></div>
+
+  <header class="hero" id="hero">
+    <div class="title-row">
+      <div>
+        <h1>SINCLAIR CTF <span>// GHOST PROTOCOL</span></h1>
+        <div class="tagline">Sinclair Networks — Incident Response Console</div>
+      </div>
+      <div class="stat">
+        <span>SCORE</span>
+        <b id="scoreDisplay">0 / 100</b>
+      </div>
+    </div>
+
+    <div class="briefing-panel" id="introPanel">
+      <p><strong>0300 HRS.</strong> Sinclair Networks' intrusion-detection system flagged unauthorized access three hours ago. An actor calling itself <em>GHOST PROTOCOL</em> is moving through the network. Six intercepted fragments were recovered before the trail went cold — each one encoded differently, and each one hiding a piece of the actor's next move.</p>
+      <p>Your club has been called in to decode the fragments, in order, and identify where GHOST PROTOCOL is headed. Later stations build on words you recover earlier — keep track of what you decode.</p>
+      <div class="team-row">
+        <input type="text" id="teamName" placeholder="Team / callsign name" maxlength="30">
+        <button id="startBtn">Begin Mission</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="map" id="mapWrap">
+    <div class="map-track" id="mapTrack"></div>
+    <div class="map-labels" id="mapLabels"></div>
+  </div>
+
+  <div class="keyring" id="keyring">
+    <div class="keyring-label">RECOVERED KEYWORDS</div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="stations"></div>
+
+  <div class="complete" id="completePanel">
+    <div class="print-only" style="margin-bottom:14px;font-size:12px;color:#333;">SINCLAIR CTF — GHOST PROTOCOL — Mission Certificate</div>
+    <h2>GHOST PROTOCOL CONTAINED</h2>
+    <p id="teamNameOut">—</p>
+    <div class="score-big" id="finalScore">0 / 100</div>
+    <p id="timeTaken"></p>
+    <div class="actions">
+      <button id="printBtn">Print Certificate</button>
+      <button class="secondary" id="resetBtnEnd">Reset Mission</button>
+    </div>
+  </div>
+
+  <footer>
+    <button class="secondary" id="resetBtn">Reset Progress</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+
+  /* ---------------- Obfuscation hash (NOT cryptographic — just keeps
+     answers out of plain view-source; matching python djb2 variant) ---------------- */
+  function obfHash(str){
+    var s = str.replace(/\s+/g,'').toUpperCase();
+    var h = 5381;
+    for (var i=0;i<s.length;i++){
+      h = ((h*33) + s.charCodeAt(i)) >>> 0;
+    }
+    return h;
+  }
+
+  var STATIONS = [
+    {
+      code:'01', title:'Intercepted Transmission', type:'Caesar Cipher', points:10,
+      briefing:'The first fragment is a straightforward substitution — every letter has been shifted forward by the same fixed amount through the alphabet. Shift each letter <em>backward</em> by the right number to recover it. Submit your answer as <em>SINCLAIR{WORD}</em>.',
+      puzzle:'ILUVW NHBZRUG LV VKDGRZ',
+      hints:['Try shifting backward through the alphabet by a single-digit amount.', 'It is the most famous shift in cipher history — the one Caesar himself supposedly used.'],
+      answerHash: 385136664, keyword:'SHADOW'
+    },
+    {
+      code:'02', title:'Fragmented Signal', type:'Rail Fence Cipher', points:15,
+      briefing:'This fragment was written in a zig-zag across three rows, then read off row by row. Reconstruct the zig-zag to recover the original message (spaces were removed before encoding). Submit as <em>SINCLAIR{WORD}</em>.',
+      puzzle:'SNYROEODEIGILCCKSDK',
+      hints:['There are 3 rails. Write the letters in a zig-zag: down, up, down, up…', 'Sketch three rows. The ciphertext gives you row 1 in full, then row 2, then row 3 — count out how many letters belong on each row before you start zig-zagging back through.'],
+      answerHash: 3545657281, keyword:'GRIDLOCK'
+    },
+    {
+      code:'03', title:'Packet Capture', type:'Binary / ASCII', points:15,
+      briefing:'A raw packet payload was recovered — six bytes of standard 8-bit ASCII. Convert each byte to its decimal value, then to its letter. Submit as <em>SINCLAIR{WORD}</em>.',
+      puzzle:'01000010 01000101 01000001 01000011 01001111 01001110',
+      hints:['Each 8-digit group is one letter. Convert binary to decimal, then decimal to a letter using A=65, B=66, C=67…', 'The first byte, 01000010, is decimal 66 — the letter B.'],
+      answerHash: 4082542554, keyword:'BEACON'
+    },
+    {
+      code:'04', title:'Encrypted Channel', type:'Vigenère Cipher', points:20,
+      briefing:'This fragment uses a repeating keyword to shift each letter by a different amount. You do not have the keyword yet — but you have already recovered it. <em>The keyword is the answer word from Station 02.</em> Submit as <em>SINCLAIR{WORD}</em>.',
+      puzzle:'LFCUEV MOE ZA VPBVSTVT',
+      hints:['Use a Vigenère square (or the formula plain = cipher − key, mod 26). The keyword repeats letter by letter and only advances over letters, not spaces.', 'The keyword is 8 letters long, all caps, and it was Station 02’s answer word.'],
+      answerHash: 4023572724, keyword:'SENTINEL'
+    },
+    {
+      code:'05', title:'Credential Vault', type:'Dictionary Attack', points:20,
+      briefing:'A leaked credential hash was found on the server. The (deliberately simple) hashing scheme used is: <em>convert each letter to its position in the alphabet (A=1 … Z=26) and add them all together.</em> Find the word in the recovered wordlist below whose checksum equals the target. Submit as <em>SINCLAIR{WORD}</em>.',
+      puzzle:'TARGET CHECKSUM: 91',
+      wordlist:['DRAGON','MONKEY','SUNSHINE','BASEBALL','PRINCESS','WELCOME','GRIFFIN','TRIDENT','CYCLONE','PHOENIX'],
+      hints:['DRAGON checksums to 59 (D=4, R=18, A=1, G=7, O=15, N=14 → 59) — use that as your worked example.', 'Only one word in the list sums to exactly 91. It’s one of the last three alphabetically.'],
+      answerHash: 1367327117, keyword:'PHOENIX'
+    },
+    {
+      code:'06', title:'Ghost Protocol', type:'Final Transmission', points:20,
+      briefing:'One last message, Caesar-shifted like Station 01 — but this time nobody told you the shift. <em>Add up the number of letters in all five keywords you’ve recovered so far.</em> That total, reduced to a number under 26, is your shift. Decode the message and submit the location as <em>SINCLAIR{WORD}</em> (letters only, no spaces).',
+      puzzle:'PQXBC YAXCXLXU UXLJCRXW BNAENA AXXV K',
+      hints:['SHADOW(6) + GRIDLOCK(8) + BEACON(6) + SENTINEL(8) + PHOENIX(7) = 35. What is 35 mod 26?', 'The shift is 9. Shift every letter backward by 9 to decode the message, then strip spaces from the final location for your flag.'],
+      answerHash: 3355433800, keyword:'SERVERROOMB'
+    }
+  ];
+
+  var STORAGE_KEY = 'sinclairCtfProgress_v1';
+  var state = {
+    teamName:'', unlocked:0, completed:[], score:0, hintsUsed:{}, startedAt:null
+  };
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        state = Object.assign(state, parsed);
+      }
+    }catch(e){}
+  }
+
+  var els = {};
+
+  function totalPoints(){
+    return STATIONS.reduce(function(a,s){return a+s.points;},0);
+  }
+
+  function renderMap(){
+    var track = document.getElementById('mapTrack');
+    var labels = document.getElementById('mapLabels');
+    track.innerHTML = ''; labels.innerHTML = '';
+    STATIONS.forEach(function(s, i){
+      var node = document.createElement('div');
+      node.className = 'node';
+      if(state.completed.indexOf(i) > -1){ node.className += ' done'; node.textContent = '✓'; }
+      else if(i === state.unlocked){ node.className += ' active'; node.textContent = s.code; }
+      else { node.className += ' locked'; node.textContent = '●'; }
+      track.appendChild(node);
+
+      if(i < STATIONS.length - 1){
+        var c = document.createElement('div');
+        c.className = 'connector' + (state.completed.indexOf(i) > -1 ? ' done' : '');
+        track.appendChild(c);
+      }
+      var lbl = document.createElement('span');
+      lbl.textContent = s.code;
+      labels.appendChild(lbl);
+    });
+  }
+
+  function renderKeyring(){
+    var chips = document.getElementById('chips');
+    chips.innerHTML = '';
+    STATIONS.forEach(function(s, i){
+      var chip = document.createElement('span');
+      if(state.completed.indexOf(i) > -1){
+        chip.className = 'chip';
+        chip.textContent = s.keyword;
+      } else {
+        chip.className = 'chip empty';
+        chip.textContent = '?????';
+      }
+      chips.appendChild(chip);
+    });
+  }
+
+  function renderScore(){
+    document.getElementById('scoreDisplay').textContent = state.score + ' / ' + totalPoints();
+  }
+
+  function stationHTML(s, i){
+    var isCurrent = (i === state.unlocked && state.completed.indexOf(i) === -1);
+    var isDone = state.completed.indexOf(i) > -1;
+    var div = document.createElement('div');
+    div.className = 'station' + (isCurrent || isDone && i === state.unlocked-1 && false ? '' : '');
+    if(isCurrent) div.className += ' current';
+    if(isDone) div.className += ' current';
+
+    if(!isCurrent && !isDone){
+      return null; // locked stations aren't rendered at all
+    }
+
+    var dotClass = isDone ? 'g' : 'a';
+    var wordlistHtml = '';
+    if(s.wordlist){
+      wordlistHtml = '<div class="wordlist">' + s.wordlist.map(function(w){return '<span>'+w+'</span>';}).join('') + '</div>';
+    }
+
+    var hintsHtml = '<div class="hints" data-hints-for="'+i+'">' +
+      s.hints.map(function(h, hi){
+        return '<button class="hint-btn" data-station="'+i+'" data-hint="'+hi+'">HINT '+(hi+1)+'</button>';
+      }).join('') + '<div class="hint-slot" id="hintSlot'+i+'"></div></div>';
+
+    div.innerHTML =
+      '<div class="term-bar"><span class="dot r"></span><span class="dot a"></span><span class="dot '+dotClass+'"></span>'+
+      '<span class="term-title">STATION_'+s.code+'.LOG'+(isDone?' — CLEARED':'')+'</span></div>'+
+      '<div class="station-body">'+
+        '<div class="station-head"><h2>'+s.code+' — '+s.title+'</h2><span class="badge">'+s.type+' · '+s.points+' PTS</span></div>'+
+        '<div class="briefing-text">'+s.briefing+'</div>'+
+        '<div class="puzzle-block">'+s.puzzle+'</div>'+
+        wordlistHtml+
+        (isDone
+          ? '<div class="feedback ok">✓ Cleared — flag SINCLAIR{'+s.keyword+'} accepted. Keyword added to your key ring.</div>'
+          : (
+            '<div class="answer-row">'+
+              '<input type="text" placeholder="SINCLAIR{...}" id="answerInput'+i+'">'+
+              '<button data-submit="'+i+'">Submit Flag</button>'+
+            '</div>'+
+            '<div class="feedback" id="feedback'+i+'"></div>'+
+            hintsHtml
+          )
+        )+
+      '</div>';
+    return div;
+  }
+
+  function renderStations(){
+    var container = document.getElementById('stations');
+    container.innerHTML = '';
+    STATIONS.forEach(function(s, i){
+      var node = stationHTML(s, i);
+      if(node) container.appendChild(node);
+    });
+    attachStationHandlers();
+  }
+
+  function attachStationHandlers(){
+    document.querySelectorAll('[data-submit]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var i = parseInt(btn.getAttribute('data-submit'), 10);
+        checkAnswer(i);
+      });
+      var input = document.getElementById('answerInput'+btn.getAttribute('data-submit'));
+      if(input){
+        input.addEventListener('keydown', function(e){
+          if(e.key === 'Enter'){ checkAnswer(parseInt(btn.getAttribute('data-submit'),10)); }
+        });
+      }
+    });
+    document.querySelectorAll('.hint-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var i = parseInt(btn.getAttribute('data-station'),10);
+        var hi = parseInt(btn.getAttribute('data-hint'),10);
+        showHint(i, hi);
+      });
+    });
+  }
+
+  function showHint(i, hi){
+    var s = STATIONS[i];
+    var slot = document.getElementById('hintSlot'+i);
+    var div = document.createElement('div');
+    div.className = 'hint-text';
+    div.textContent = 'HINT ' + (hi+1) + ': ' + s.hints[hi];
+    slot.appendChild(div);
+    state.hintsUsed[i] = state.hintsUsed[i] || [];
+    if(state.hintsUsed[i].indexOf(hi) === -1) state.hintsUsed[i].push(hi);
+    save();
+  }
+
+  function checkAnswer(i){
+    var s = STATIONS[i];
+    var input = document.getElementById('answerInput'+i);
+    var feedback = document.getElementById('feedback'+i);
+    var val = input.value || '';
+    if(!val.trim()){ return; }
+    var hash = obfHash(val);
+    if(hash === s.answerHash){
+      var penalty = (state.hintsUsed[i] || []).length * 2;
+      var earned = Math.max(s.points - penalty, Math.ceil(s.points/2));
+      state.score += earned;
+      state.completed.push(i);
+      state.unlocked = i + 1;
+      save();
+      feedback.className = 'feedback ok';
+      feedback.textContent = '✓ Correct! +' + earned + ' points. Fragment decoded: ' + s.keyword + '.';
+      setTimeout(function(){
+        renderAll();
+        if(state.unlocked >= STATIONS.length){ showComplete(); }
+      }, 700);
+    } else {
+      feedback.className = 'feedback bad';
+      feedback.textContent = '✗ Not quite — check your working and try again.';
+    }
+  }
+
+  function showComplete(){
+    document.getElementById('completePanel').classList.add('show');
+    document.getElementById('finalScore').textContent = state.score + ' / ' + totalPoints();
+    document.getElementById('teamNameOut').textContent = (state.teamName || 'UNNAMED TEAM') + ' — GHOST PROTOCOL contained.';
+    if(state.startedAt){
+      var mins = Math.round((Date.now() - state.startedAt) / 60000);
+      document.getElementById('timeTaken').textContent = 'Mission time: ~' + mins + ' minute' + (mins===1?'':'s');
+    }
+  }
+
+  function renderAll(){
+    renderMap();
+    renderKeyring();
+    renderScore();
+    renderStations();
+    if(state.unlocked >= STATIONS.length){ showComplete(); }
+  }
+
+  function bootSequence(cb){
+    var lines = [
+      'CONNECTING TO SINCLAIR NETWORKS SECURE CONSOLE...',
+      'AUTHENTICATING CLUB CREDENTIALS... OK',
+      'LOADING INCIDENT REPORT... OK',
+      'FRAGMENTS RECOVERED: 6',
+      'INITIALIZING MISSION CONSOLE_'
+    ];
+    var boot = document.getElementById('boot');
+    var full = lines.join('\n');
+    var idx = 0;
+    var iv = setInterval(function(){
+      boot.textContent = full.slice(0, idx);
+      idx += 3;
+      if(idx > full.length){
+        clearInterval(iv);
+        cb();
+      }
+    }, 12);
+  }
+
+  function init(){
+    load();
+    document.getElementById('teamName').value = state.teamName || '';
+
+    document.getElementById('startBtn').addEventListener('click', function(){
+      state.teamName = document.getElementById('teamName').value.trim();
+      if(!state.startedAt) state.startedAt = Date.now();
+      save();
+      document.getElementById('introPanel').style.display = 'none';
+      document.getElementById('mapWrap').classList.add('show');
+      document.getElementById('keyring').classList.add('show');
+      renderAll();
+    });
+
+    function resetAll(){
+      if(!confirm('Reset all mission progress? This cannot be undone.')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = { teamName:'', unlocked:0, completed:[], score:0, hintsUsed:{}, startedAt:null };
+      document.getElementById('completePanel').classList.remove('show');
+      document.getElementById('introPanel').style.display = '';
+      document.getElementById('mapWrap').classList.remove('show');
+      document.getElementById('keyring').classList.remove('show');
+      document.getElementById('teamName').value = '';
+      renderAll();
+    }
+    document.getElementById('resetBtn').addEventListener('click', resetAll);
+    document.getElementById('resetBtnEnd').addEventListener('click', resetAll);
+    document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+
+    bootSequence(function(){
+      document.getElementById('hero').classList.add('show');
+      // resume in-progress mission
+      if(state.unlocked > 0 || state.completed.length > 0){
+        document.getElementById('introPanel').style.display = 'none';
+        document.getElementById('mapWrap').classList.add('show');
+        document.getElementById('keyring').classList.add('show');
+        renderAll();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
