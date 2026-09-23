@@ -1,0 +1,740 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hidden in Plain Sight</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg-void:#0a0e13;
+    --bg-panel:#0f151c;
+    --bg-raised:#141d26;
+    --bg-well:#0c1219;
+    --line:#1f2b36;
+    --line-soft:#182028;
+    --text:#dce6ea;
+    --text-dim:#84939f;
+    --text-faint:#4d5c68;
+    --cyan:#2ee6d6;
+    --cyan-soft:rgba(46,230,214,0.12);
+    --cyan-line:rgba(46,230,214,0.35);
+    --amber:#ffb020;
+    --amber-soft:rgba(255,176,32,0.12);
+    --red:#ff4d5e;
+    --red-soft:rgba(255,77,94,0.12);
+    --font-mono:'JetBrains Mono','Courier New',monospace;
+    --font-sans:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{
+    margin:0;
+    background:var(--bg-void);
+    color:var(--text);
+    font-family:var(--font-sans);
+    line-height:1.6;
+    padding:0 20px 96px;
+  }
+  ::selection{ background:var(--cyan-soft); color:var(--cyan); }
+
+  a{ color:var(--cyan); }
+
+  h1,h2,h3{
+    font-family:var(--font-mono);
+    font-weight:700;
+    text-wrap:balance;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+
+  code, .mono{ font-family:var(--font-mono); }
+
+  :focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  /* ---------- shell ---------- */
+  .shell{ max-width:920px; margin:0 auto; }
+
+  .termbar{
+    display:flex; align-items:center; gap:10px;
+    padding:12px 16px;
+    margin-top:24px;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:8px 8px 0 0;
+  }
+  .termbar .dots{ display:flex; gap:6px; }
+  .termbar .dot{ width:10px; height:10px; border-radius:50%; }
+  .termbar .dot.r{ background:var(--red); }
+  .termbar .dot.a{ background:var(--amber); }
+  .termbar .dot.c{ background:var(--cyan); }
+  .termbar .path{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--text-faint);
+    margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  .hero{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 10px 10px;
+    padding:40px clamp(20px,4vw,52px) 44px;
+  }
+  .hero .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--cyan); margin:0 0 14px;
+  }
+  .hero h1{ font-size:clamp(32px,5vw,46px); color:var(--text); }
+  .hero .sub{
+    color:var(--text-dim); font-size:16px; max-width:60ch; margin-top:16px;
+  }
+  .hero .thesis{
+    margin-top:28px; padding-top:24px; border-top:1px solid var(--line-soft);
+    display:grid; grid-template-columns:1fr 1fr; gap:24px;
+  }
+  @media (max-width:640px){ .hero .thesis{ grid-template-columns:1fr; } }
+  .thesis .col .tag{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.1em;
+    text-transform:uppercase; margin-bottom:6px;
+  }
+  .thesis .col.a .tag{ color:var(--cyan); }
+  .thesis .col.b .tag{ color:var(--amber); }
+  .thesis .col p{ margin:0; font-size:14.5px; color:var(--text-dim); }
+  .thesis .col strong{ color:var(--text); }
+
+  /* ---------- nav ---------- */
+  nav.jump{
+    display:flex; gap:6px; flex-wrap:wrap;
+    margin:28px 0 0; padding:0;
+  }
+  nav.jump a{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--text-dim);
+    text-decoration:none; padding:8px 14px; border:1px solid var(--line);
+    border-radius:999px; background:var(--bg-panel);
+  }
+  nav.jump a:hover{ color:var(--cyan); border-color:var(--cyan-line); }
+
+  /* ---------- sections ---------- */
+  section{ margin-top:56px; scroll-margin-top:24px; }
+  .section-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:6px; }
+  .section-head .num{ font-family:var(--font-mono); color:var(--text-faint); font-size:14px; }
+  .section-head h2{ font-size:24px; }
+  .section-head.cyan h2{ color:var(--text); }
+  .section-head .chip{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.08em;
+    padding:3px 9px; border-radius:999px; text-transform:uppercase;
+    margin-left:auto;
+  }
+  .chip.cyan{ background:var(--cyan-soft); color:var(--cyan); }
+  .chip.amber{ background:var(--amber-soft); color:var(--amber); }
+
+  .deck{ color:var(--text-dim); font-size:15px; max-width:66ch; margin:14px 0 28px; }
+  .deck strong{ color:var(--text); font-weight:600; }
+
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:10px;
+    padding:clamp(18px,3vw,28px);
+  }
+  .panel + .panel{ margin-top:16px; }
+
+  .tool-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:24px;
+  }
+  @media (max-width:720px){ .tool-grid{ grid-template-columns:1fr; } }
+
+  label.field-label{
+    display:block; font-family:var(--font-mono); font-size:11.5px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint);
+    margin-bottom:8px;
+  }
+  input[type=text], textarea{
+    width:100%; background:var(--bg-well); border:1px solid var(--line);
+    color:var(--text); font-family:var(--font-mono); font-size:14.5px;
+    padding:11px 13px; border-radius:6px; resize:vertical;
+  }
+  input[type=text]:focus, textarea:focus{ border-color:var(--cyan-line); }
+  .field + .field{ margin-top:16px; }
+
+  .output-box{
+    background:var(--bg-well); border:1px solid var(--line-soft); border-radius:6px;
+    padding:14px 16px; font-family:var(--font-mono); font-size:15.5px;
+    color:var(--cyan); letter-spacing:0.02em; word-break:break-word;
+    min-height:44px; font-variant-numeric:tabular-nums;
+  }
+
+  .steps-wrap{ overflow-x:auto; margin-top:16px; border:1px solid var(--line-soft); border-radius:6px; }
+  table.steps{ border-collapse:collapse; font-family:var(--font-mono); font-size:12.5px; width:100%; }
+  table.steps th, table.steps td{
+    padding:6px 9px; text-align:center; border-bottom:1px solid var(--line-soft);
+    white-space:nowrap;
+  }
+  table.steps th{ color:var(--text-faint); font-weight:500; text-transform:uppercase; font-size:10px; letter-spacing:0.06em; background:var(--bg-panel); position:sticky; top:0; }
+  table.steps td.p{ color:var(--text-dim); }
+  table.steps td.k{ color:var(--amber); }
+  table.steps td.s{ color:var(--text-faint); }
+  table.steps td.c{ color:var(--cyan); font-weight:600; }
+  .steps-note{ font-size:11.5px; color:var(--text-faint); margin-top:8px; }
+
+  details.dive{
+    margin-top:18px; border:1px solid var(--line-soft); border-radius:8px;
+    background:var(--bg-well); padding:0;
+  }
+  details.dive summary{
+    cursor:pointer; padding:13px 16px; font-family:var(--font-mono); font-size:13px;
+    color:var(--cyan); list-style:none; display:flex; align-items:center; gap:8px;
+  }
+  details.dive summary::-webkit-details-marker{ display:none; }
+  details.dive summary::before{ content:'▸'; display:inline-block; transition:transform 0.15s ease; color:var(--text-faint); }
+  details.dive[open] summary::before{ transform:rotate(90deg); }
+  details.dive .dive-body{ padding:0 16px 18px; color:var(--text-dim); font-size:14px; }
+  details.dive .dive-body p{ margin:0 0 12px; }
+  details.dive .dive-body p:last-child{ margin-bottom:0; }
+
+  .tableau-scroll{ overflow-x:auto; margin-top:10px; padding-bottom:6px; }
+  table.tableau{ border-collapse:collapse; font-family:var(--font-mono); font-size:10.5px; }
+  table.tableau td, table.tableau th{
+    width:20px; height:20px; text-align:center; color:var(--text-faint);
+  }
+  table.tableau th{ color:var(--text-dim); font-weight:600; }
+  table.tableau th.corner{ background:var(--bg-well); }
+  table.tableau td.cell{ color:var(--text-faint); }
+  table.tableau td.cell.hi-row{ background:var(--amber-soft); color:var(--amber); }
+  table.tableau td.cell.hi-col{ background:var(--cyan-soft); color:var(--cyan); }
+  table.tableau td.cell.hi-both{ background:var(--amber); color:var(--bg-void); font-weight:700; }
+  table.tableau th.hi{ color:var(--text); font-weight:700; }
+
+  .btn{
+    font-family:var(--font-mono); font-size:12.5px; letter-spacing:0.03em;
+    background:var(--bg-well); color:var(--text); border:1px solid var(--line);
+    padding:10px 16px; border-radius:6px; cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--cyan-line); color:var(--cyan); }
+  .btn.primary{ background:var(--cyan-soft); border-color:var(--cyan-line); color:var(--cyan); }
+  .btn-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+  .cover-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  canvas.cover{ width:100%; max-width:320px; height:auto; border:1px solid var(--line-soft); border-radius:6px; image-rendering:pixelated; }
+  .cover-caption{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); text-align:center; }
+
+  .fingerprint{
+    margin-top:14px; font-family:var(--font-mono); font-size:11px; color:var(--text-faint);
+    word-break:break-all; padding:10px 12px; background:var(--bg-well); border-radius:6px;
+    border:1px solid var(--line-soft);
+  }
+  .fingerprint b{ display:block; color:var(--text-dim); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:5px; }
+  .fingerprint span{ color:var(--amber); }
+
+  .status-line{ font-family:var(--font-mono); font-size:12.5px; margin-top:14px; min-height:18px; }
+  .status-line.ok{ color:var(--cyan); }
+  .status-line.err{ color:var(--red); }
+
+  /* ---------- quiz ---------- */
+  .quiz-q{ padding:20px 0; border-top:1px solid var(--line-soft); }
+  .quiz-q:first-child{ border-top:none; padding-top:0; }
+  .quiz-q .qtext{ font-size:15px; color:var(--text); margin:0 0 14px; font-weight:500; }
+  .quiz-q .qnum{ color:var(--text-faint); font-family:var(--font-mono); margin-right:8px; }
+  .opts{ display:flex; flex-direction:column; gap:8px; }
+  .opt{
+    text-align:left; background:var(--bg-well); border:1px solid var(--line);
+    color:var(--text-dim); font-family:var(--font-sans); font-size:14px;
+    padding:11px 14px; border-radius:6px; cursor:pointer;
+  }
+  .opt:hover:not(:disabled){ border-color:var(--cyan-line); color:var(--text); }
+  .opt:disabled{ cursor:default; }
+  .opt.correct{ border-color:var(--cyan); background:var(--cyan-soft); color:var(--cyan); }
+  .opt.wrong{ border-color:var(--red); background:var(--red-soft); color:var(--red); }
+  .explain{
+    margin-top:10px; font-size:13.5px; color:var(--text-dim); background:var(--bg-well);
+    border-left:2px solid var(--amber); padding:10px 14px; border-radius:0 6px 6px 0;
+  }
+
+  footer{
+    margin-top:64px; padding-top:24px; border-top:1px solid var(--line-soft);
+    font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+</style>
+
+<div class="shell">
+
+  <div class="termbar">
+    <div class="dots"><span class="dot r"></span><span class="dot a"></span><span class="dot c"></span></div>
+    <div class="path">~/cit2640/module-02/hidden-in-plain-sight</div>
+  </div>
+
+  <div class="hero">
+    <p class="eyebrow">CIT 2640 · Network Security · Module 2 reference</p>
+    <h1>Hidden in Plain Sight</h1>
+    <p class="sub">Two ways to keep a message safe from the wrong reader — and why they aren't the same tool. Work through both live below, then check your understanding at the bottom.</p>
+    <div class="thesis">
+      <div class="col a">
+        <div class="tag">Cryptography</div>
+        <p><strong>Hides what a message means.</strong> The message is visibly there — anyone can see the ciphertext — but without the key its meaning is scrambled. The Vigenère cipher below is a classic, breakable example.</p>
+      </div>
+      <div class="col b">
+        <div class="tag">Steganography</div>
+        <p><strong>Hides that a message exists at all.</strong> Nothing about the carrier — an image, a file, a sentence — looks unusual. The secret sits inside it, in plain sight.</p>
+      </div>
+    </div>
+  </div>
+
+  <nav class="jump">
+    <a href="#vigenere">01 · Vigenère Cipher</a>
+    <a href="#stego">02 · Image Steganography</a>
+    <a href="#check">03 · Quick Check</a>
+  </nav>
+
+  <!-- ============ VIGENERE ============ -->
+  <section id="vigenere">
+    <div class="section-head">
+      <span class="num">01</span>
+      <h2>The Vigenère Cipher</h2>
+      <span class="chip amber">Polyalphabetic substitution</span>
+    </div>
+    <p class="deck">
+      Invented in the 16th century and unbroken in practice until the 1860s, the Vigenère cipher shifts each
+      letter of the plaintext by an amount set by a repeating keyword — so the same plaintext letter can encrypt
+      to a different ciphertext letter every time it appears. That defeats simple frequency analysis, which is why
+      it was called <strong>le chiffre indéchiffrable</strong> — "the indecipherable cipher" — for nearly three centuries.
+    </p>
+
+    <div class="panel">
+      <div class="tool-grid">
+        <div>
+          <div class="field">
+            <label class="field-label" for="vig-text">Plaintext</label>
+            <textarea id="vig-text" rows="3" spellcheck="false">ATTACKATDAWN</textarea>
+          </div>
+          <div class="field">
+            <label class="field-label" for="vig-key">Keyword</label>
+            <input type="text" id="vig-key" value="LEMON" spellcheck="false">
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="vig-mode-enc" data-mode="encode">Encode</button>
+            <button class="btn" id="vig-mode-dec" data-mode="decode">Decode</button>
+          </div>
+        </div>
+        <div>
+          <label class="field-label">Ciphertext</label>
+          <div class="output-box" id="vig-output">—</div>
+          <div class="steps-note" id="vig-note"></div>
+        </div>
+      </div>
+
+      <div class="steps-wrap">
+        <table class="steps" id="vig-steps"></table>
+      </div>
+
+      <details class="dive">
+        <summary>Show the tabula recta (Vigenère square)</summary>
+        <div class="dive-body">
+          <p>
+            Each row of the square is the alphabet shifted by that row's letter — exactly a Caesar cipher. To encrypt
+            a letter, find its column under the <span style="color:var(--cyan)">plaintext letter</span>, follow it down
+            to the <span style="color:var(--amber)">row of the current key letter</span>, and read off the cell where
+            they meet. The highlight below tracks the last character you typed above.
+          </p>
+          <div class="tableau-scroll"><table class="tableau" id="tableau"></table></div>
+        </div>
+      </details>
+
+      <details class="dive">
+        <summary>How the cipher was eventually broken</summary>
+        <div class="dive-body">
+          <p>
+            The <strong>Kasiski examination</strong> (1863) looks for repeated sequences of three or more letters in
+            the ciphertext. If the same short stretch of plaintext lines up with the same stretch of key twice, it
+            produces identical ciphertext — and the distance between the repeats is a multiple of the key length.
+            Enough repeats narrow the key length down to one likely value.
+          </p>
+          <p>
+            Once the key length <code>n</code> is known, the ciphertext splits into <code>n</code> interleaved streams,
+            each encrypted with a single, constant shift — a plain Caesar cipher. Frequency analysis (E, T, A are the
+            most common English letters) cracks each stream on its own, and the key falls out letter by letter.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ STEGANOGRAPHY ============ -->
+  <section id="stego">
+    <div class="section-head">
+      <span class="num">02</span>
+      <h2>Image Steganography</h2>
+      <span class="chip cyan">Least-significant-bit encoding</span>
+    </div>
+    <p class="deck">
+      Every pixel in an image is stored as color values, typically 0–255 per channel. Flipping a value's
+      <strong>least significant bit</strong> changes it by at most 1 out of 256 possible shades — a difference no
+      human eye can register. Spend one bit per color channel across enough pixels and you have a covert channel
+      hidden inside an ordinary-looking picture. Tools like <code>steghide</code> build on this idea (with real
+      encryption and randomized placement); the demo below uses the bare technique so the mechanism stays visible.
+    </p>
+
+    <div class="panel">
+      <div class="tool-grid">
+        <div>
+          <div class="field">
+            <label class="field-label" for="stego-msg">Secret message</label>
+            <textarea id="stego-msg" rows="3" spellcheck="false">MEET AT 0300</textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="stego-new-cover">New cover image</button>
+            <button class="btn primary" id="stego-conceal">Conceal</button>
+            <button class="btn" id="stego-reveal">Reveal</button>
+          </div>
+          <div class="status-line" id="stego-status"></div>
+          <div class="fingerprint" id="stego-fingerprint" hidden>
+            <b>SHA-256 fingerprint of extracted message</b>
+            <span id="stego-hash">—</span>
+          </div>
+        </div>
+        <div class="cover-wrap">
+          <canvas class="cover" id="stego-canvas" width="240" height="150"></canvas>
+          <div class="cover-caption">Cover image — a generated network-traffic waterfall, 240×150px</div>
+        </div>
+      </div>
+
+      <details class="dive">
+        <summary>Why a fingerprint instead of just trusting the image?</summary>
+        <div class="dive-body">
+          <p>
+            In the full lab, after extracting a hidden file you run <code>md5sum</code> against it and compare the
+            result to a known-good hash — that's how you confirm the extraction wasn't corrupted, not whether the
+            secret exists. Browsers don't expose MD5 directly, so this page computes a <strong>SHA-256</strong>
+            fingerprint of the extracted text instead: same purpose, a stronger algorithm.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="check">
+    <div class="section-head">
+      <span class="num">03</span>
+      <h2>Quick Check</h2>
+    </div>
+    <p class="deck">Four questions, instant feedback, nothing recorded — just a gut check before the graded lab.</p>
+
+    <div class="panel" id="quiz"></div>
+  </section>
+
+  <footer>
+    <span>CIT 2640 — Network Security · Module 2</span>
+    <span>Self-contained · no data leaves this page</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+
+  /* ================= VIGENERE ================= */
+  var vigText = document.getElementById('vig-text');
+  var vigKey = document.getElementById('vig-key');
+  var vigOutput = document.getElementById('vig-output');
+  var vigNote = document.getElementById('vig-note');
+  var vigSteps = document.getElementById('vig-steps');
+  var btnEnc = document.getElementById('vig-mode-enc');
+  var btnDec = document.getElementById('vig-mode-dec');
+  var vigMode = 'encode';
+
+  function cleanKey(k){ return (k || '').replace(/[^A-Za-z]/g,'').toUpperCase(); }
+
+  function vigenere(text, key, decode){
+    var k = cleanKey(key);
+    var out = '';
+    var steps = [];
+    if (!k) return { output:'', steps:[] };
+    var ki = 0;
+    for (var i=0;i<text.length;i++){
+      var ch = text[i];
+      if (/[A-Za-z]/.test(ch)){
+        var isUpper = ch === ch.toUpperCase();
+        var p = ch.toUpperCase().charCodeAt(0) - 65;
+        var kLetter = k[ki % k.length];
+        var kVal = kLetter.charCodeAt(0) - 65;
+        var c = decode ? ((p - kVal + 26) % 26) : ((p + kVal) % 26);
+        var outCh = String.fromCharCode(c + 65);
+        out += isUpper ? outCh : outCh.toLowerCase();
+        steps.push({ p: ch.toUpperCase(), k: kLetter, shift: kVal, c: outCh });
+        ki++;
+      } else {
+        out += ch;
+      }
+    }
+    return { output: out, steps: steps };
+  }
+
+  var lastKeyLetter = null, lastPlainLetter = null;
+
+  function renderVigenere(){
+    var text = vigText.value;
+    var key = vigKey.value;
+    var result = vigenere(text, key, vigMode === 'decode');
+    vigOutput.textContent = result.output || '—';
+
+    var shown = result.steps.slice(0, 32);
+    var rows = '<tr><th>Plain</th><th>Key</th><th>Shift</th><th>' + (vigMode==='decode' ? 'Recovered' : 'Cipher') + '</th></tr>';
+    shown.forEach(function(s){
+      rows += '<tr><td class="p">' + s.p + '</td><td class="k">' + s.k + '</td><td class="s">+' + s.shift + '</td><td class="c">' + s.c + '</td></tr>';
+    });
+    vigSteps.innerHTML = rows;
+    vigNote.textContent = result.steps.length > 32 ? 'Showing the first 32 characters of ' + result.steps.length + '.' : '';
+
+    if (shown.length){
+      var last = shown[shown.length - 1];
+      lastKeyLetter = last.k;
+      lastPlainLetter = last.p;
+    } else {
+      lastKeyLetter = null; lastPlainLetter = null;
+    }
+    highlightTableau();
+  }
+
+  btnEnc.addEventListener('click', function(){ vigMode='encode'; btnEnc.classList.add('primary'); btnDec.classList.remove('primary'); renderVigenere(); });
+  btnDec.addEventListener('click', function(){ vigMode='decode'; btnDec.classList.add('primary'); btnEnc.classList.remove('primary'); renderVigenere(); });
+  vigText.addEventListener('input', renderVigenere);
+  vigKey.addEventListener('input', renderVigenere);
+
+  /* ---- tabula recta ---- */
+  var tableau = document.getElementById('tableau');
+  var ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  (function buildTableau(){
+    var html = '<tr><th class="corner"></th>';
+    for (var c=0;c<26;c++) html += '<th data-col="' + ALPHA[c] + '">' + ALPHA[c] + '</th>';
+    html += '</tr>';
+    for (var r=0;r<26;r++){
+      html += '<tr><th data-row="' + ALPHA[r] + '">' + ALPHA[r] + '</th>';
+      for (var c2=0;c2<26;c2++){
+        var letter = ALPHA[(r + c2) % 26];
+        html += '<td class="cell" data-row="' + ALPHA[r] + '" data-col="' + ALPHA[c2] + '">' + letter + '</td>';
+      }
+      html += '</tr>';
+    }
+    tableau.innerHTML = html;
+  })();
+
+  function highlightTableau(){
+    var cells = tableau.querySelectorAll('td.cell');
+    var headRows = tableau.querySelectorAll('th[data-row]');
+    var headCols = tableau.querySelectorAll('th[data-col]');
+    cells.forEach(function(td){
+      var isRow = td.getAttribute('data-row') === lastKeyLetter;
+      var isCol = td.getAttribute('data-col') === lastPlainLetter;
+      td.classList.toggle('hi-both', !!(isRow && isCol && lastKeyLetter));
+      td.classList.toggle('hi-row', !!(isRow && !isCol && lastKeyLetter));
+      td.classList.toggle('hi-col', !!(isCol && !isRow && lastPlainLetter));
+    });
+    headRows.forEach(function(th){ th.classList.toggle('hi', th.getAttribute('data-row') === lastKeyLetter); });
+    headCols.forEach(function(th){ th.classList.toggle('hi', th.getAttribute('data-col') === lastPlainLetter); });
+  }
+
+  /* ================= STEGANOGRAPHY ================= */
+  var canvas = document.getElementById('stego-canvas');
+  var ctx = canvas.getContext('2d');
+  var stegoMsg = document.getElementById('stego-msg');
+  var statusLine = document.getElementById('stego-status');
+  var fingerprintBox = document.getElementById('stego-fingerprint');
+  var hashSpan = document.getElementById('stego-hash');
+
+  function generateCover(){
+    var w = canvas.width, h = canvas.height;
+    var grad = ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0, '#0d1520');
+    grad.addColorStop(1, '#121b25');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle = 'rgba(46,230,214,0.30)';
+    ctx.lineWidth = 1;
+    for (var x=0; x<w; x+=3){
+      var barH = 8 + Math.abs(Math.sin(x*0.09)) * 45 + Math.random() * 18;
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, h);
+      ctx.lineTo(x + 0.5, h - barH);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,176,32,0.18)';
+    for (var y = h; y > 0; y -= 14){
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(w, y + 0.5);
+      ctx.stroke();
+    }
+    statusLine.textContent = '';
+    statusLine.className = 'status-line';
+    fingerprintBox.hidden = true;
+  }
+
+  function textToBits(str){
+    var bytes = new TextEncoder().encode(str);
+    var bits = [];
+    var len = bytes.length;
+    for (var i=31;i>=0;i--) bits.push((len >> i) & 1);
+    bytes.forEach(function(b){
+      for (var i2=7;i2>=0;i2--) bits.push((b >> i2) & 1);
+    });
+    return bits;
+  }
+
+  function conceal(){
+    var msg = stegoMsg.value;
+    var bits = textToBits(msg);
+    var imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    var data = imgData.data;
+    var capacity = Math.floor(data.length / 4) * 3;
+    if (bits.length > capacity){
+      statusLine.textContent = 'Message too long for this cover image — shorten it or generate a larger one.';
+      statusLine.className = 'status-line err';
+      return;
+    }
+    var bitIndex = 0;
+    for (var i=0; i<data.length && bitIndex<bits.length; i+=4){
+      for (var c=0;c<3 && bitIndex<bits.length;c++){
+        data[i+c] = (data[i+c] & 0xFE) | bits[bitIndex];
+        bitIndex++;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    statusLine.textContent = 'Concealed ' + msg.length + ' characters across ' + bits.length + ' pixel channels. The image above looks unchanged.';
+    statusLine.className = 'status-line ok';
+    fingerprintBox.hidden = true;
+  }
+
+  function reveal(){
+    var imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    var data = imgData.data;
+    var allBits = [];
+    for (var i=0;i<data.length;i+=4){
+      for (var c=0;c<3;c++) allBits.push(data[i+c] & 1);
+    }
+    var len = 0;
+    for (var b=0;b<32;b++) len = (len << 1) | allBits[b];
+    if (len < 0 || len > 10000 || (32 + len*8) > allBits.length){
+      statusLine.textContent = 'No valid hidden message found — try Concealing one first.';
+      statusLine.className = 'status-line err';
+      return;
+    }
+    var bytes = new Uint8Array(len);
+    for (var byteI=0; byteI<len; byteI++){
+      var byte = 0;
+      for (var bitI=0; bitI<8; bitI++){
+        byte = (byte << 1) | allBits[32 + byteI*8 + bitI];
+      }
+      bytes[byteI] = byte;
+    }
+    var text = new TextDecoder().decode(bytes);
+    statusLine.textContent = 'Extracted: "' + text + '"';
+    statusLine.className = 'status-line ok';
+
+    if (window.crypto && window.crypto.subtle){
+      var buf = new TextEncoder().encode(text);
+      window.crypto.subtle.digest('SHA-256', buf).then(function(digest){
+        var arr = Array.from(new Uint8Array(digest));
+        var hex = arr.map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+        hashSpan.textContent = hex;
+        fingerprintBox.hidden = false;
+      });
+    }
+  }
+
+  document.getElementById('stego-new-cover').addEventListener('click', generateCover);
+  document.getElementById('stego-conceal').addEventListener('click', conceal);
+  document.getElementById('stego-reveal').addEventListener('click', reveal);
+
+  /* ================= QUIZ ================= */
+  var QUESTIONS = [
+    {
+      q: 'What is the fundamental difference between cryptography and steganography?',
+      opts: [
+        { t: 'Cryptography hides that a message exists; steganography hides what it means.', ok:false },
+        { t: 'Cryptography scrambles a message’s meaning; steganography hides that a message exists at all.', ok:true },
+        { t: 'They are two names for the same technique.', ok:false },
+        { t: 'Steganography only works on images; cryptography only works on text.', ok:false }
+      ],
+      exp: 'A ciphertext is visibly a secret, even unread. A steganographic carrier is designed to look like nothing at all.'
+    },
+    {
+      q: 'The Vigenère cipher was called "le chiffre indéchiffrable" for centuries. What eventually broke it in practice?',
+      opts: [
+        { t: 'Brute-force computing power.', ok:false },
+        { t: 'The Kasiski examination — spotting repeated ciphertext sequences to deduce the key length.', ok:true },
+        { t: 'The keyword was always a common dictionary word.', ok:false },
+        { t: 'Simple single-letter frequency analysis, the same attack used on a Caesar cipher.', ok:false }
+      ],
+      exp: 'Once the key length is known, the ciphertext splits into that many interleaved Caesar ciphers — each easy to solve with ordinary frequency analysis.'
+    },
+    {
+      q: 'In LSB image steganography, why is the change usually invisible to the human eye?',
+      opts: [
+        { t: 'The message is stored in the file’s metadata, not its pixels.', ok:false },
+        { t: 'Only the least significant bit of a color value changes — at most 1 shade out of 256.', ok:true },
+        { t: 'The image is encrypted before the message is embedded.', ok:false },
+        { t: 'Displays cannot render single-bit color differences.', ok:false }
+      ],
+      exp: 'A color channel runs 0–255. Flipping its lowest bit moves the value by at most 1 — far below what the eye can distinguish.'
+    },
+    {
+      q: 'A Vigenère key of length 1 (a single repeating letter) is equivalent to which classical cipher?',
+      opts: [
+        { t: 'The Caesar cipher.', ok:true },
+        { t: 'The Atbash cipher.', ok:false },
+        { t: 'The rail fence cipher.', ok:false },
+        { t: 'A one-time pad.', ok:false }
+      ],
+      exp: 'With a one-letter key, every plaintext letter shifts by the same fixed amount — exactly what a Caesar cipher does.'
+    }
+  ];
+
+  var quizEl = document.getElementById('quiz');
+  QUESTIONS.forEach(function(item, qi){
+    var wrap = document.createElement('div');
+    wrap.className = 'quiz-q';
+    var qtext = document.createElement('p');
+    qtext.className = 'qtext';
+    qtext.innerHTML = '<span class="qnum">Q' + (qi+1) + '</span>' + item.q;
+    wrap.appendChild(qtext);
+
+    var opts = document.createElement('div');
+    opts.className = 'opts';
+    var explain = document.createElement('div');
+    explain.className = 'explain';
+    explain.style.display = 'none';
+    explain.textContent = item.exp;
+
+    item.opts.forEach(function(opt){
+      var b = document.createElement('button');
+      b.className = 'opt';
+      b.type = 'button';
+      b.textContent = opt.t;
+      b.addEventListener('click', function(){
+        var all = opts.querySelectorAll('.opt');
+        all.forEach(function(o){ o.disabled = true; });
+        if (opt.ok){ b.classList.add('correct'); }
+        else {
+          b.classList.add('wrong');
+          var correctBtn = Array.prototype.find.call(all, function(o, idx){ return item.opts[idx].ok; });
+          if (correctBtn) correctBtn.classList.add('correct');
+        }
+        explain.style.display = 'block';
+      });
+      opts.appendChild(b);
+    });
+
+    wrap.appendChild(opts);
+    wrap.appendChild(explain);
+    quizEl.appendChild(wrap);
+  });
+
+  /* ================= INIT ================= */
+  renderVigenere();
+  generateCover();
+  conceal();
+
+})();
+</script>
+
+</body></html>

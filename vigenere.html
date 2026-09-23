@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vigenère Cipher · Encoder / Decoder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg-void:#f3f5f6; --bg-panel:#ffffff; --bg-well:#eef2f4;
+    --line:#d3dde2; --line-soft:#e2e9ec;
+    --text:#10181e; --text-dim:#4a5963; --text-faint:#7c8b95;
+    --cyan:#0a8f85; --cyan-soft:rgba(10,143,133,0.10); --cyan-line:rgba(10,143,133,0.40);
+    --amber:#b36b00; --amber-soft:rgba(179,107,0,0.12);
+    --red:#d42f40; --on-amber:#ffffff;
+    --font-mono:'JetBrains Mono','Courier New',monospace;
+    --font-sans:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg-void:#0a0e13; --bg-panel:#0f151c; --bg-well:#0c1219;
+      --line:#1f2b36; --line-soft:#182028;
+      --text:#dce6ea; --text-dim:#84939f; --text-faint:#4d5c68;
+      --cyan:#2ee6d6; --cyan-soft:rgba(46,230,214,0.12); --cyan-line:rgba(46,230,214,0.35);
+      --amber:#ffb020; --amber-soft:rgba(255,176,32,0.12);
+      --red:#ff4d5e; --on-amber:#0a0e13;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg-void:#0a0e13; --bg-panel:#0f151c; --bg-well:#0c1219;
+    --line:#1f2b36; --line-soft:#182028;
+    --text:#dce6ea; --text-dim:#84939f; --text-faint:#4d5c68;
+    --cyan:#2ee6d6; --cyan-soft:rgba(46,230,214,0.12); --cyan-line:rgba(46,230,214,0.35);
+    --amber:#ffb020; --amber-soft:rgba(255,176,32,0.12);
+    --red:#ff4d5e; --on-amber:#0a0e13;
+    color-scheme:dark;
+  }
+  :root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  html{ scroll-padding-top:env(safe-area-inset-top,0px); background:var(--bg-void); }
+  *,*::before,*::after{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg-void); color:var(--text); font-family:var(--font-sans); line-height:1.6; padding:0 20px 72px; }
+  ::selection{ background:var(--cyan-soft); color:var(--cyan); }
+  h1,h2{ font-family:var(--font-mono); font-weight:700; margin:0; letter-spacing:-0.01em; text-wrap:balance; }
+  code{ font-family:var(--font-mono); }
+  :focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ *{ transition-duration:0.001ms !important; } }
+
+  .shell{ max-width:920px; margin:0 auto; }
+  .termbar{ display:flex; align-items:center; gap:10px; padding:12px 16px; margin-top:24px; background:var(--bg-panel); border:1px solid var(--line); border-radius:8px 8px 0 0; }
+  .dots{ display:flex; gap:6px; } .dot{ width:10px; height:10px; border-radius:50%; }
+  .dot.r{ background:var(--red); } .dot.a{ background:var(--amber); } .dot.c{ background:var(--cyan); }
+  .path{ font-family:var(--font-mono); font-size:12.5px; color:var(--text-faint); margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hero{ background:var(--bg-panel); border:1px solid var(--line); border-top:none; border-radius:0 0 10px 10px; padding:36px clamp(20px,4vw,52px) 36px; }
+  .eyebrow{ font-family:var(--font-mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cyan); margin:0 0 14px; }
+  .hero h1{ font-size:clamp(28px,5vw,42px); }
+  .sub{ color:var(--text-dim); font-size:15.5px; max-width:66ch; margin:16px 0 0; }
+  .sub strong{ color:var(--text); font-weight:600; }
+  .chip{ display:inline-block; margin-top:18px; font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.08em; padding:3px 9px; border-radius:999px; text-transform:uppercase; background:var(--amber-soft); color:var(--amber); }
+
+  section{ margin-top:28px; }
+  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:10px; padding:clamp(18px,3vw,28px); }
+  .tool-grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:720px){ .tool-grid{ grid-template-columns:1fr; } }
+  .field-label{ display:block; font-family:var(--font-mono); font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px; }
+  input[type=text], textarea{ width:100%; background:var(--bg-well); border:1px solid var(--line); color:var(--text); font-family:var(--font-mono); font-size:14.5px; padding:11px 13px; border-radius:6px; resize:vertical; }
+  input[type=text]:focus, textarea:focus{ border-color:var(--cyan-line); outline:none; }
+  .field + .field{ margin-top:16px; }
+  .output-box{ background:var(--bg-well); border:1px solid var(--line-soft); border-radius:6px; padding:14px 16px; font-family:var(--font-mono); font-size:15.5px; color:var(--cyan); letter-spacing:0.02em; word-break:break-word; white-space:pre-wrap; min-height:44px; }
+  .key-echo{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); margin-top:8px; word-break:break-all; }
+  .key-echo span{ color:var(--amber); }
+
+  .btn{ font-family:var(--font-mono); font-size:12.5px; letter-spacing:0.03em; background:var(--bg-well); color:var(--text); border:1px solid var(--line); padding:10px 16px; border-radius:6px; cursor:pointer; }
+  .btn:hover{ border-color:var(--cyan-line); color:var(--cyan); }
+  .btn.primary{ background:var(--cyan-soft); border-color:var(--cyan-line); color:var(--cyan); }
+  .btn-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+  .steps-wrap{ overflow-x:auto; margin-top:20px; border:1px solid var(--line-soft); border-radius:6px; max-height:360px; overflow-y:auto; }
+  table.steps{ border-collapse:collapse; font-family:var(--font-mono); font-size:12.5px; width:100%; }
+  table.steps th, table.steps td{ padding:6px 9px; text-align:center; border-bottom:1px solid var(--line-soft); white-space:nowrap; }
+  table.steps th{ color:var(--text-faint); font-weight:500; text-transform:uppercase; font-size:10px; letter-spacing:0.06em; background:var(--bg-panel); position:sticky; top:0; }
+  td.p{ color:var(--text-dim); } td.k{ color:var(--amber); } td.s{ color:var(--text-faint); } td.c{ color:var(--cyan); font-weight:600; }
+  .steps-note{ font-size:11.5px; color:var(--text-faint); margin-top:8px; min-height:1em; }
+
+  details.dive{ margin-top:18px; border:1px solid var(--line-soft); border-radius:8px; background:var(--bg-well); }
+  details.dive summary{ cursor:pointer; padding:13px 16px; font-family:var(--font-mono); font-size:13px; color:var(--cyan); list-style:none; display:flex; align-items:center; gap:8px; }
+  details.dive summary::-webkit-details-marker{ display:none; }
+  details.dive summary::before{ content:'▸'; display:inline-block; transition:transform 0.15s ease; color:var(--text-faint); }
+  details.dive[open] summary::before{ transform:rotate(90deg); }
+  .open-block{ margin-top:18px; border:1px solid var(--line-soft); border-radius:8px; background:var(--bg-well); }
+  .block-title{ padding:13px 16px; font-family:var(--font-mono); font-size:13px; color:var(--cyan); }
+  .dive-body{ padding:0 16px 18px; color:var(--text-dim); font-size:14px; }
+  .dive-body p{ margin:0 0 12px; } .dive-body p:last-child{ margin-bottom:0; }
+  .tableau-scroll{ overflow-x:auto; margin-top:10px; padding-bottom:6px; }
+  table.tableau{ border-collapse:collapse; font-family:var(--font-mono); font-size:10.5px; }
+  table.tableau td, table.tableau th{ width:20px; height:20px; text-align:center; color:var(--text-faint); }
+  table.tableau th{ color:var(--text-dim); font-weight:600; }
+  td.cell.hi-row{ background:var(--amber-soft); color:var(--amber); }
+  td.cell.hi-col{ background:var(--cyan-soft); color:var(--cyan); }
+  td.cell.hi-both{ background:var(--amber); color:var(--on-amber); font-weight:700; }
+  table.tableau th.hi{ color:var(--text); font-weight:700; }
+
+  footer{ margin-top:48px; padding-top:20px; border-top:1px solid var(--line-soft); font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="termbar">
+    <div class="dots"><span class="dot r"></span><span class="dot a"></span><span class="dot c"></span></div>
+    <div class="path">~/cit2640/tools/vigenere</div>
+  </div>
+
+  <header class="hero">
+    <p class="eyebrow">CIT 2640 · Network Security · Cipher tool</p>
+    <h1>Vigenère Encoder / Decoder</h1>
+    <p class="sub">
+      The Vigenère cipher shifts each letter of the plaintext by an amount set by a repeating keyword, so the same
+      plaintext letter can encrypt to a different ciphertext letter every time it appears. That defeated simple
+      frequency analysis for nearly three centuries — it was called <strong>le chiffre indéchiffrable</strong>.
+    </p>
+    <span class="chip">Polyalphabetic substitution</span>
+  </header>
+
+  <section>
+    <div class="panel">
+      <div class="tool-grid">
+        <div>
+          <div class="field">
+            <label class="field-label" for="vig-text" id="in-label">Plaintext</label>
+            <textarea id="vig-text" rows="4" spellcheck="false">ATTACKATDAWN</textarea>
+          </div>
+          <div class="field">
+            <label class="field-label" for="vig-key">Keyword</label>
+            <input type="text" id="vig-key" value="LEMON" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="vig-mode-enc" type="button">Encode</button>
+            <button class="btn" id="vig-mode-dec" type="button">Decode</button>
+            <button class="btn" id="vig-swap" type="button" title="Move the output into the input and flip the mode">⇄ Swap</button>
+          </div>
+        </div>
+        <div>
+          <span class="field-label" id="out-label">Ciphertext</span>
+          <div class="output-box" id="vig-output" aria-live="polite">—</div>
+          <div class="key-echo" id="vig-keyecho"></div>
+          <div class="btn-row">
+            <button class="btn" id="vig-copy" type="button">Copy output</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="steps-wrap">
+        <table class="steps" id="vig-steps"></table>
+      </div>
+      <div class="steps-note" id="vig-note"></div>
+
+      <div class="dive open-block">
+        <div class="block-title">Tabula recta (Vigenère square)</div>
+        <div class="dive-body">
+          <p>
+            Each row of the square is the alphabet shifted by that row's letter — exactly a Caesar cipher. To encrypt
+            a letter, find its column under the <span style="color:var(--cyan)">plaintext letter</span>, follow it down
+            to the <span style="color:var(--amber)">row of the current key letter</span>, and read off the cell where
+            they meet. To decrypt, go along the key row until you find the ciphertext letter; its column header is the
+            plaintext. The highlight tracks the last letter processed above.
+          </p>
+          <div class="tableau-scroll"><table class="tableau" id="tableau"></table></div>
+        </div>
+      </div>
+
+      <details class="dive">
+        <summary>How the cipher was eventually broken</summary>
+        <div class="dive-body">
+          <p>
+            The <strong>Kasiski examination</strong> (1863) looks for repeated sequences of three or more letters in
+            the ciphertext. If the same short stretch of plaintext lines up with the same stretch of key twice, it
+            produces identical ciphertext — and the distance between the repeats is a multiple of the key length.
+            Enough repeats narrow the key length down to one likely value.
+          </p>
+          <p>
+            Once the key length <code>n</code> is known, the ciphertext splits into <code>n</code> interleaved streams,
+            each encrypted with a single, constant shift — a plain Caesar cipher. Frequency analysis (E, T, A are the
+            most common English letters) cracks each stream on its own, and the key falls out letter by letter.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <span>CIT 2640 — Network Security</span>
+    <span>Self-contained · no data leaves this page</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var vigText = document.getElementById('vig-text');
+  var vigKey = document.getElementById('vig-key');
+  var vigOutput = document.getElementById('vig-output');
+  var vigNote = document.getElementById('vig-note');
+  var vigSteps = document.getElementById('vig-steps');
+  var keyEcho = document.getElementById('vig-keyecho');
+  var inLabel = document.getElementById('in-label');
+  var outLabel = document.getElementById('out-label');
+  var btnEnc = document.getElementById('vig-mode-enc');
+  var btnDec = document.getElementById('vig-mode-dec');
+  var btnSwap = document.getElementById('vig-swap');
+  var btnCopy = document.getElementById('vig-copy');
+  var vigMode = 'encode';
+  var MAX_STEPS = 64;
+
+  function cleanKey(k){ return (k || '').replace(/[^A-Za-z]/g,'').toUpperCase(); }
+
+  function vigenere(text, key, decode){
+    var k = cleanKey(key);
+    var out = '', steps = [];
+    if (!k) return { output:'', steps:[], key:'' };
+    var ki = 0;
+    for (var i=0;i<text.length;i++){
+      var ch = text[i];
+      if (/[A-Za-z]/.test(ch)){
+        var isUpper = ch === ch.toUpperCase();
+        var p = ch.toUpperCase().charCodeAt(0) - 65;
+        var kLetter = k[ki % k.length];
+        var kVal = kLetter.charCodeAt(0) - 65;
+        var c = decode ? ((p - kVal + 26) % 26) : ((p + kVal) % 26);
+        var outCh = String.fromCharCode(c + 65);
+        out += isUpper ? outCh : outCh.toLowerCase();
+        steps.push({ inp: ch.toUpperCase(), k: kLetter, shift: kVal, out: outCh });
+        ki++;
+      } else {
+        out += ch;   // spaces, digits, punctuation pass through; key does not advance
+      }
+    }
+    return { output: out, steps: steps, key: k };
+  }
+
+  var lastKeyLetter = null, lastPlainLetter = null;
+
+  function setMode(m){
+    vigMode = m;
+    btnEnc.classList.toggle('primary', m === 'encode');
+    btnDec.classList.toggle('primary', m === 'decode');
+    inLabel.textContent = m === 'decode' ? 'Ciphertext' : 'Plaintext';
+    outLabel.textContent = m === 'decode' ? 'Recovered plaintext' : 'Ciphertext';
+    render();
+  }
+
+  function render(){
+    var decode = vigMode === 'decode';
+    var result = vigenere(vigText.value, vigKey.value, decode);
+    vigOutput.textContent = result.output || '—';
+
+    if (result.key && result.steps.length){
+      var stream = result.steps.map(function(s){ return s.k; }).join('');
+      keyEcho.innerHTML = 'Key stream: <span>' + (stream.length > 80 ? stream.slice(0,80) + '…' : stream) + '</span>';
+    } else {
+      keyEcho.textContent = result.key ? '' : 'Enter a keyword containing at least one letter.';
+    }
+
+    var shown = result.steps.slice(0, MAX_STEPS);
+    var rows = '<tr><th>#</th><th>' + (decode ? 'Cipher' : 'Plain') + '</th><th>Key</th><th>Shift</th><th>' + (decode ? 'Plain' : 'Cipher') + '</th></tr>';
+    shown.forEach(function(s, i){
+      rows += '<tr><td class="s">' + (i+1) + '</td><td class="p">' + s.inp + '</td><td class="k">' + s.k +
+              '</td><td class="s">' + (decode ? '−' : '+') + s.shift + '</td><td class="c">' + s.out + '</td></tr>';
+    });
+    vigSteps.innerHTML = rows;
+    vigNote.textContent = result.steps.length > MAX_STEPS ? 'Showing the first ' + MAX_STEPS + ' letters of ' + result.steps.length + '.' : '';
+
+    if (shown.length){
+      var last = shown[shown.length - 1];
+      lastKeyLetter = last.k;
+      lastPlainLetter = decode ? last.out : last.inp;   // column is always the plaintext letter
+    } else {
+      lastKeyLetter = null; lastPlainLetter = null;
+    }
+    highlightTableau();
+  }
+
+  btnEnc.addEventListener('click', function(){ setMode('encode'); });
+  btnDec.addEventListener('click', function(){ setMode('decode'); });
+  btnSwap.addEventListener('click', function(){
+    var out = vigOutput.textContent;
+    if (out && out !== '—') vigText.value = out;
+    setMode(vigMode === 'encode' ? 'decode' : 'encode');
+  });
+  btnCopy.addEventListener('click', function(){
+    var out = vigOutput.textContent;
+    if (!out || out === '—') return;
+    var done = function(){ btnCopy.textContent = 'Copied ✓'; setTimeout(function(){ btnCopy.textContent = 'Copy output'; }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(out).then(done, fallback);
+    } else { fallback(); }
+    function fallback(){
+      var ta = document.createElement('textarea'); ta.value = out; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+  vigText.addEventListener('input', render);
+  vigKey.addEventListener('input', render);
+
+  /* ---- tabula recta ---- */
+  var tableau = document.getElementById('tableau');
+  var ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  (function(){
+    var html = '<tr><th></th>';
+    for (var c=0;c<26;c++) html += '<th data-col="' + ALPHA[c] + '">' + ALPHA[c] + '</th>';
+    html += '</tr>';
+    for (var r=0;r<26;r++){
+      html += '<tr><th data-row="' + ALPHA[r] + '">' + ALPHA[r] + '</th>';
+      for (var c2=0;c2<26;c2++){
+        html += '<td class="cell" data-row="' + ALPHA[r] + '" data-col="' + ALPHA[c2] + '">' + ALPHA[(r + c2) % 26] + '</td>';
+      }
+      html += '</tr>';
+    }
+    tableau.innerHTML = html;
+  })();
+
+  function highlightTableau(){
+    tableau.querySelectorAll('td.cell').forEach(function(td){
+      var isRow = td.getAttribute('data-row') === lastKeyLetter;
+      var isCol = td.getAttribute('data-col') === lastPlainLetter;
+      td.classList.toggle('hi-both', !!(isRow && isCol));
+      td.classList.toggle('hi-row', !!(isRow && !isCol));
+      td.classList.toggle('hi-col', !!(isCol && !isRow));
+    });
+    tableau.querySelectorAll('th[data-row]').forEach(function(th){ th.classList.toggle('hi', th.getAttribute('data-row') === lastKeyLetter); });
+    tableau.querySelectorAll('th[data-col]').forEach(function(th){ th.classList.toggle('hi', th.getAttribute('data-col') === lastPlainLetter); });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
