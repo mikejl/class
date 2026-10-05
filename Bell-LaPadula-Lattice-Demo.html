@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bell-LaPadula Lattice — CIT 2640 Live Demo</title>
+<style>
+:root{
+  --bg:#eef1f4;--panel:#ffffff;--panel2:#e6ebf0;--line:#c5cfd9;--fg:#122029;--muted:#566776;
+  --cyan:#00778b;--amber:#9a5f00;--red:#c8142e;--green:#167f41;--floor:rgba(18,32,41,.035);
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","JetBrains Mono",Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1218;--panel:#111a22;--panel2:#17222c;--line:#283745;--fg:#dae3eb;--muted:#8697a8;
+    --cyan:#3ad4e9;--amber:#ffb22e;--red:#ff4258;--green:#4cd986;--floor:rgba(120,175,210,.045);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1218;--panel:#111a22;--panel2:#17222c;--line:#283745;--fg:#dae3eb;--muted:#8697a8;
+  --cyan:#3ad4e9;--amber:#ffb22e;--red:#ff4258;--green:#4cd986;--floor:rgba(120,175,210,.045);
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);display:flex;flex-direction:column}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.4rem;padding:.75rem 1.25rem;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand h1{margin:0;font:700 1.25rem/1.2 var(--mono);letter-spacing:-.01em}
+.brand h1 .prompt{color:var(--red)}
+.brand p{margin:.15rem 0 0;color:var(--muted);font-size:.85rem;max-width:62ch}
+nav.tabs{display:flex;gap:.25rem;margin-left:auto;flex-wrap:wrap}
+nav.tabs button{background:none;border:1px solid transparent;border-radius:6px;padding:.4rem .8rem;cursor:pointer;color:var(--muted);font-weight:600}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-color:var(--line);background:var(--panel2);box-shadow:inset 0 -2px 0 var(--red)}
+.tools{display:flex;gap:.3rem}
+.tools button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:.3rem .55rem;cursor:pointer;font:600 .85rem var(--mono)}
+
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(330px,1fr)}
+.stage{min-height:0;display:flex;align-items:center;justify-content:center;padding:.5rem 1rem;position:relative}
+#lat{width:100%;height:100%;max-height:100%;display:block}
+aside{min-height:0;overflow:auto;border-left:1px solid var(--line);background:var(--panel);padding:1rem 1.15rem 1.5rem}
+
+/* SVG */
+.floor{fill:var(--floor);stroke:var(--line);stroke-dasharray:2 5}
+.lvlname{font:700 15px var(--mono);fill:var(--fg)}
+.lvlsub{font:500 11px var(--mono);fill:var(--muted)}
+.edge{stroke:var(--line);stroke-width:1.6;transition:stroke .25s,opacity .25s}
+.edge.erd{stroke:var(--cyan);opacity:.75}
+.edge.ewr{stroke:var(--amber);opacity:.85}
+.edge.edim{opacity:.3}
+.node{cursor:pointer;transition:opacity .25s}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.6;transition:fill .25s,stroke .25s,stroke-width .2s}
+.node text{fill:var(--fg);font:600 12px var(--mono);pointer-events:none}
+.node:hover rect{stroke:var(--fg)}
+.node:focus{outline:none}
+.node:focus-visible rect{stroke:var(--cyan);stroke-width:3}
+.node.rd rect{fill:color-mix(in srgb,var(--cyan) 20%,var(--panel));stroke:var(--cyan)}
+.node.wr rect{fill:color-mix(in srgb,var(--amber) 22%,var(--panel));stroke:var(--amber)}
+.node.self rect{fill:color-mix(in srgb,var(--fg) 14%,var(--panel));stroke:var(--fg);stroke-width:3}
+.node.dim{opacity:.3}
+.node.obj rect{stroke-dasharray:6 3;stroke-width:3}
+.node.ub rect{fill:color-mix(in srgb,var(--amber) 14%,var(--panel));stroke:color-mix(in srgb,var(--amber) 60%,var(--line))}
+.node.lb rect{fill:color-mix(in srgb,var(--cyan) 14%,var(--panel));stroke:color-mix(in srgb,var(--cyan) 60%,var(--line))}
+.node.lub rect{fill:color-mix(in srgb,var(--amber) 30%,var(--panel));stroke:var(--amber);stroke-width:3.5}
+.node.glb rect{fill:color-mix(in srgb,var(--cyan) 30%,var(--panel));stroke:var(--cyan);stroke-width:3.5}
+.node.pick rect{stroke:var(--fg);stroke-width:3}
+.node.flash-ok rect{animation:fok .9s ease-out}
+.node.flash-no rect{animation:fno .9s ease-out}
+@keyframes fok{0%{stroke:var(--green);stroke-width:6}100%{}}
+@keyframes fno{0%{stroke:var(--red);stroke-width:6}100%{}}
+.tag rect{fill:var(--fg)}
+.tag text{fill:var(--bg);font:700 11px var(--mono)}
+.tag.obj rect{fill:var(--panel);stroke:var(--fg);stroke-width:1.5;stroke-dasharray:4 2}
+.tag.obj text{fill:var(--fg)}
+.tag.join rect{fill:var(--amber)} .tag.join text{fill:#111}
+.tag.meet rect{fill:var(--cyan)} .tag.meet text{fill:#111}
+.flow{stroke:var(--muted);stroke-width:2.5;stroke-dasharray:6 6;opacity:.8}
+.flow.yes.read{stroke:var(--cyan);stroke-dasharray:none}
+.flow.yes.write{stroke:var(--amber);stroke-dasharray:none}
+.flow.no{stroke:var(--red)}
+.packet{stroke:var(--bg);stroke-width:2}
+.packet.read{fill:var(--cyan)} .packet.write{fill:var(--amber)}
+.mark text{font:700 13px var(--mono)}
+.mark.no circle{fill:var(--red)} .mark.no text{fill:var(--red)}
+.mark.ok circle{fill:var(--green)} .mark.ok text{fill:var(--green)}
+.mark path{stroke:#fff;stroke-width:2.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* Panel */
+.panel{display:none}
+.panel.on{display:block}
+h2{font:700 1.05rem var(--mono);margin:0 0 .6rem}
+h3{font:700 .95rem var(--mono);margin:0}
+.seg{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;margin-bottom:.9rem;font-size:.85rem;color:var(--muted)}
+.seg .btns{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{background:none;border:0;padding:.3rem .75rem;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--fg);color:var(--bg)}
+.who{border:1px solid var(--line);border-radius:10px;padding:.7rem .8rem;margin-bottom:.6rem;background:var(--panel2)}
+.who.s{border-left:4px solid var(--fg)}
+.who.o{border-left:4px dashed var(--fg)}
+.who .top{display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.45rem}
+.who select{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.2rem .35rem;max-width:62%}
+.who .row{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .9rem}
+.who label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.who input[type=checkbox]{width:1.05rem;height:1.05rem;accent-color:var(--cyan)}
+.who .fmt{font:700 1.15rem var(--mono);margin-top:.35rem}
+.actions{display:flex;gap:.5rem;margin:.85rem 0}
+.actions button{flex:1;border-radius:8px;padding:.6rem .5rem;cursor:pointer;font:700 .95rem var(--mono);background:var(--panel2);border:2px solid}
+#bRead{border-color:var(--cyan);color:var(--cyan)}
+#bWrite{border-color:var(--amber);color:var(--amber)}
+.actions button:hover{background:color-mix(in srgb,currentColor 12%,var(--panel))}
+.actions kbd{font:600 .7rem var(--mono);opacity:.7;margin-left:.3rem}
+.rule{border:1px solid var(--line);border-radius:10px;padding:.65rem .8rem;margin-bottom:.6rem}
+.rule.read{border-top:3px solid var(--cyan)} .rule.write{border-top:3px solid var(--amber)}
+.rule h3 span{font-weight:500;color:var(--muted);font-size:.8rem;margin-left:.35rem}
+.rule .def{font-size:.82rem;color:var(--muted);margin:.2rem 0 .45rem}
+.chk{display:grid;grid-template-columns:5.5rem 1fr 1.4rem;gap:.4rem;font:500 .85rem var(--mono);padding:.15rem 0;align-items:baseline}
+.chk .k{color:var(--muted);font-family:var(--sans)}
+.chk .m{font-weight:800;text-align:right}
+.chk .m.y{color:var(--green)} .chk .m.n{color:var(--red)}
+.verdict{margin-top:.45rem;font:700 .95rem var(--mono)}
+.verdict.y{color:var(--green)} .verdict.n{color:var(--red)}
+.tgl{display:flex;gap:.5rem;align-items:flex-start;font-size:.85rem;margin:.4rem 0 1rem;cursor:pointer}
+.tgl input{margin-top:.2rem;accent-color:var(--amber)}
+.legend{display:grid;gap:.3rem;font-size:.82rem;color:var(--muted);margin:.6rem 0 1rem}
+.legend i{display:inline-block;width:1.6rem;height:.9rem;border-radius:3px;vertical-align:-.12rem;margin-right:.45rem;border:2px solid}
+.lg-rd{background:color-mix(in srgb,var(--cyan) 20%,var(--panel));border-color:var(--cyan)!important}
+.lg-wr{background:color-mix(in srgb,var(--amber) 22%,var(--panel));border-color:var(--amber)!important}
+.lg-self{background:color-mix(in srgb,var(--fg) 14%,var(--panel));border-color:var(--fg)!important}
+.lg-dim{background:var(--panel2);border-color:var(--line)!important;opacity:.45}
+.lg-ub{background:color-mix(in srgb,var(--amber) 14%,var(--panel));border-color:var(--amber)!important}
+.lg-lb{background:color-mix(in srgb,var(--cyan) 14%,var(--panel));border-color:var(--cyan)!important}
+.log{background:#0a0f14;color:#b9c7d3;border-radius:8px;padding:.6rem .7rem;font:500 .74rem/1.55 var(--mono);min-height:5.5rem;max-height:13rem;overflow:auto;border:1px solid var(--line)}
+:root[data-theme="light"] .log{background:#16222c}
+.log .t{color:#6f8293}
+.log .r{color:#3ad4e9;font-weight:700} .log .w{color:#ffb22e;font-weight:700}
+.log .ok{color:#4cd986;font-weight:700} .log .no{color:#ff4258;font-weight:700}
+.log .why{color:#8a9bab}
+.log .empty{color:#6f8293}
+.calc{border:1px solid var(--line);border-radius:10px;padding:.7rem .8rem;margin-bottom:.6rem}
+.calc.join{border-top:3px solid var(--amber)} .calc.meet{border-top:3px solid var(--cyan)}
+.calc .res{font:700 1.15rem var(--mono);margin:.25rem 0}
+.calc .ln{font:500 .84rem var(--mono);color:var(--muted)}
+.pair{display:flex;gap:.6rem;margin-bottom:.6rem}
+.pair div{flex:1;border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;background:var(--panel2)}
+.pair b{font:700 .8rem var(--mono);color:var(--muted);display:block}
+.pair span{font:700 1.05rem var(--mono)}
+.relation{font:600 .9rem var(--mono);padding:.5rem .7rem;border-radius:8px;background:var(--panel2);margin-bottom:.8rem}
+p.note{font-size:.88rem;color:var(--muted);margin:.4rem 0 .8rem}
+.step-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.3rem}
+.step-n{font:600 .8rem var(--mono);color:var(--muted)}
+.step-title{font:700 1.2rem/1.3 var(--mono);margin:.1rem 0 .55rem}
+.step-body{font-size:1rem;line-height:1.6;min-height:9.5rem}
+.dots{display:flex;gap:.35rem;margin:.6rem 0}
+.dots span{width:.55rem;height:.55rem;border-radius:50%;background:var(--line)}
+.dots span.on{background:var(--red)}
+.stepnav{display:flex;gap:.5rem;margin:.6rem 0 1rem}
+.stepnav button{flex:1;padding:.55rem;border-radius:8px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font:700 .9rem var(--mono)}
+.stepnav button.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.stepnav button:disabled{opacity:.4;cursor:default}
+.mini{display:grid;grid-template-columns:auto 1fr;gap:.2rem .7rem;font-size:.85rem;margin-bottom:.8rem}
+.mini b{font-family:var(--mono)}
+.keys{font-size:.78rem;color:var(--muted);margin-top:1rem;border-top:1px solid var(--line);padding-top:.6rem}
+.keys kbd{font:600 .72rem var(--mono);border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:var(--panel2)}
+
+@media (max-width:900px){
+  body{height:auto}
+  main{display:block}
+  .stage{height:auto;padding:.5rem}
+  #lat{height:auto}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  nav.tabs{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1><span class="prompt">&gt;</span> Bell-LaPadula security lattice</h1>
+    <p>4 levels × 2 categories (Army, Navy) = 16 security labels. Label A dominates label B when A's level is at least B's and A's categories include all of B's.</p>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="access" aria-selected="true">Access check</button>
+    <button role="tab" data-tab="join" aria-selected="false">Join &amp; meet</button>
+    <button role="tab" data-tab="trojan" aria-selected="false">Trojan horse walkthrough</button>
+  </nav>
+  <div class="tools">
+    <button id="fMinus" title="Smaller text (-)" aria-label="Smaller text">A−</button>
+    <button id="fPlus" title="Larger text (+)" aria-label="Larger text">A+</button>
+    <button id="theme" title="Switch light/dark" aria-label="Switch light or dark theme">◐</button>
+  </div>
+</header>
+
+<main>
+  <div class="stage">
+    <svg id="lat" viewBox="0 0 700 690" role="img" aria-label="Hasse diagram of the Bell-LaPadula lattice with 16 security labels">
+      <g id="gFloors"></g><g id="gEdges"></g><g id="gFlow"></g><g id="gNodes"></g><g id="gTags"></g><g id="gMarks"></g>
+    </svg>
+  </div>
+
+  <aside>
+    <!-- ACCESS -->
+    <section class="panel on" id="p-access">
+      <div class="seg"><span>Clicking a node sets the</span>
+        <span class="btns"><button data-mode="subject" class="on">Subject</button><button data-mode="object">Object</button></span>
+        <span>(<kbd>S</kbd>/<kbd>O</kbd>)</span>
+      </div>
+
+      <div class="who s">
+        <div class="top"><h3>Subject — clearance</h3><select id="sPreset" aria-label="Subject preset"></select></div>
+        <div class="row">
+          <select id="sLvl" aria-label="Subject level"></select>
+          <label><input type="checkbox" id="sA"> Army</label>
+          <label><input type="checkbox" id="sN"> Navy</label>
+        </div>
+        <div class="fmt" id="sFmt"></div>
+      </div>
+      <div class="who o">
+        <div class="top"><h3>Object — classification</h3><select id="oPreset" aria-label="Object preset"></select></div>
+        <div class="row">
+          <select id="oLvl" aria-label="Object level"></select>
+          <label><input type="checkbox" id="oA"> Army</label>
+          <label><input type="checkbox" id="oN"> Navy</label>
+        </div>
+        <div class="fmt" id="oFmt"></div>
+      </div>
+
+      <div class="actions">
+        <button id="bRead">Try read<kbd>R</kbd></button>
+        <button id="bWrite">Try write<kbd>W</kbd></button>
+      </div>
+
+      <div class="rule read">
+        <h3>Simple security property<span>no read up</span></h3>
+        <div class="def">Read only if the subject dominates the object.</div>
+        <div id="rRead"></div>
+      </div>
+      <div class="rule write">
+        <h3 id="wTitle">*-property<span>no write down</span></h3>
+        <div class="def" id="wDef">Write only if the object dominates the subject.</div>
+        <div id="rWrite"></div>
+      </div>
+
+      <label class="tgl"><input type="checkbox" id="strong"> <span>Strong *-property: the subject may write only at its own exact label</span></label>
+
+      <div class="legend">
+        <div><i class="lg-self"></i>Subject's own label: read and write</div>
+        <div><i class="lg-rd"></i>Subject may read (labels it dominates)</div>
+        <div><i class="lg-wr"></i>Subject may write (labels that dominate it)</div>
+        <div><i class="lg-dim"></i>Incomparable or blocked both ways</div>
+      </div>
+
+      <h3 style="margin-bottom:.35rem">Reference monitor log</h3>
+      <div class="log" id="log"><span class="empty">Waiting for an access request…</span></div>
+    </section>
+
+    <!-- JOIN / MEET -->
+    <section class="panel" id="p-join">
+      <div class="seg"><span>Clicking a node sets label</span>
+        <span class="btns"><button data-pick="A" class="on">A</button><button data-pick="B">B</button></span>
+      </div>
+      <div class="pair">
+        <div><b>Label A</b><span id="jA"></span></div>
+        <div><b>Label B</b><span id="jB"></span></div>
+      </div>
+      <div class="relation" id="jRel"></div>
+      <div class="calc join">
+        <h3>Join — least upper bound</h3>
+        <div class="res" id="jLub"></div>
+        <div class="ln" id="jLubL"></div>
+        <div class="ln" id="jLubC"></div>
+        <p class="note">The lowest label that dominates both. A subject needs at least this clearance to read A and B.</p>
+      </div>
+      <div class="calc meet">
+        <h3>Meet — greatest lower bound</h3>
+        <div class="res" id="jGlb"></div>
+        <div class="ln" id="jGlbL"></div>
+        <div class="ln" id="jGlbC"></div>
+        <p class="note">The highest label both A and B dominate. Anything at this label is readable by subjects at A and at B.</p>
+      </div>
+      <div class="legend">
+        <div><i class="lg-ub"></i>Common upper bounds — the join is the lowest of these</div>
+        <div><i class="lg-lb"></i>Common lower bounds — the meet is the highest of these</div>
+      </div>
+      <p class="note">Every pair of the 16 labels has exactly one join and one meet. That property is what makes this partial order a <strong>lattice</strong>. Its top, (TS, {Army, Navy}), is system high; its bottom, (U, { }), is system low.</p>
+    </section>
+
+    <!-- TROJAN -->
+    <section class="panel" id="p-trojan">
+      <div class="step-head"><h2 style="margin:0">Why "no write down"?</h2><span class="step-n" id="tN"></span></div>
+      <div class="dots" id="tDots"></div>
+      <div class="step-title" id="tTitle"></div>
+      <div class="step-body" id="tBody"></div>
+      <div class="stepnav">
+        <button id="tPrev">◀ Back</button>
+        <button id="tReplay">Replay</button>
+        <button id="tNext" class="primary">Next ▶</button>
+      </div>
+      <div class="mini">
+        <span>Subject</span><b id="tSubj"></b>
+        <span>Object</span><b id="tObj"></b>
+      </div>
+      <h3 style="margin-bottom:.35rem">Reference monitor log</h3>
+      <div class="log" id="tLog"><span class="empty">Step through to generate requests…</span></div>
+    </section>
+
+    <div class="keys"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> switch views · <kbd>←</kbd> <kbd>→</kbd> step the walkthrough · <kbd>+</kbd> <kbd>−</kbd> text size</div>
+  </aside>
+</main>
+
+<script>
+(function(){
+"use strict";
+var LV=[{n:"Unclassified",a:"U",col:"#2e9e5b"},{n:"Confidential",a:"C",col:"#2f6fd6"},{n:"Secret",a:"S",col:"#d4283c"},{n:"Top Secret",a:"TS",col:"#f08a24"}];
+function catStr(c){if(!c)return "{ }";var a=[];if(c&1)a.push("Army");if(c&2)a.push("Navy");return "{"+a.join(", ")+"}";}
+function fmt(x){return "("+LV[x.l].a+", "+catStr(x.c)+")";}
+function dom(a,b){return a.l>=b.l&&(a.c&b.c)===b.c;}
+function eq(a,b){return a.l===b.l&&a.c===b.c;}
+function L(l,c){return {l:l,c:c};}
+function pos(l,c){var y=652-l*165,cx=392;return [[cx-40,y],[cx-162,y-50],[cx+162,y-50],[cx+40,y-100]][c];}
+
+var SUBJ=[["Contractor J. Diaz",L(0,0)],["Pvt. Dana Cole",L(1,1)],["Lt. Sam Ortiz",L(2,2)],["Col. Rae Hayes",L(3,1)],["Adm. Lee Park",L(3,3)]];
+var OBJ=[["Mess hall menu",L(0,0)],["Army supply manifest",L(1,1)],["Navy port schedule",L(2,2)],["Army deployment orders",L(2,1)],["Joint operations plan",L(3,3)]];
+
+var state={tab:"access",mode:"subject",subj:L(2,2),obj:L(1,1),strong:false,A:L(1,1),B:L(2,2),pick:"A",step:0,font:1};
+var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+var NS="http://www.w3.org/2000/svg";
+function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function $(id){return document.getElementById(id);}
+var gFloors=$("gFloors"),gEdges=$("gEdges"),gFlow=$("gFlow"),gNodes=$("gNodes"),gTags=$("gTags"),gMarks=$("gMarks");
+
+/* ---------- build lattice ---------- */
+var nodes={},edges=[];
+for(var l=0;l<4;l++){
+  var p0=pos(l,0),p1=pos(l,1),p2=pos(l,2),p3=pos(l,3);
+  el("polygon",{class:"floor",points:[p0[0]+","+(p0[1]+30),(p1[0]-82)+","+p1[1],p3[0]+","+(p3[1]-30),(p2[0]+82)+","+p2[1]].join(" ")},gFloors);
+  var ly=p0[1]-50;
+  el("rect",{x:14,y:ly-22,width:5,height:40,rx:2,fill:LV[l].col},gFloors);
+  var t=el("text",{x:28,y:ly-3,class:"lvlname"},gFloors);t.textContent=LV[l].n;
+  var t2=el("text",{x:28,y:ly+14,class:"lvlsub"},gFloors);t2.textContent="level "+l+" · "+LV[l].a;
+}
+for(l=0;l<4;l++)for(var c=0;c<4;c++){
+  [1,2].forEach(function(x){if(!(c&x))edges.push([L(l,c),L(l,c|x)]);});
+  if(l<3)edges.push([L(l,c),L(l+1,c)]);
+}
+edges.forEach(function(e){
+  var a=pos(e[0].l,e[0].c),b=pos(e[1].l,e[1].c);
+  e.el=el("line",{class:"edge",x1:a[0],y1:a[1],x2:b[0],y2:b[1]},gEdges);
+});
+for(l=0;l<4;l++)for(c=0;c<4;c++){
+  var p=pos(l,c);
+  var g=el("g",{class:"node",transform:"translate("+p[0]+","+p[1]+")",tabindex:"0",role:"button","aria-label":LV[l].n+" "+catStr(c)},gNodes);
+  el("rect",{x:-62,y:-15,width:124,height:30,rx:7},g);
+  var tx=el("text",{x:0,y:4.5,"text-anchor":"middle"},g);tx.textContent=LV[l].a+" "+catStr(c);
+  (function(lab,gg){
+    gg.addEventListener("click",function(){nodeClick(lab);});
+    gg.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();nodeClick(lab);}});
+  })(L(l,c),g);
+  nodes[l+"-"+c]=g;
+}
+function N(x){return nodes[x.l+"-"+x.c];}
+
+/* ---------- controls ---------- */
+function fillSelects(){
+  ["s","o"].forEach(function(k){
+    var lv=$(k+"Lvl");LV.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.n;lv.appendChild(o);});
+    var pr=$(k+"Preset");var o0=document.createElement("option");o0.value="";o0.textContent="Custom";pr.appendChild(o0);
+    (k==="s"?SUBJ:OBJ).forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v[0]+"  "+fmt(v[1]);pr.appendChild(o);});
+    pr.addEventListener("change",function(){if(pr.value==="")return;var v=(k==="s"?SUBJ:OBJ)[+pr.value][1];setLabel(k,L(v.l,v.c));});
+    [lv,$(k+"A"),$(k+"N")].forEach(function(inp){inp.addEventListener("change",function(){
+      setLabel(k,L(+lv.value,($(k+"A").checked?1:0)|($(k+"N").checked?2:0)));
+    });});
+  });
+}
+function nameOf(k,x){var list=k==="s"?SUBJ:OBJ;for(var i=0;i<list.length;i++)if(eq(list[i][1],x))return list[i][0];return k==="s"?"Subject":"Object";}
+function syncWho(){
+  ["s","o"].forEach(function(k){
+    var x=k==="s"?state.subj:state.obj,list=k==="s"?SUBJ:OBJ;
+    $(k+"Lvl").value=x.l;$(k+"A").checked=!!(x.c&1);$(k+"N").checked=!!(x.c&2);
+    var idx="";for(var i=0;i<list.length;i++)if(eq(list[i][1],x)){idx=String(i);break;}
+    $(k+"Preset").value=idx;$(k+"Fmt").textContent=fmt(x);
+  });
+}
+function setLabel(k,x){if(k==="s")state.subj=x;else state.obj=x;clearFlow();render();}
+
+function nodeClick(x){
+  if(state.tab==="access"){setLabel(state.mode==="subject"?"s":"o",x);}
+  else if(state.tab==="join"){state[state.pick]=x;state.pick=state.pick==="A"?"B":"A";syncPick();render();}
+}
+document.querySelectorAll("[data-mode]").forEach(function(b){b.addEventListener("click",function(){setMode(b.dataset.mode);});});
+function setMode(m){state.mode=m;document.querySelectorAll("[data-mode]").forEach(function(b){b.classList.toggle("on",b.dataset.mode===m);});}
+document.querySelectorAll("[data-pick]").forEach(function(b){b.addEventListener("click",function(){state.pick=b.dataset.pick;syncPick();});});
+function syncPick(){document.querySelectorAll("[data-pick]").forEach(function(b){b.classList.toggle("on",b.dataset.pick===state.pick);});}
+$("strong").addEventListener("change",function(e){state.strong=e.target.checked;render();});
+
+/* ---------- rules ---------- */
+function mark(ok){return '<span class="m '+(ok?"y":"n")+'">'+(ok?"✓":"✗")+"</span>";}
+function readCheck(s,o){return {lv:s.l>=o.l,ct:(s.c&o.c)===o.c};}
+function writeCheck(s,o){return state.strong?{lv:s.l===o.l,ct:s.c===o.c}:{lv:o.l>=s.l,ct:(o.c&s.c)===s.c};}
+function renderRules(){
+  var s=state.subj,o=state.obj,r=readCheck(s,o),w=writeCheck(s,o);
+  $("rRead").innerHTML=
+    '<div class="chk"><span class="k">Level</span><span>'+LV[s.l].n+" ≥ "+LV[o.l].n+"</span>"+mark(r.lv)+"</div>"+
+    '<div class="chk"><span class="k">Categories</span><span>'+catStr(s.c)+" ⊇ "+catStr(o.c)+"</span>"+mark(r.ct)+"</div>"+
+    '<div class="verdict '+(r.lv&&r.ct?"y":"n")+'">'+(r.lv&&r.ct?"Read allowed":"Read denied")+"</div>";
+  var op=state.strong?"=":"≥",cop=state.strong?"=":"⊇";
+  $("wTitle").innerHTML=state.strong?'Strong *-property<span>write at own label only</span>':'*-property<span>no write down</span>';
+  $("wDef").textContent=state.strong?"Write only if the object's label equals the subject's.":"Write only if the object dominates the subject.";
+  $("rWrite").innerHTML=
+    '<div class="chk"><span class="k">Level</span><span>'+LV[o.l].n+" "+op+" "+LV[s.l].n+"</span>"+mark(w.lv)+"</div>"+
+    '<div class="chk"><span class="k">Categories</span><span>'+catStr(o.c)+" "+cop+" "+catStr(s.c)+"</span>"+mark(w.ct)+"</div>"+
+    '<div class="verdict '+(w.lv&&w.ct?"y":"n")+'">'+(w.lv&&w.ct?"Write allowed":"Write denied")+"</div>";
+}
+
+/* ---------- lattice render ---------- */
+function clearClasses(){for(var k in nodes)nodes[k].setAttribute("class","node");edges.forEach(function(e){e.el.setAttribute("class","edge");});}
+function add(x,cls){N(x).classList.add(cls);}
+function accessView(s,o){
+  for(var l=0;l<4;l++)for(var c=0;c<4;c++){
+    var n=L(l,c),r=dom(s,n),w=state.strong&&state.tab==="access"?eq(n,s):dom(n,s),g=N(n);
+    if(eq(n,s))g.classList.add("self");else if(r)g.classList.add("rd");else if(w)g.classList.add("wr");else g.classList.add("dim");
+  }
+  edges.forEach(function(e){
+    var a=e[0],b=e[1];
+    var strongW=state.strong&&state.tab==="access";
+    if(dom(s,a)&&dom(s,b))e.el.classList.add("erd");
+    else if(!strongW&&dom(a,s)&&dom(b,s))e.el.classList.add("ewr");
+    else e.el.classList.add("edim");
+  });
+  var tags=[{x:s,text:"subject",cls:"subj"}];
+  if(o){add(o,"obj");tags.push({x:o,text:"object",cls:"obj"});}
+  drawTags(tags);
+}
+function lub(a,b){return L(Math.max(a.l,b.l),a.c|b.c);}
+function glb(a,b){return L(Math.min(a.l,b.l),a.c&b.c);}
+function joinView(){
+  var A=state.A,B=state.B,U=lub(A,B),G=glb(A,B);
+  for(var l=0;l<4;l++)for(var c=0;c<4;c++){
+    var n=L(l,c),g=N(n);
+    if(eq(n,U))g.classList.add("lub");else if(eq(n,G))g.classList.add("glb");
+    else if(dom(n,A)&&dom(n,B))g.classList.add("ub");else if(dom(A,n)&&dom(B,n))g.classList.add("lb");
+    else if(!eq(n,A)&&!eq(n,B))g.classList.add("dim");
+    if(eq(n,A)||eq(n,B))g.classList.add("pick");
+  }
+  edges.forEach(function(e){
+    var a=e[0],b=e[1];
+    if(dom(a,U)&&dom(b,U))e.el.classList.add("ewr");
+    else if(dom(G,a)&&dom(G,b))e.el.classList.add("erd");
+    else e.el.classList.add("edim");
+  });
+  drawTags([{x:A,text:"A",cls:"subj"},{x:B,text:"B",cls:"subj"},{x:U,text:"join",cls:"join"},{x:G,text:"meet",cls:"meet"}]);
+  $("jA").textContent=fmt(A);$("jB").textContent=fmt(B);
+  $("jLub").textContent=fmt(U);
+  $("jLubL").textContent="level: max("+LV[A.l].a+", "+LV[B.l].a+") = "+LV[U.l].a;
+  $("jLubC").textContent="categories: "+catStr(A.c)+" ∪ "+catStr(B.c)+" = "+catStr(U.c);
+  $("jGlb").textContent=fmt(G);
+  $("jGlbL").textContent="level: min("+LV[A.l].a+", "+LV[B.l].a+") = "+LV[G.l].a;
+  $("jGlbC").textContent="categories: "+catStr(A.c)+" ∩ "+catStr(B.c)+" = "+catStr(G.c);
+  var rel;
+  if(eq(A,B))rel="A = B — the same label";
+  else if(dom(A,B))rel="A dominates B — comparable";
+  else if(dom(B,A))rel="B dominates A — comparable";
+  else rel="A and B are incomparable — neither dominates";
+  $("jRel").textContent=rel;
+}
+function drawTags(list){
+  gTags.innerHTML="";var by={},order=[];
+  list.forEach(function(t){var k=t.x.l+"-"+t.x.c;if(!by[k]){by[k]=[];order.push(k);}by[k].push(t);});
+  order.forEach(function(k){
+    var arr=by[k],p=pos(arr[0].x.l,arr[0].x.c);
+    var ws=arr.map(function(t){return t.text.length*6.8+16;});
+    var total=ws.reduce(function(a,b){return a+b;},0)+(arr.length-1)*4,cx=p[0]-total/2;
+    arr.forEach(function(t,i){
+      var g=el("g",{class:"tag "+t.cls,transform:"translate("+cx+","+(p[1]-37)+")"},gTags);
+      el("rect",{x:0,y:0,width:ws[i],height:19,rx:9.5},g);
+      var tx=el("text",{x:ws[i]/2,y:13.5,"text-anchor":"middle"},g);tx.textContent=t.text;
+      cx+=ws[i]+4;
+    });
+  });
+}
+function render(){
+  clearClasses();
+  if(state.tab==="access"){syncWho();renderRules();accessView(state.subj,state.obj);}
+  else if(state.tab==="join"){joinView();}
+  else {var st=STEPS[state.step];accessView(TS_SUBJ,st.obj||null);}
+}
+
+/* ---------- animation ---------- */
+var token=0;
+function clearFlow(){token++;gFlow.innerHTML="";gMarks.innerHTML="";}
+function flash(x,ok){var g=N(x),c=ok?"flash-ok":"flash-no";g.classList.remove("flash-ok","flash-no");void g.getBBox();g.classList.add(c);setTimeout(function(){g.classList.remove(c);},950);}
+function drawMark(x,y,ok,label){
+  var g=el("g",{class:"mark "+(ok?"ok":"no"),transform:"translate("+x+","+y+")"},gMarks);
+  el("circle",{r:14},g);
+  el("path",{d:ok?"M-6,0 L-2,4.5 L6,-5":"M-5,-5 L5,5 M5,-5 L-5,5"},g);
+  var t=el("text",{x:0,y:-21,"text-anchor":"middle"},g);t.textContent=label;
+}
+function animate(from,to,kind,ok){
+  clearFlow();var my=token;
+  var a=pos(from.l,from.c),b=pos(to.l,to.c);
+  if(eq(from,to)){flash(to,ok);drawMark(b[0]+76,b[1],ok,ok?"allowed":"denied");later(my);return;}
+  var line=el("line",{class:"flow "+kind,x1:a[0],y1:a[1],x2:b[0],y2:b[1]},gFlow);
+  var dot=el("circle",{class:"packet "+kind,r:7,cx:a[0],cy:a[1]},gFlow);
+  var stop=ok?1:0.55,dur=reduce?0:1050*(ok?1:0.75),t0=performance.now();
+  function frame(t){
+    if(my!==token)return;
+    var pr=dur?Math.min(1,(t-t0)/dur):1,e=1-Math.pow(1-pr,3),f=e*stop;
+    dot.setAttribute("cx",a[0]+(b[0]-a[0])*f);dot.setAttribute("cy",a[1]+(b[1]-a[1])*f);
+    if(pr<1){requestAnimationFrame(frame);return;}
+    if(ok){line.classList.add("yes");dot.remove();flash(to,true);drawMark(b[0]+76,b[1],true,"allowed");}
+    else{line.classList.add("no");dot.remove();flash(to,false);drawMark(a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,false,"denied");}
+    later(my);
+  }
+  requestAnimationFrame(frame);
+}
+function later(my){setTimeout(function(){if(my===token){gFlow.innerHTML="";gMarks.innerHTML="";}},3200);}
+
+/* ---------- log ---------- */
+function stamp(){var d=new Date();return [d.getHours(),d.getMinutes(),d.getSeconds()].map(function(n){return String(n).padStart(2,"0");}).join(":");}
+function esc(s){return s.replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
+function log(box,kind,sName,s,oName,o,ok,why){
+  var b=$(box),e=b.querySelector(".empty");if(e)b.innerHTML="";
+  var arrow=kind==="read"?" ← ":" → ";
+  var line=document.createElement("div");
+  line.innerHTML='<span class="t">['+stamp()+']</span> <span class="'+(kind==="read"?"r":"w")+'">'+(kind==="read"?"READ ":"WRITE")+"</span> "+
+    esc(sName)+" "+fmt(s)+arrow+esc(oName)+" "+fmt(o)+' <span class="'+(ok?"ok":"no")+'">'+(ok?"ALLOWED":"DENIED")+"</span>"+
+    (why?' <span class="why">— '+esc(why)+"</span>":"");
+  b.insertBefore(line,b.firstChild);
+  while(b.children.length>14)b.removeChild(b.lastChild);
+}
+function readWhy(s,o){var r=readCheck(s,o);if(!r.lv)return LV[s.l].n+" < "+LV[o.l].n+" (no read up)";if(!r.ct)return catStr(s.c)+" ⊉ "+catStr(o.c)+" (need to know)";return "subject dominates object";}
+function writeWhy(s,o,strong){
+  var w=strong?{lv:s.l===o.l,ct:s.c===o.c}:{lv:o.l>=s.l,ct:(o.c&s.c)===s.c};
+  if(strong&&!(w.lv&&w.ct))return "strong *-property requires identical labels";
+  if(!w.lv)return LV[o.l].n+" < "+LV[s.l].n+" (no write down)";
+  if(!w.ct)return catStr(o.c)+" ⊉ "+catStr(s.c)+" (would leak a category)";
+  return "object dominates subject";
+}
+function tryRead(){var s=state.subj,o=state.obj,r=readCheck(s,o),ok=r.lv&&r.ct;animate(o,s,"read",ok);log("log","read",nameOf("s",s),s,nameOf("o",o),o,ok,readWhy(s,o));}
+function tryWrite(){var s=state.subj,o=state.obj,w=writeCheck(s,o),ok=w.lv&&w.ct;animate(s,o,"write",ok);log("log","write",nameOf("s",s),s,nameOf("o",o),o,ok,writeWhy(s,o,state.strong));}
+$("bRead").addEventListener("click",tryRead);
+$("bWrite").addEventListener("click",tryWrite);
+
+/* ---------- trojan walkthrough ---------- */
+var TS_SUBJ=L(3,2);
+var STEPS=[
+ {title:"Meet the analyst",subjName:"Analyst Reyes",
+  body:"Analyst Reyes holds a Top Secret clearance in the Navy compartment: (TS, {Navy}). Cyan labels are everything Reyes may read; amber labels are everything Reyes may write to. Every Army-only and joint label below TS is grey — incomparable, so neither direction is allowed."},
+ {title:"A legitimate read down",subjName:"Analyst Reyes",obj:L(2,2),objName:"Fleet movement plan",op:"read",
+  body:"Reyes opens the Fleet movement plan at (S, {Navy}). Top Secret ≥ Secret and {Navy} ⊇ {Navy}, so the simple security property allows the read. Data flows up the lattice to Reyes."},
+ {title:"A program runs with its user's label",subjName:"PDF converter (as Reyes)",
+  body:"Reyes runs a free PDF converter downloaded from a vendor site. Every process Reyes starts is a subject at (TS, {Navy}) — including any code hidden inside it. The system can't tell the helpful part from the malicious part."},
+ {title:"The Trojan tries to leak",subjName:"PDF converter (as Reyes)",obj:L(0,0),objName:"Public share",op:"write",
+  body:"Hidden code tries to copy the fleet plan into the Public share at (U, { }), where anyone could read it. That is a write down, and the *-property blocks it. Discretionary access control alone could not stop this, because the program has Reyes's permissions."},
+ {title:"It tries to snoop sideways",subjName:"PDF converter (as Reyes)",obj:L(2,1),objName:"Army logistics brief",op:"read",
+  body:"Next it tries to read the Army logistics brief at (S, {Army}). The level check passes — Top Secret ≥ Secret — but {Navy} ⊉ {Army}. Categories enforce need to know even against lower-level data."},
+ {title:"Writing up is allowed",subjName:"PDF converter (as Reyes)",obj:L(3,3),objName:"Joint archive",op:"write",
+  body:"It can write into the Joint archive at (TS, {Army, Navy}), because that label dominates its own. This is a blind write: the program can't read the archive back, and nobody below the archive's label can read what was written."},
+ {title:"The takeaway",subjName:"Analyst Reyes",
+  body:"Under BLP, information moves only upward through the lattice — never down, never sideways. That protects confidentiality. It does nothing for integrity: a low subject can still write into high objects. The Biba model is the mirror image — no read down, no write up."}
+];
+function renderStep(play){
+  var st=STEPS[state.step],i;
+  $("tN").textContent="Step "+(state.step+1)+" of "+STEPS.length;
+  $("tTitle").textContent=st.title;$("tBody").textContent=st.body;
+  var d=$("tDots");d.innerHTML="";for(i=0;i<STEPS.length;i++){var s=document.createElement("span");if(i<=state.step)s.className="on";d.appendChild(s);}
+  $("tSubj").textContent=st.subjName+"  "+fmt(TS_SUBJ);
+  $("tObj").textContent=st.obj?st.objName+"  "+fmt(st.obj):"—";
+  $("tPrev").disabled=state.step===0;$("tNext").disabled=state.step===STEPS.length-1;
+  $("tReplay").disabled=!st.op;
+  clearFlow();render();
+  if(play&&st.op)setTimeout(function(){playStep(st);},350);
+}
+function playStep(st){
+  var s=TS_SUBJ,o=st.obj,ok,why;
+  if(st.op==="read"){ok=dom(s,o);why=readWhy(s,o);animate(o,s,"read",ok);}
+  else{ok=dom(o,s);why=writeWhy(s,o,false);animate(s,o,"write",ok);}
+  log("tLog",st.op,st.subjName,s,st.objName,o,ok,why);
+}
+$("tPrev").addEventListener("click",function(){if(state.step>0){state.step--;renderStep(false);}});
+$("tNext").addEventListener("click",function(){if(state.step<STEPS.length-1){state.step++;renderStep(true);}});
+$("tReplay").addEventListener("click",function(){var st=STEPS[state.step];if(st.op)playStep(st);});
+
+/* ---------- tabs, keys, tools ---------- */
+var TABS=["access","join","trojan"];
+document.querySelectorAll("[data-tab]").forEach(function(b){b.addEventListener("click",function(){setTab(b.dataset.tab);});});
+function setTab(t){
+  state.tab=t;
+  document.querySelectorAll("[data-tab]").forEach(function(b){b.setAttribute("aria-selected",String(b.dataset.tab===t));});
+  TABS.forEach(function(x){$("p-"+x).classList.toggle("on",x===t);});
+  clearFlow();
+  if(t==="trojan")renderStep(false);else render();
+}
+function setFont(f){state.font=Math.max(.8,Math.min(1.6,f));document.documentElement.style.fontSize=(state.font*100)+"%";}
+$("fPlus").addEventListener("click",function(){setFont(state.font+.1);});
+$("fMinus").addEventListener("click",function(){setFont(state.font-.1);});
+$("theme").addEventListener("click",function(){
+  var r=document.documentElement,cur=r.getAttribute("data-theme");
+  var dark=cur?cur==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;
+  r.setAttribute("data-theme",dark?"light":"dark");
+  try{localStorage.setItem("blp-theme",dark?"light":"dark");}catch(e){}
+});
+try{var saved=localStorage.getItem("blp-theme");if(saved==="light"||saved==="dark")document.documentElement.setAttribute("data-theme",saved);}catch(e){}
+
+document.addEventListener("keydown",function(e){
+  var tag=(e.target.tagName||"").toLowerCase();
+  if(tag==="select"||tag==="input"||e.ctrlKey||e.metaKey||e.altKey)return;
+  var k=e.key;
+  if(k==="1"||k==="2"||k==="3"){setTab(TABS[+k-1]);return;}
+  if(k==="+"||k==="="){setFont(state.font+.1);return;}
+  if(k==="-"||k==="_"){setFont(state.font-.1);return;}
+  if(state.tab==="access"){
+    if(k==="r"||k==="R")tryRead();
+    else if(k==="w"||k==="W")tryWrite();
+    else if(k==="s"||k==="S")setMode("subject");
+    else if(k==="o"||k==="O")setMode("object");
+  }else if(state.tab==="trojan"){
+    if(k==="ArrowRight"){e.preventDefault();$("tNext").click();}
+    else if(k==="ArrowLeft"){e.preventDefault();$("tPrev").click();}
+  }else if(state.tab==="join"){
+    if(k==="a"||k==="A"){state.pick="A";syncPick();}
+    else if(k==="b"||k==="B"){state.pick="B";syncPick();}
+  }
+});
+
+fillSelects();render();
+})();
+</script>
+</body>
+</html>

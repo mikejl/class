@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAC &amp; SELinux — CIT-2640 Lecture Demo</title>
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#0f1620;
+    --panel-2:#131c28;
+    --line:#1e2a38;
+    --line-bright:#2a3b4f;
+    --ink:#c9d4e2;
+    --ink-dim:#6b7a8d;
+    --ink-faint:#43515f;
+    --red:#ff4d5e;      /* deny / attack / compromise */
+    --cyan:#2fd4ee;     /* MAC / SELinux / system */
+    --amber:#ffb630;    /* warn / permissive / caution */
+    --green:#45e08a;    /* allow / held / safe */
+    --violet:#9d8cff;   /* hardware layer */
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  body{padding-bottom:64px}
+  a{color:var(--cyan)}
+
+  /* ---------- Header / nav ---------- */
+  header{position:sticky;top:0;z-index:30;background:rgba(10,14,20,.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .bar{display:flex;align-items:center;gap:16px;padding:12px 22px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-size:13px;letter-spacing:.06em;color:var(--ink-dim)}
+  .brand b{color:var(--cyan);font-weight:600}
+  .brand .cve{color:var(--red)}
+  .spacer{flex:1}
+  .hint{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)}
+  .hint kbd{font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line-bright);
+    border-radius:4px;padding:1px 6px;color:var(--ink-dim);font-size:11px}
+  nav{display:flex;gap:4px;padding:0 14px 12px;flex-wrap:wrap}
+  .tab{font-family:var(--mono);font-size:13px;color:var(--ink-dim);background:transparent;
+    border:1px solid transparent;border-radius:7px;padding:8px 14px;cursor:pointer;
+    display:flex;align-items:center;gap:9px;transition:color .15s,border-color .15s,background .15s}
+  .tab .n{color:var(--ink-faint);font-size:12px}
+  .tab:hover{color:var(--ink);background:var(--panel)}
+  .tab.active{color:var(--bg);background:var(--cyan);border-color:var(--cyan);font-weight:600}
+  .tab.active .n{color:var(--bg);opacity:.65}
+
+  /* ---------- Layout ---------- */
+  main{max-width:1060px;margin:0 auto;padding:34px 22px 0}
+  section{display:none;animation:fade .35s ease}
+  section.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--cyan);letter-spacing:.05em;margin:0 0 10px}
+  h1{font-size:34px;line-height:1.1;margin:0 0 14px;font-weight:700;letter-spacing:-.01em}
+  h2{font-size:22px;margin:30px 0 12px;font-weight:650}
+  .lead{font-size:18px;color:var(--ink);max-width:70ch;margin:0 0 8px}
+  .muted{color:var(--ink-dim)}
+  p{max-width:72ch}
+  code{font-family:var(--mono);font-size:.92em;background:var(--panel-2);padding:2px 6px;border-radius:5px;color:var(--cyan)}
+  .mono{font-family:var(--mono)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .card h3{margin:0 0 4px;font-size:16px;font-family:var(--mono);letter-spacing:.02em}
+
+  .pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;
+    padding:3px 10px;border-radius:999px;border:1px solid var(--line-bright);color:var(--ink-dim)}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.red{background:var(--red)} .dot.green{background:var(--green)}
+  .dot.amber{background:var(--amber)} .dot.cyan{background:var(--cyan)}
+  .dot.violet{background:var(--violet)}
+
+  /* ---------- Buttons / toggles ---------- */
+  button{font-family:var(--sans)}
+  .btn{font-family:var(--mono);font-size:14px;background:var(--cyan);color:#06222a;border:none;
+    border-radius:8px;padding:11px 20px;cursor:pointer;font-weight:700;letter-spacing:.02em}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--line-bright)}
+  .btn.ghost:hover{color:var(--ink);border-color:var(--cyan)}
+  .btn.danger{background:var(--red);color:#2a0409}
+
+  .seg{display:inline-flex;border:1px solid var(--line-bright);border-radius:8px;overflow:hidden}
+  .seg button{background:var(--panel-2);color:var(--ink-dim);border:none;padding:9px 14px;
+    font-family:var(--mono);font-size:13px;cursor:pointer;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{color:var(--bg);font-weight:700}
+  .seg button.on[data-tone=good]{background:var(--green)}
+  .seg button.on[data-tone=bad]{background:var(--red)}
+  .seg button.on[data-tone=warn]{background:var(--amber)}
+  .seg button.on[data-tone=mac]{background:var(--cyan)}
+  .seg button.on[data-tone=hw]{background:var(--violet)}
+
+  .ctl-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0}
+  .ctl-label{font-family:var(--mono);font-size:13px;color:var(--ink);min-width:150px}
+  .ctl-label small{display:block;color:var(--ink-faint);font-size:11px;letter-spacing:0}
+
+  /* ---------- Console ---------- */
+  .console{background:#06090e;border:1px solid var(--line);border-radius:10px;
+    font-family:var(--mono);font-size:13.5px;line-height:1.5;padding:16px 18px;
+    color:#9fb3c6;white-space:pre-wrap;overflow:auto;min-height:120px}
+  .console .c-prompt{color:var(--green)}
+  .console .c-deny{color:var(--red)}
+  .console .c-allow{color:var(--green)}
+  .console .c-warn{color:var(--amber)}
+  .console .c-mac{color:var(--cyan)}
+  .console .c-dim{color:var(--ink-faint)}
+
+  /* ---------- Section 1: DAC vs MAC ---------- */
+  .scene{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;margin-top:14px}
+  .scene-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:10px}
+  @media(max-width:820px){.flow{grid-template-columns:1fr;gap:14px}}
+  .node{background:var(--panel-2);border:1px solid var(--line-bright);border-radius:10px;padding:14px 16px;text-align:center}
+  .node .ico{font-family:var(--mono);font-size:12px;color:var(--ink-faint);letter-spacing:.04em}
+  .node .ttl{font-family:var(--mono);font-size:15px;margin-top:4px;color:var(--ink)}
+  .node .sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+  .arrow{font-family:var(--mono);color:var(--ink-faint);text-align:center;font-size:20px}
+  @media(max-width:820px){.arrow{transform:rotate(90deg)}}
+  .verdict{margin-top:16px;border-radius:10px;padding:14px 18px;font-family:var(--mono);
+    border:1px solid var(--line-bright);display:flex;gap:12px;align-items:flex-start}
+  .verdict.allow{border-color:var(--green);background:rgba(69,224,138,.08)}
+  .verdict.deny{border-color:var(--red);background:rgba(255,77,94,.08)}
+  .verdict .big{font-size:15px;font-weight:700}
+  .verdict.allow .big{color:var(--green)} .verdict.deny .big{color:var(--red)}
+  .verdict .why{color:var(--ink-dim);font-size:13px;margin-top:3px;font-family:var(--sans)}
+
+  table.cmp{width:100%;border-collapse:collapse;margin-top:6px;font-size:15px}
+  table.cmp th,table.cmp td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.cmp th{font-family:var(--mono);font-size:12px;color:var(--ink-dim);letter-spacing:.03em;font-weight:600}
+  table.cmp td:first-child{color:var(--ink-dim);width:38%}
+  table.cmp .dac{color:var(--amber)} table.cmp .mac{color:var(--cyan)}
+
+  /* ---------- Section 2: label + decision ---------- */
+  .label-ctx{font-family:var(--mono);font-size:clamp(18px,3.4vw,30px);letter-spacing:.01em;
+    background:var(--panel-2);border:1px solid var(--line-bright);border-radius:10px;
+    padding:18px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:6px 0 4px}
+  .fld{padding:2px 7px;border-radius:6px;cursor:pointer;transition:background .15s}
+  .fld:hover,.fld.sel{background:#0a1118}
+  .fld[data-f=user]{color:var(--green)} .fld[data-f=role]{color:var(--amber)}
+  .fld[data-f=type]{color:var(--cyan)} .fld[data-f=level]{color:var(--violet)}
+  .sep{color:var(--ink-faint)}
+  .fld-info{min-height:52px;color:var(--ink-dim);font-size:14px;text-align:center;padding:4px 8px}
+  .fld-info b{color:var(--ink)}
+
+  .selectors{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 2px}
+  @media(max-width:820px){.selectors{grid-template-columns:1fr}}
+  .selectors label{font-family:var(--mono);font-size:12px;color:var(--ink-dim);display:block;margin-bottom:5px}
+  select{width:100%;font-family:var(--mono);font-size:14px;background:var(--panel-2);color:var(--ink);
+    border:1px solid var(--line-bright);border-radius:8px;padding:10px 12px;cursor:pointer}
+
+  /* ---------- Section 3: memory map ---------- */
+  .memwrap{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:820px){.memwrap{grid-template-columns:1fr}}
+  .addrmap{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px;height:420px;display:flex;flex-direction:column}
+  .region{position:relative;border:1px solid var(--line-bright);border-radius:7px;margin:3px 0;
+    display:flex;align-items:center;justify-content:space-between;padding:6px 12px;font-family:var(--mono);
+    font-size:12.5px;color:var(--ink-dim)}
+  .region .hex{color:var(--ink-faint);font-size:11.5px}
+  .r-kernel{background:#12101c;flex:0 0 46px;color:var(--violet)}
+  .r-stack{background:#141b10;flex:1;color:var(--green);position:relative;overflow:hidden}
+  .r-gap{background:var(--panel-2);flex:0 0 70px;color:var(--ink-faint);display:flex;align-items:center;justify-content:center}
+  .r-min{flex:0 0 2px;background:var(--amber);margin:0;border:none;border-radius:0;position:relative}
+  .r-min::after{content:"mmap_min_addr = 0x10000";position:absolute;right:8px;top:-9px;
+    font-family:var(--mono);font-size:10.5px;color:var(--amber);background:var(--panel);padding:0 5px}
+  .r-zero{background:#1c1012;flex:0 0 42px;color:var(--red);border-color:#3a1a20}
+  .stackfill{position:absolute;left:0;right:0;top:0;height:14%;
+    background:repeating-linear-gradient(45deg,rgba(69,224,138,.18),rgba(69,224,138,.18) 8px,transparent 8px,transparent 16px);
+    border-bottom:2px dashed var(--green);transition:height 1.2s cubic-bezier(.65,0,.35,1)}
+  .stackfill.attack{background:repeating-linear-gradient(45deg,rgba(255,77,94,.22),rgba(255,77,94,.22) 8px,transparent 8px,transparent 16px);
+    border-bottom-color:var(--red)}
+  .reduce .stackfill{transition:none}
+
+  .layerlist{display:flex;flex-direction:column;gap:10px}
+  .layer{border:1px solid var(--line);border-left-width:3px;border-radius:9px;padding:12px 14px;background:var(--panel)}
+  .layer h4{margin:0 0 3px;font-family:var(--mono);font-size:14px}
+  .layer p{margin:0;font-size:13.5px;color:var(--ink-dim);max-width:none}
+  .layer.hw{border-left-color:var(--violet)} .layer.hw h4{color:var(--violet)}
+  .layer.dac{border-left-color:var(--amber)} .layer.dac h4{color:var(--amber)}
+  .layer.mac{border-left-color:var(--cyan)} .layer.mac h4{color:var(--cyan)}
+
+  /* ---------- Section 4: defense lab ---------- */
+  .lab{display:grid;grid-template-columns:330px 1fr;gap:18px;align-items:start}
+  @media(max-width:900px){.lab{grid-template-columns:1fr}}
+  .panelbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .panelbox h3{margin:0 0 14px;font-family:var(--mono);font-size:14px;color:var(--ink);letter-spacing:.03em}
+  .adv-head{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);letter-spacing:.06em;
+    margin:18px 0 8px;border-top:1px dashed var(--line);padding-top:14px}
+  .chain{display:flex;flex-direction:column;gap:0}
+  .gate{border:1px solid var(--line-bright);border-radius:10px;padding:13px 15px;background:var(--panel-2);
+    opacity:.35;transition:opacity .3s,border-color .3s,background .3s}
+  .gate.shown{opacity:1}
+  .gate.held{border-color:var(--green);background:rgba(69,224,138,.07)}
+  .gate.bypass{border-color:var(--red);background:rgba(255,77,94,.06)}
+  .gate.neutral{border-color:var(--amber);background:rgba(255,182,48,.06)}
+  .gate .g-top{display:flex;align-items:center;gap:10px}
+  .gate .g-tag{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:5px;letter-spacing:.05em}
+  .g-tag.dac{background:rgba(255,182,48,.15);color:var(--amber)}
+  .g-tag.mac{background:rgba(47,212,238,.15);color:var(--cyan)}
+  .g-tag.hw{background:rgba(157,140,255,.15);color:var(--violet)}
+  .gate .g-name{font-family:var(--mono);font-size:14px;color:var(--ink)}
+  .gate .g-status{margin-left:auto;font-family:var(--mono);font-size:12px}
+  .gate.held .g-status{color:var(--green)} .gate.bypass .g-status{color:var(--red)}
+  .gate.neutral .g-status{color:var(--amber)}
+  .gate .g-detail{font-size:12.5px;color:var(--ink-dim);margin-top:5px;font-family:var(--sans)}
+  .connector{width:2px;height:16px;background:var(--line-bright);margin:0 auto;transition:background .3s}
+  .connector.flow{background:var(--red)}
+  .connector.stop{background:var(--green)}
+
+  .finalverdict{margin-top:16px;border-radius:12px;padding:18px 20px;border:1px solid var(--line-bright);
+    font-family:var(--mono);opacity:.4;transition:opacity .3s}
+  .finalverdict.shown{opacity:1}
+  .finalverdict .fv-title{font-size:20px;font-weight:800;letter-spacing:.01em}
+  .finalverdict .fv-sub{font-family:var(--sans);font-size:14px;color:var(--ink-dim);margin-top:6px;max-width:64ch}
+  .finalverdict.blocked{border-color:var(--green);background:rgba(69,224,138,.08)}
+  .finalverdict.blocked .fv-title{color:var(--green)}
+  .finalverdict.root{border-color:var(--red);background:rgba(255,77,94,.09)}
+  .finalverdict.root .fv-title{color:var(--red)}
+
+  .note{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--cyan);
+    border-radius:9px;padding:14px 16px;margin-top:16px;font-size:14px;color:var(--ink-dim)}
+  .note b{color:var(--ink)}
+  details.inote{margin-top:14px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);padding:0 16px}
+  details.inote summary{cursor:pointer;padding:13px 0;font-family:var(--mono);font-size:13px;color:var(--amber);list-style:none}
+  details.inote summary::-webkit-details-marker{display:none}
+  details.inote summary::before{content:"▸ ";color:var(--amber)}
+  details.inote[open] summary::before{content:"▾ "}
+  details.inote .ibody{padding:0 0 16px;font-size:14px;color:var(--ink-dim)}
+  details.inote .ibody p{max-width:none}
+
+  /* ---------- Section 5: debrief ---------- */
+  .takeaways{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+  @media(max-width:820px){.takeaways{grid-template-columns:1fr}}
+  .take{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:18px;border-top:3px solid var(--cyan)}
+  .take h4{margin:0 0 6px;font-size:15px;font-family:var(--mono)}
+  .take p{margin:0;font-size:14px;color:var(--ink-dim);max-width:none}
+  .cmds{background:#06090e;border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+    font-family:var(--mono);font-size:13.5px;line-height:1.75;margin-top:14px;overflow:auto}
+  .cmds .cm{color:var(--green)} .cmds .cc{color:var(--ink-faint)}
+
+  footer{max-width:1060px;margin:40px auto 0;padding:18px 22px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;color:var(--ink-faint);display:flex;gap:14px;flex-wrap:wrap}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001s!important;transition-duration:.001s!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <span class="brand"><b>CIT-2640</b> · Network Security &nbsp;//&nbsp; Mandatory Access Control &nbsp;//&nbsp; <span class="cve">CVE-2019-9213</span></span>
+    <span class="spacer"></span>
+    <span class="hint">Navigate: <kbd>←</kbd> <kbd>→</kbd> or <kbd>1</kbd>–<kbd>5</kbd></span>
+  </div>
+  <nav id="nav">
+    <button class="tab active" data-sec="0"><span class="n">01</span> DAC vs MAC</button>
+    <button class="tab" data-sec="1"><span class="n">02</span> Inside a Label</button>
+    <button class="tab" data-sec="2"><span class="n">03</span> CVE-2019-9213</button>
+    <button class="tab" data-sec="3"><span class="n">04</span> Defense Lab</button>
+    <button class="tab" data-sec="4"><span class="n">05</span> Debrief</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ========== SECTION 1 : DAC vs MAC ========== -->
+<section class="active" id="sec0">
+  <p class="eyebrow">01 — The core idea</p>
+  <h1>Who decides what a process is allowed to do?</h1>
+  <p class="lead">Two models answer that question. The difference is the whole point of this lecture — and it's clearest when the attacker already has <strong>root</strong>.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="color:var(--amber)">DAC — Discretionary Access Control</h3>
+      <p class="muted" style="font-size:14px">The owner of a resource sets its permissions (<code>chmod</code>, <code>chown</code>). Access is at the <em>owner's discretion</em>. The catch: <strong>root is exempt from the checks.</strong> This is standard Linux file permissions.</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--cyan)">MAC — Mandatory Access Control</h3>
+      <p class="muted" style="font-size:14px">A system-wide policy, enforced by the kernel, decides access by the <em>security label</em> of the subject and object. No user — <strong>not even root</strong> — can waive it. SELinux is the implementation we'll use.</p>
+    </div>
+  </div>
+
+  <div class="scene">
+    <div class="scene-head">
+      <div>
+        <div class="mono" style="font-size:14px;color:var(--ink)">Scenario: a compromised web server tries to read the password hashes</div>
+        <div class="muted" style="font-size:13px">Process: <code>httpd</code> &nbsp;→&nbsp; target: <code>/etc/shadow</code></div>
+      </div>
+      <div class="ctl-row" style="margin:0">
+        <span class="ctl-label" style="min-width:auto">Attacker privilege</span>
+        <div class="seg" id="privseg">
+          <button data-priv="user" class="on" data-tone="good">unprivileged</button>
+          <button data-priv="root" data-tone="bad">got root (uid 0)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- DAC flow -->
+      <div>
+        <div class="mono" style="font-size:12px;color:var(--amber);margin-bottom:8px">DISCRETIONARY (file permissions)</div>
+        <div class="flow" style="grid-template-columns:1fr auto 1fr">
+          <div class="node"><div class="ico">SUBJECT</div><div class="ttl">httpd</div><div class="sub" id="dac-uid">uid = 48 (apache)</div></div>
+          <div class="arrow">→</div>
+          <div class="node"><div class="ico">/etc/shadow</div><div class="ttl">0 root root</div><div class="sub">mode 0000</div></div>
+        </div>
+        <div class="verdict deny" id="dac-verdict">
+          <span class="dot red" style="margin-top:5px"></span>
+          <div><div class="big" id="dac-big">DENIED</div><div class="why" id="dac-why">The file mode grants no access to "other", and apache is neither owner nor group.</div></div>
+        </div>
+      </div>
+      <!-- MAC flow -->
+      <div>
+        <div class="mono" style="font-size:12px;color:var(--cyan);margin-bottom:8px">MANDATORY (SELinux type enforcement)</div>
+        <div class="flow" style="grid-template-columns:1fr auto 1fr">
+          <div class="node"><div class="ico">DOMAIN</div><div class="ttl">httpd_t</div><div class="sub">confined</div></div>
+          <div class="arrow">→</div>
+          <div class="node"><div class="ico">TYPE</div><div class="ttl">shadow_t</div><div class="sub">file · read</div></div>
+        </div>
+        <div class="verdict deny" id="mac-verdict">
+          <span class="dot red" style="margin-top:5px"></span>
+          <div><div class="big" id="mac-big">DENIED</div><div class="why" id="mac-why">No policy rule <code>allow httpd_t shadow_t:file read</code> exists. The kernel refuses regardless of uid.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" id="sec0-note">
+    <b>Flip the switch.</b> With DAC, the moment the attacker reaches root the file-permission check evaporates — root reads anything. With MAC, nothing changes: <code>httpd_t</code> has no rule permitting <code>shadow_t:file read</code>, so the kernel denies it even to uid 0. <b>That is "mandatory":</b> the policy is not the owner's to override, and root is not above it.
+  </div>
+</section>
+
+<!-- ========== SECTION 2 : Inside a Label ========== -->
+<section id="sec1">
+  <p class="eyebrow">02 — The mechanics</p>
+  <h1>Every subject and object wears a label</h1>
+  <p class="lead">SELinux attaches a <strong>security context</strong> to every process and resource. A decision is just a lookup: does a rule allow this subject-type to perform this action on this object-type?</p>
+
+  <h2>Anatomy of a security context</h2>
+  <p class="muted" style="font-size:14px;margin-top:-4px">Click a field. This is what <code>ls -Z</code> and <code>ps -Z</code> show you.</p>
+  <div class="label-ctx" id="ctx">
+    <span class="fld" data-f="user">system_u</span><span class="sep">:</span>
+    <span class="fld" data-f="role">system_r</span><span class="sep">:</span>
+    <span class="fld" data-f="type">httpd_t</span><span class="sep">:</span>
+    <span class="fld" data-f="level">s0</span>
+  </div>
+  <div class="fld-info" id="fldinfo">Four fields: <b style="color:var(--green)">user</b> &nbsp;:&nbsp; <b style="color:var(--amber)">role</b> &nbsp;:&nbsp; <b style="color:var(--cyan)">type</b> &nbsp;:&nbsp; <b style="color:var(--violet)">level</b>. The <b style="color:var(--cyan)">type</b> is what type enforcement actually decides on.</div>
+
+  <h2>The decision engine</h2>
+  <p class="muted" style="font-size:14px;margin-top:-4px">Pick a subject, an object, and an action. SELinux is <strong>default-deny</strong>: if no rule explicitly allows it, it's refused.</p>
+  <div class="selectors">
+    <div>
+      <label>SUBJECT DOMAIN</label>
+      <select id="sel-sub">
+        <option value="httpd_t">httpd_t (web server)</option>
+        <option value="unconfined_t">unconfined_t (interactive user)</option>
+        <option value="user_t">user_t (confined user)</option>
+        <option value="sshd_t">sshd_t (ssh daemon)</option>
+      </select>
+    </div>
+    <div>
+      <label>OBJECT</label>
+      <select id="sel-obj">
+        <option value="httpd_sys_content_t|file|/var/www/html/index.html">/var/www/html (httpd_sys_content_t · file)</option>
+        <option value="shadow_t|file|/etc/shadow">/etc/shadow (shadow_t · file)</option>
+        <option value="http_port_t|tcp_socket|:80">tcp :80 (http_port_t · tcp_socket)</option>
+        <option value="user_home_t|file|~/notes.txt">~/notes.txt (user_home_t · file)</option>
+        <option value="self|memprotect|zero page">zero page (self · memprotect)</option>
+      </select>
+    </div>
+    <div>
+      <label>ACTION</label>
+      <select id="sel-act">
+        <option value="read">read</option>
+        <option value="write">write</option>
+        <option value="open">open</option>
+        <option value="name_bind">name_bind</option>
+        <option value="mmap_zero">mmap_zero</option>
+      </select>
+    </div>
+  </div>
+  <div style="margin:14px 0 10px"><button class="btn" id="decide-btn">Evaluate policy</button></div>
+  <div class="console" id="decide-out"><span class="c-dim"># choose a subject / object / action and evaluate</span></div>
+  <div class="note">
+    <b>Read the rule aloud:</b> <code>allow <span style="color:var(--cyan)">SUBJECT</span> <span style="color:var(--cyan)">OBJECT_TYPE</span>:<span style="color:var(--amber)">CLASS</span> <span style="color:var(--green)">ACTION</span>;</code> — if that exact line isn't in the loaded policy, the answer is "no". Try <code>httpd_t</code> reading <code>shadow_t</code>, then switch the subject to <code>unconfined_t</code> and watch it change.
+  </div>
+</section>
+
+<!-- ========== SECTION 3 : CVE-2019-9213 ========== -->
+<section id="sec2">
+  <p class="eyebrow">03 — The real vulnerability</p>
+  <h1>CVE-2019-9213 — mapping the forbidden zero page</h1>
+  <p class="lead">A whole class of kernel exploits needs one thing first: a mapping at virtual address <code>0x0</code>. Several independent layers exist to stop that. This CVE knocks one of them out.</p>
+
+  <div class="memwrap">
+    <div class="addrmap" id="addrmap" aria-hidden="true">
+      <div class="region r-kernel"><span>kernel space</span><span class="hex">0xffff…</span></div>
+      <div class="region r-stack"><span>user stack&nbsp; (grows ↓)</span><span class="hex">0x7fff…</span>
+        <div class="stackfill" id="stackfill"></div>
+      </div>
+      <div class="region r-gap"><span>⟂ guarded low memory ⟂</span></div>
+      <div class="region r-min" title="mmap_min_addr"></div>
+      <div class="region r-zero"><span>■ zero page</span><span class="hex">0x0000</span></div>
+    </div>
+
+    <div>
+      <div class="layerlist">
+        <div class="layer hw">
+          <h4>① Hardware · SMAP</h4>
+          <p>Supervisor Mode Access Prevention stops the kernel from touching user memory at all. That's why the CVE note says <em>"on non-SMAP platforms"</em> — older CPUs have no such guard.</p>
+        </div>
+        <div class="layer dac">
+          <h4>② DAC · mmap_min_addr</h4>
+          <p><code>/proc/sys/vm/mmap_min_addr</code> (default <code>0x10000</code>) blocks unprivileged mapping of low memory — you'd need <code>CAP_SYS_RAWIO</code>. A capability check.</p>
+        </div>
+        <div class="layer mac">
+          <h4>③ MAC · SELinux memprotect:mmap_zero</h4>
+          <p>A separate permission, bound to the process <strong>domain</strong> and <strong>decoupled</strong> from the tunable. Confined domains like <code>httpd_t</code> are denied the zero page even if an admin sets <code>mmap_min_addr = 0</code>.</p>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost" id="anim-normal">Normal stack growth</button>
+        <button class="btn danger" id="anim-attack">Run CVE-2019-9213</button>
+      </div>
+      <div class="console" id="cve-out" style="margin-top:12px;min-height:88px"><span class="c-dim"># press a button to trace the stack</span></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>The bug in one line:</b> <code>expand_downwards()</code> in <code>mm/mmap.c</code> (Linux &lt; 4.20.14) grew a stack VMA <em>without</em> re-checking <code>mmap_min_addr</code>. So instead of calling <code>mmap(0)</code> — which the capability check refuses — an attacker places a VMA just above the guard and lets the stack <strong>grow down into the zero page</strong>. The DAC guard is simply never consulted. MITRE flags it as a <em>"capability check for the wrong task."</em>
+  </div>
+</section>
+
+<!-- ========== SECTION 4 : Defense Lab ========== -->
+<section id="sec3">
+  <p class="eyebrow">04 — Put it together</p>
+  <h1>Defense Lab: watch the attack meet each layer</h1>
+  <p class="lead">Set the system's posture, then launch the exploit. The chain shows exactly where the attack is stopped — or why it isn't.</p>
+
+  <div class="lab">
+    <div class="panelbox">
+      <h3>System posture</h3>
+      <div class="ctl-row"><span class="ctl-label">Kernel<small>CVE-2019-9213 status</small></span>
+        <div class="seg" data-state="kernel">
+          <button data-v="vulnerable" class="on" data-tone="bad">vulnerable</button>
+          <button data-v="patched" data-tone="good">patched</button>
+        </div>
+      </div>
+      <div class="ctl-row"><span class="ctl-label">SELinux mode<small>getenforce</small></span>
+        <div class="seg" data-state="selinux">
+          <button data-v="enforcing" class="on" data-tone="mac">enforcing</button>
+          <button data-v="permissive" data-tone="warn">permissive</button>
+          <button data-v="disabled" data-tone="bad">disabled</button>
+        </div>
+      </div>
+      <div class="ctl-row"><span class="ctl-label">Process domain<small>who got popped</small></span>
+        <div class="seg" data-state="domain">
+          <button data-v="confined" class="on" data-tone="mac">confined httpd_t</button>
+          <button data-v="unconfined" data-tone="bad">unconfined_t</button>
+        </div>
+      </div>
+
+      <div class="adv-head">ADVANCED LAYERS</div>
+      <div class="ctl-row"><span class="ctl-label">CPU SMAP<small>hardware guard</small></span>
+        <div class="seg" data-state="smap">
+          <button data-v="off" class="on" data-tone="bad">absent</button>
+          <button data-v="on" data-tone="hw">present</button>
+        </div>
+      </div>
+      <div class="ctl-row"><span class="ctl-label">mmap_min_addr<small>vm tunable</small></span>
+        <div class="seg" data-state="mmapmin">
+          <button data-v="on" class="on" data-tone="good">0x10000</button>
+          <button data-v="off" data-tone="bad">0 (disabled)</button>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn danger" id="launch">▶ Launch exploit</button>
+        <button class="btn ghost" id="reset-lab">Reset</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="chain" id="chain"></div>
+      <div class="finalverdict" id="finalverdict"><div class="fv-title">—</div><div class="fv-sub">Set a posture and launch.</div></div>
+      <div class="console" id="lab-out" style="margin-top:14px;min-height:96px"><span class="c-dim"># audit / dmesg output appears here</span></div>
+      <details class="inote">
+        <summary>Instructor notes — the honest nuance (expand if the class is ready)</summary>
+        <div class="ibody">
+          <p><b>SELinux's clean win is the standard route.</b> The <code>memprotect:mmap_zero</code> hook sits on the <code>mmap()</code> syscall path. It reliably stops a confined domain from the ordinary <code>mmap(0)</code> technique — and it does so even when <code>mmap_min_addr</code> has been zeroed (the classic "I disabled it to run WINE" footgun). That decoupling is the designed behaviour.</p>
+          <p><b>The CVE's stack-growth route is sneakier.</b> <code>expand_downwards()</code> is not the <code>mmap()</code> path, so neither the capability check nor the <code>mmap_zero</code> hook fires on it. On a vulnerable, non-SMAP kernel the zero page gets mapped regardless of SELinux mode.</p>
+          <p><b>And once code runs in ring 0, it's above the reference monitor.</b> A successful kernel-NULL-deref gives kernel-mode execution — at which point SELinux itself can be subverted. So for <em>this</em> bug the decisive controls are <strong>patch</strong> and <strong>SMAP</strong>. MAC's role here is to shrink the attack surface beforehand (least privilege on the service) and to own the standard route — not to magically contain ring-0 compromise. That distinction is the real defense-in-depth lesson.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SECTION 5 : Debrief ========== -->
+<section id="sec4">
+  <p class="eyebrow">05 — Takeaways</p>
+  <h1>What to remember</h1>
+  <div class="takeaways">
+    <div class="take"><h4 style="color:var(--amber)">DAC answers to the owner</h4><p>File permissions are discretionary and root is exempt. Useful, but a single misconfig or a root compromise collapses it.</p></div>
+    <div class="take"><h4 style="color:var(--cyan)">MAC answers to the policy</h4><p>SELinux decides by label and rule, enforced in the kernel. Default-deny, and binding even on uid 0.</p></div>
+    <div class="take"><h4 style="color:var(--green)">Confinement limits blast radius</h4><p>A service pinned to <code>httpd_t</code> can only do what its domain allows — shrinking what a compromise can reach.</p></div>
+    <div class="take"><h4 style="color:var(--red)">No single layer is complete</h4><p>CVE-2019-9213 slipped past a capability check via stack growth. Layers — hardware, DAC, MAC, patching — cover each other's gaps.</p></div>
+  </div>
+
+  <h2>The commands behind the demo</h2>
+  <div class="cmds">
+<span class="cc"># current enforcement state</span>
+<span class="cm">getenforce</span>           <span class="cc"># Enforcing | Permissive | Disabled</span>
+<span class="cm">sestatus</span>             <span class="cc"># full status + policy name</span>
+<span class="cm">setenforce 0</span>         <span class="cc"># drop to permissive (log, don't block) — temporary</span>
+
+<span class="cc"># see the labels</span>
+<span class="cm">ps -eZ | grep httpd</span>   <span class="cc"># subject contexts</span>
+<span class="cm">ls -Z /etc/shadow</span>     <span class="cc"># object context -> system_u:object_r:shadow_t:s0</span>
+
+<span class="cc"># investigate a denial</span>
+<span class="cm">ausearch -m avc -ts recent</span>        <span class="cc"># find AVC denials in the audit log</span>
+<span class="cm">ausearch -m avc -ts recent | audit2allow</span>   <span class="cc"># show the rule that would permit it</span>
+
+<span class="cc"># policy knobs</span>
+<span class="cm">getsebool -a | grep httpd</span>         <span class="cc"># booleans toggle optional allows</span>
+<span class="cm">semanage fcontext ...</span>            <span class="cc"># manage file-context mappings</span>
+  </div>
+  <div class="note" style="border-left-color:var(--amber)">
+    <b>Live option:</b> if you have a terminal handy, <code>setenforce 0</code>, reproduce a denial, then <code>setenforce 1</code> and show the AVC in <code>ausearch</code>. The simulator mirrors exactly those <code>avc: denied</code> lines.
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>CIT-2640 · Network Security</span><span>·</span>
+  <span>Mandatory Access Control &amp; SELinux</span><span>·</span>
+  <span>CVE-2019-9213 lecture demo</span><span>·</span>
+  <span class="muted">offline · self-contained</span>
+</footer>
+
+<script>
+"use strict";
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) document.body.classList.add("reduce");
+
+/* ---------------- Section navigation ---------------- */
+const tabs = [...document.querySelectorAll(".tab")];
+const secs = [...document.querySelectorAll("section")];
+let cur = 0;
+function go(i){
+  cur = Math.max(0, Math.min(secs.length-1, i));
+  tabs.forEach((t,k)=>t.classList.toggle("active", k===cur));
+  secs.forEach((s,k)=>s.classList.toggle("active", k===cur));
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+tabs.forEach(t=>t.addEventListener("click", ()=>go(+t.dataset.sec)));
+document.addEventListener("keydown", e=>{
+  if (e.target.tagName==="SELECT") return;
+  if (e.key==="ArrowRight") go(cur+1);
+  else if (e.key==="ArrowLeft") go(cur-1);
+  else if (e.key>="1" && e.key<="5") go(+e.key-1);
+});
+
+/* ---------------- Section 1: DAC vs MAC ---------------- */
+let priv = "user";
+const dacUid=document.getElementById("dac-uid"), dacBig=document.getElementById("dac-big"),
+      dacWhy=document.getElementById("dac-why"), dacV=document.getElementById("dac-verdict"),
+      macBig=document.getElementById("mac-big"), macWhy=document.getElementById("mac-why"),
+      macV=document.getElementById("mac-verdict");
+function renderDacMac(){
+  if (priv==="root"){
+    dacUid.textContent = "uid = 0 (root)";
+    dacV.className="verdict allow"; dacV.querySelector(".dot").className="dot green";
+    dacBig.textContent="ALLOWED"; dacBig.style.color="var(--green)";
+    dacWhy.innerHTML="Root bypasses file-permission checks entirely. The mode bits no longer matter — the hashes are read.";
+  } else {
+    dacUid.textContent = "uid = 48 (apache)";
+    dacV.className="verdict deny"; dacV.querySelector(".dot").className="dot red";
+    dacBig.textContent="DENIED"; dacBig.style.color="var(--red)";
+    dacWhy.innerHTML='The file mode grants no access to "other", and apache is neither owner nor group.';
+  }
+  // MAC never changes with privilege
+  macV.className="verdict deny"; macV.querySelector(".dot").className="dot red";
+  macBig.textContent="DENIED"; macBig.style.color="var(--red)";
+  macWhy.innerHTML = priv==="root"
+    ? 'Still denied. No rule <code>allow httpd_t shadow_t:file read</code> exists — uid 0 does not change the label or the policy.'
+    : 'No policy rule <code>allow httpd_t shadow_t:file read</code> exists. The kernel refuses regardless of uid.';
+}
+document.getElementById("privseg").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  priv=b.dataset.priv;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle("on", x===b));
+  renderDacMac();
+});
+renderDacMac();
+
+/* ---------------- Section 2a: label fields ---------------- */
+const fldText = {
+  user:'<b>SELinux user</b> — the SELinux identity (not the Linux user). Maps many Linux accounts to a few policy identities. Here: <b>system_u</b>, used for system services.',
+  role:'<b>Role</b> — part of role-based access control; gates which <b>types</b> a user may enter. Processes typically carry <b>system_r</b>.',
+  type:'<b>Type</b> — the heart of it. Type Enforcement decides access by the <em>type of the subject</em> (a "domain", e.g. <b>httpd_t</b>) acting on the <em>type of the object</em>. This field does the work.',
+  level:'<b>Level / sensitivity</b> — MLS/MCS label (e.g. <b>s0</b>, categories <b>c0.c1023</b>). Used for multi-level security; often just <b>s0</b> on a targeted policy.'
+};
+const fldInfo=document.getElementById("fldinfo");
+document.querySelectorAll("#ctx .fld").forEach(f=>{
+  f.addEventListener("click", ()=>{
+    document.querySelectorAll("#ctx .fld").forEach(x=>x.classList.toggle("sel", x===f));
+    fldInfo.innerHTML = fldText[f.dataset.f];
+  });
+});
+
+/* ---------------- Section 2b: decision engine ---------------- */
+// allow set: "subject|type|class|action"
+const ALLOW = new Set([
+  "httpd_t|httpd_sys_content_t|file|read",
+  "httpd_t|httpd_sys_content_t|file|open",
+  "httpd_t|http_port_t|tcp_socket|name_bind",
+  "unconfined_t|shadow_t|file|read",
+  "unconfined_t|shadow_t|file|write",
+  "unconfined_t|shadow_t|file|open",
+  "unconfined_t|httpd_sys_content_t|file|read",
+  "unconfined_t|httpd_sys_content_t|file|open",
+  "unconfined_t|http_port_t|tcp_socket|name_bind",
+  "unconfined_t|user_home_t|file|read",
+  "unconfined_t|user_home_t|file|write",
+  "unconfined_t|self|memprotect|mmap_zero",   // unconfined may map low memory (WINE etc.)
+  "user_t|user_home_t|file|read",
+  "user_t|user_home_t|file|write",
+  "user_t|user_home_t|file|open",
+  "sshd_t|http_port_t|tcp_socket|name_bind"
+]);
+const PID = {httpd_t:2041, unconfined_t:3390, user_t:3771, sshd_t:1180};
+const COMM = {httpd_t:"httpd", unconfined_t:"bash", user_t:"bash", sshd_t:"sshd"};
+function ts(){return (1709651520 + Math.floor(Math.random()*8000)) + "." + (100+Math.floor(Math.random()*899));}
+document.getElementById("decide-btn").addEventListener("click", ()=>{
+  const sub=document.getElementById("sel-sub").value;
+  const [otype,oclass,opath]=document.getElementById("sel-obj").value.split("|");
+  const act=document.getElementById("sel-act").value;
+  const key=`${sub}|${otype}|${oclass}|${act}`;
+  const ok=ALLOW.has(key);
+  const out=document.getElementById("decide-out");
+  const rule=`allow ${sub} ${otype}:${oclass} ${act};`;
+  if (ok){
+    out.innerHTML =
+`<span class="c-prompt">policy&gt;</span> evaluate ${sub} -&gt; ${otype}:${oclass} { ${act} }
+matching rule found:
+  <span class="c-allow">${rule}</span>
+<span class="c-allow">result: ALLOWED</span>  <span class="c-dim">(${opath})</span>`;
+  } else {
+    out.innerHTML =
+`<span class="c-prompt">policy&gt;</span> evaluate ${sub} -&gt; ${otype}:${oclass} { ${act} }
+no matching allow rule &rarr; <span class="c-dim">default-deny</span>
+<span class="c-deny">type=AVC msg=audit(${ts()}:${200+Math.floor(Math.random()*400)}): avc:  denied  { ${act} } for  pid=${PID[sub]} comm="${COMM[sub]}" path="${opath}" scontext=system_u:system_r:${sub}:s0 tcontext=system_u:object_r:${otype}:s0 tclass=${oclass} permissive=0</span>
+<span class="c-deny">result: DENIED</span>  <span class="c-dim">(would need: ${rule})</span>`;
+  }
+});
+
+/* ---------------- Section 3: stack animation ---------------- */
+const stackfill=document.getElementById("stackfill");
+const cveOut=document.getElementById("cve-out");
+document.getElementById("anim-normal").addEventListener("click", ()=>{
+  stackfill.classList.remove("attack");
+  stackfill.style.height="14%";
+  requestAnimationFrame(()=>{ stackfill.style.height="34%"; });
+  cveOut.innerHTML =
+`<span class="c-prompt">trace&gt;</span> stack grows downward on demand...
+VMA 0x7ffffffde000 &rarr; 0x7ffffff9e000
+<span class="c-mac">expand_downwards(): addr 0x7ffffff9e000 &ge; mmap_min_addr (0x10000) &rarr; OK</span>
+<span class="c-allow">stack stays in normal territory. zero page untouched.</span>`;
+});
+document.getElementById("anim-attack").addEventListener("click", ()=>{
+  stackfill.classList.remove("attack"); stackfill.style.height="14%";
+  void stackfill.offsetWidth;
+  stackfill.classList.add("attack");
+  requestAnimationFrame(()=>{ stackfill.style.height="100%"; });
+  cveOut.innerHTML =
+`<span class="c-prompt">exploit&gt;</span> place VMA just above the guard, fault downward...
+<span class="c-warn">expand_downwards(): growing past 0x10000 — mmap_min_addr NEVER checked</span>
+VMA extends 0x10000 &rarr; 0x1000 &rarr; <span class="c-deny">0x0</span>
+<span class="c-deny">zero page MAPPED. capability guard bypassed (CVE-2019-9213).</span>`;
+});
+
+/* ---------------- Section 4: defense lab engine ---------------- */
+const state={kernel:"vulnerable",selinux:"enforcing",domain:"confined",smap:"off",mmapmin:"on"};
+document.querySelectorAll(".seg[data-state]").forEach(seg=>{
+  seg.addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    state[seg.dataset.state]=b.dataset.v;
+    [...seg.children].forEach(x=>x.classList.toggle("on", x===b));
+    resetChain();
+  });
+});
+
+const chainEl=document.getElementById("chain");
+const fvEl=document.getElementById("finalverdict");
+const labOut=document.getElementById("lab-out");
+
+function resetChain(){
+  chainEl.innerHTML="";
+  fvEl.className="finalverdict";
+  fvEl.innerHTML='<div class="fv-title">—</div><div class="fv-sub">Posture changed. Launch to run the exploit.</div>';
+  labOut.innerHTML='<span class="c-dim"># audit / dmesg output appears here</span>';
+}
+document.getElementById("reset-lab").addEventListener("click", resetChain);
+
+// Build the gate sequence + verdict for the current posture (honest model)
+function computeChain(){
+  const g=[]; const log=[]; let zeroMapped=false; let route;
+  const dom = state.domain==="confined" ? "httpd_t" : "unconfined_t";
+
+  if (state.kernel==="vulnerable"){
+    route="cve";
+    g.push({tag:"dac",name:"mmap_min_addr (capability)",cls:"bypass",status:"BYPASSED",
+      detail:"expand_downwards() stack growth never consults the check — CVE-2019-9213."});
+    g.push({tag:"mac",name:"SELinux memprotect:mmap_zero",cls:"neutral",status:"NOT ON PATH",
+      detail:"The mmap_zero hook guards mmap(); it does not fire on the stack-growth path."});
+    zeroMapped=true;
+    log.push(['warn',`dmesg: expand_downwards: VMA for pid grown below mmap_min_addr (0x10000) -> 0x0`]);
+    log.push(['deny',`exploit: zero page mapped via CVE-2019-9213 (capability guard bypassed)`]);
+  } else {
+    route="standard";
+    // patched: attacker must use mmap(0)
+    if (state.mmapmin==="on"){
+      g.push({tag:"dac",name:"mmap_min_addr (capability)",cls:"held",status:"HELD",
+        detail:"mmap(0) needs CAP_SYS_RAWIO. Unprivileged attacker is refused; stack-growth shortcut is patched."});
+      log.push(['deny',`mmap: pid attempted MAP_FIXED @ 0x0 -> EPERM (mmap_min_addr=0x10000)`]);
+    } else {
+      g.push({tag:"dac",name:"mmap_min_addr (capability)",cls:"bypass",status:"DISABLED",
+        detail:"Admin set the tunable to 0 (the classic 'needed it for WINE' footgun). No capability check."});
+      log.push(['warn',`sysctl: vm.mmap_min_addr = 0  (low-memory protection OFF)`]);
+      // now the SELinux mmap path check
+      if (state.selinux==="enforcing"){
+        if (dom==="httpd_t"){
+          g.push({tag:"mac",name:"SELinux memprotect:mmap_zero",cls:"held",status:"HELD",
+            detail:"httpd_t has no mmap_zero rule. Denied even though mmap_min_addr was disabled — MAC is decoupled from the tunable."});
+          log.push(['mac',`type=AVC msg=audit(${ts()}:447): avc:  denied  { mmap_zero } for  pid=2041 comm="httpd" scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:system_r:httpd_t:s0 tclass=memprotect permissive=0`]);
+        } else {
+          g.push({tag:"mac",name:"SELinux memprotect:mmap_zero",cls:"bypass",status:"ALLOWED",
+            detail:"unconfined_t is permitted mmap_zero, so the zero page maps. MAC only helps when the domain is actually confined."});
+          zeroMapped=true;
+          log.push(['mac',`avc: granted { mmap_zero } for comm="bash" scontext=...:unconfined_t:s0 tclass=memprotect`]);
+        }
+      } else if (state.selinux==="permissive"){
+        g.push({tag:"mac",name:"SELinux memprotect:mmap_zero",cls:"neutral",status:"LOGGED ONLY",
+          detail:"Permissive mode logs the would-be denial but allows the action. Great for debugging, no protection."});
+        zeroMapped=true;
+        log.push(['warn',`type=AVC msg=audit(${ts()}:448): avc:  denied  { mmap_zero } for  pid=2041 comm="httpd" scontext=system_u:system_r:${dom}:s0 tclass=memprotect permissive=1`]);
+      } else { // disabled
+        g.push({tag:"mac",name:"SELinux memprotect:mmap_zero",cls:"bypass",status:"OFF",
+          detail:"SELinux disabled: no MAC check at all. The zero page maps."});
+        zeroMapped=true;
+      }
+    }
+  }
+
+  if (zeroMapped){
+    // Gate: SMAP
+    if (state.smap==="on"){
+      g.push({tag:"hw",name:"CPU · SMAP",cls:"held",status:"HELD",
+        detail:"Zero page is user memory. SMAP faults the kernel the instant it dereferences it — exploit can't execute."});
+      log.push(['allow',`#PF: supervisor access to user page (SMAP) -> exploit aborted`]);
+    } else {
+      g.push({tag:"hw",name:"CPU · SMAP",cls:"bypass",status:"ABSENT",
+        detail:"No SMAP (non-SMAP platform). Kernel reads/executes the attacker-controlled zero page during the NULL deref."});
+      log.push(['deny',`kernel: NULL-deref hit mapped 0x0 — executing ring-0 payload`]);
+    }
+  }
+
+  // verdict
+  let verdict, sub, cls;
+  const stopped = g.some(x=>x.cls==="held");
+  const smapHeld = state.smap==="on" && zeroMapped;
+  if (!zeroMapped){
+    cls="blocked"; verdict="ATTACK BLOCKED";
+    sub = state.kernel==="patched" && state.mmapmin==="on"
+      ? "The zero page was never mapped — the patched kernel closed the stack-growth route and the capability check refused mmap(0)."
+      : "SELinux refused the zero-page mapping for this confined domain, even with the DAC tunable disabled. This is MAC covering a DAC gap.";
+  } else if (smapHeld){
+    cls="blocked"; verdict="ATTACK BLOCKED";
+    sub="The zero page mapped, but SMAP stopped the kernel from using it. Hardware mitigation held where software layers didn't.";
+  } else {
+    cls="root"; verdict="KERNEL COMPROMISE";
+    if (state.selinux==="enforcing" && state.domain==="confined"){
+      sub="Ring-0 code execution succeeded. SELinux confined the service beforehand, but kernel-mode execution is above the reference monitor — MAC can't contain it. The fix for this path is to PATCH (and enable SMAP).";
+    } else {
+      sub="Every software and hardware guard on this path was down or bypassed. Attacker-controlled code runs in ring 0 → full root.";
+    }
+  }
+  return {g, log, verdict, sub, cls};
+}
+
+function paint(res, i){
+  // draw gates progressively
+  if (i < res.g.length){
+    const gate=res.g[i];
+    if (i>0){
+      const c=document.createElement("div");
+      c.className="connector " + (res.g[i-1].cls==="held" ? "stop":"flow");
+      chainEl.appendChild(c);
+    }
+    const el=document.createElement("div");
+    el.className="gate shown "+gate.cls;
+    el.innerHTML=`<div class="g-top"><span class="g-tag ${gate.tag}">${gate.tag.toUpperCase()}</span>
+      <span class="g-name">${gate.name}</span><span class="g-status">${gate.status}</span></div>
+      <div class="g-detail">${gate.detail}</div>`;
+    chainEl.appendChild(el);
+    const delay = document.body.classList.contains("reduce") ? 0 : 520;
+    setTimeout(()=>paint(res,i+1), delay);
+  } else {
+    // verdict + log
+    fvEl.className="finalverdict shown "+res.cls;
+    fvEl.innerHTML=`<div class="fv-title">${res.verdict}</div><div class="fv-sub">${res.sub}</div>`;
+    const tone={deny:"c-deny",allow:"c-allow",warn:"c-warn",mac:"c-mac"};
+    labOut.innerHTML = `<span class="c-prompt">root@lab:~#</span> ./zero_page_exploit\n` +
+      res.log.map(([t,m])=>`<span class="${tone[t]||'c-dim'}">${m}</span>`).join("\n");
+  }
+}
+
+document.getElementById("launch").addEventListener("click", ()=>{
+  resetChain();
+  const res=computeChain();
+  fvEl.innerHTML='<div class="fv-title c-dim" style="color:var(--ink-faint)">running…</div><div class="fv-sub">Tracing the exploit through each layer.</div>';
+  paint(res,0);
+});
+resetChain();
+</script>
+</body>
+</html>
