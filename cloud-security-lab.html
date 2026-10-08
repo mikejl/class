@@ -2,9 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Cloud Security Lab",
+  "schemaVersion": 1,
+  "description": "Offline, self-contained CloudSec lab with 5 modules (S3 exposure, IAM privesc, SSRF/IMDS, container escape, git secrets) — simulated terminal, objectives, hints. No external data."
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CloudSec Lab — Student Security Exercise</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0e17;
@@ -19,8 +25,8 @@
     --success: #39ff14;
     --text: #c8d8f0;
     --muted: #4a6080;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Space Grotesk', sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -109,14 +115,16 @@
     display: flex; align-items: center; gap: 10px;
     padding: 10px 12px; border-radius: 6px; cursor: pointer;
     transition: all 0.15s; border: 1px solid transparent; margin-bottom: 3px;
+    /* button reset */
+    width: 100%; background: transparent; color: inherit; font: inherit; text-align: left;
   }
   .module-item:hover   { background: var(--panel); border-color: var(--border); }
   .module-item.active  { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.3); }
   .module-item.done-mod{ opacity: 0.65; }
   .module-icon  { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
   .module-info  { flex: 1; min-width: 0; }
-  .module-name  { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .module-meta  { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .module-name  { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .module-meta  { display: block; font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
   .module-status{ font-size: 13px; flex-shrink: 0; color: var(--muted); }
   .module-status.complete { color: var(--success); }
   .difficulty   { display: inline-flex; gap: 2px; }
@@ -133,6 +141,45 @@
     height: 100%; background: linear-gradient(90deg, var(--accent), #0088ff);
     border-radius: 2px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
   }
+  .reset-btn {
+    margin-top: 10px; padding: 2px 4px; background: transparent; border: none;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.05em; text-decoration: underline; cursor: pointer;
+  }
+  .reset-btn:hover { color: var(--danger); }
+
+  /* Student name + Finish Lab */
+  .student-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; padding: 0 4px; }
+  .student-field label { font-size: 11px; color: var(--muted); }
+  .student-field input {
+    width: 100%; padding: 6px 8px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+  }
+  .student-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .student-field input[readonly] { color: var(--muted); background: var(--panel); }
+  .finish-wrap { padding: 0 4px; }
+  .finish-btn {
+    width: 100%; margin-top: 4px; padding: 8px;
+    background: var(--success); color: #000; border: 1px solid var(--success); border-radius: 5px;
+    font-family: var(--sans); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: opacity 0.15s;
+  }
+  .finish-btn:hover:not(:disabled) { opacity: 0.82; }
+  .finish-btn:disabled {
+    background: var(--panel); border-color: var(--border); color: var(--muted); cursor: not-allowed;
+  }
+  .finish-btn[hidden] { display: none; }
+  .finish-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .completion {
+    margin-top: 10px; padding: 10px 12px;
+    background: rgba(57,255,20,0.07); border: 1px solid rgba(57,255,20,0.4); border-radius: 7px;
+    font-size: 12px; line-height: 1.6; color: var(--text);
+    animation: slideIn 0.3s ease;
+  }
+  .completion[hidden] { display: none; }
+  .completion-title { font-family: var(--mono); color: var(--success); font-weight: 700; font-size: 12px; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .completion-key  { color: var(--muted); }
+  .completion-name { font-weight: 700; overflow-wrap: anywhere; }
 
   /* ── Main ── */
   .main { display: flex; flex-direction: column; overflow: hidden; }
@@ -219,6 +266,7 @@
   .ptab {
     padding: 12px 20px; font-family: var(--mono); font-size: 11px;
     letter-spacing: 0.05em; color: var(--muted); cursor: pointer;
+    background: transparent; border: none;
     border-bottom: 2px solid transparent; transition: all 0.15s; text-transform: uppercase;
   }
   .ptab:hover  { color: var(--text); }
@@ -306,6 +354,103 @@
   .t-new { animation: tFadeIn 0.25s ease; }
   @keyframes tFadeIn  { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
   @keyframes slideIn  { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── Keyboard focus ── */
+  .module-item:focus-visible,
+  .hint-card:focus-visible,
+  .reset-btn:focus-visible,
+  .finish-btn:focus-visible,
+  .completion:focus-visible,
+  .complete-banner .next-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ptab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .terminal-input-row:focus-within { box-shadow: inset 0 0 0 1px var(--accent); }
+  .terminal-input { min-width: 0; }
+
+  /* ── Light mode (terminal stays dark) ── */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --panel: #eef2f8;
+      --border: #c9d4e3;
+      --accent: #0068a8;
+      --accent2: #b8430f;
+      --accent3: #1a7f1a;
+      --warn: #8a6100;
+      --danger: #c62828;
+      --success: #1a7f1a;
+      --text: #1a2433;
+      --muted: #4f5f75;
+    }
+    body::before { display: none; }
+    body::after {
+      background-image:
+        linear-gradient(rgba(0,104,168,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,104,168,0.04) 1px, transparent 1px);
+    }
+    header { background: rgba(255,255,255,0.95); }
+    .scenario-title { color: var(--text); }
+    .module-item.active { background: rgba(0,104,168,0.08); border-color: rgba(0,104,168,0.35); }
+    .objective-item.done { border-color: rgba(26,127,26,0.4); background: rgba(26,127,26,0.06); }
+    .objective-item.done .obj-check,
+    .complete-banner .next-btn,
+    .finish-btn:not(:disabled) { color: #fff; }
+    .completion { background: rgba(26,127,26,0.06); border-color: rgba(26,127,26,0.4); }
+    .complete-banner { background: rgba(26,127,26,0.07); border-color: rgba(26,127,26,0.35); }
+    .hint-card:hover { border-color: rgba(0,104,168,0.4); }
+    .hint-card.revealed { border-color: rgba(184,67,15,0.45); background: rgba(184,67,15,0.05); }
+    /* Re-apply the dark palette inside the terminal */
+    .terminal-pane {
+      --panel: #141c2e;
+      --border: #1e2d47;
+      --accent: #00d4ff;
+      --accent2: #ff6b35;
+      --accent3: #39ff14;
+      --warn: #ffca28;
+      --danger: #ff4444;
+      --success: #39ff14;
+      --text: #c8d8f0;
+      --muted: #7088a8;
+      color: var(--text);
+    }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 220px 1fr; }
+    .content-area { grid-template-columns: 1fr 260px; }
+  }
+
+  @media (max-width: 768px) {
+    header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+    .app { display: block; height: auto; }
+    .sidebar {
+      border-right: none; border-bottom: 1px solid var(--border);
+      overflow: visible; padding: 14px 0 4px;
+    }
+    .sidebar-section { padding: 0 16px; margin-bottom: 14px; }
+    .module-list {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding-bottom: 6px; scroll-snap-type: x proximity;
+    }
+    .module-item {
+      flex: 0 0 auto; width: auto; max-width: 230px; margin-bottom: 0;
+      border-color: var(--border); scroll-snap-align: start;
+    }
+    .main { overflow: visible; }
+    .scenario-header { padding: 14px 16px; }
+    .content-area { display: block; overflow: visible; }
+    .terminal-pane {
+      height: 60vh; min-height: 340px;
+      border-right: none; border-bottom: 1px solid var(--border);
+    }
+    .terminal-output { padding: 12px 16px; overflow-wrap: anywhere; }
+    .terminal-input-row { padding: 10px 16px; }
+    .terminal-input { font-size: 16px; }
+    .student-field input { font-size: 16px; }  /* avoid iOS zoom on focus */
+    .right-panel { overflow: visible; }
+    .panel-content { overflow: visible; padding: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -334,74 +479,99 @@
       <div class="progress-track">
         <div class="progress-fill" id="globalProgress" style="width:0%"></div>
       </div>
+      <button type="button" class="reset-btn" id="resetProgress">Reset progress</button>
+    </div>
+
+    <div class="sidebar-section" role="group" aria-labelledby="studentTitle">
+      <div class="sidebar-title" id="studentTitle">Student</div>
+      <div class="student-field">
+        <label for="firstName">First name</label>
+        <input id="firstName" type="text" autocomplete="given-name" maxlength="50" spellcheck="false">
+      </div>
+      <div class="student-field">
+        <label for="lastName">Last name</label>
+        <input id="lastName" type="text" autocomplete="family-name" maxlength="50" spellcheck="false">
+      </div>
+      <div class="finish-wrap">
+        <button type="button" class="finish-btn" id="finishBtn" aria-describedby="finishHint" disabled>Finish Lab</button>
+        <p class="finish-hint" id="finishHint" role="status" aria-live="polite" aria-atomic="true">Complete all 5 modules and enter your name to finish.</p>
+        <div class="completion" id="completionCard" tabindex="-1" role="region" aria-labelledby="completionTitle" hidden>
+          <div class="completion-title" id="completionTitle">✓ LAB COMPLETE</div>
+          <div><span class="completion-key">Student:</span> <span class="completion-name" id="certName"></span></div>
+          <div><span class="completion-key">Completed:</span> <span id="certTime"></span></div>
+          <div><span class="completion-key">Result:</span> <span id="certSummary"></span></div>
+        </div>
+      </div>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-title">Modules</div>
+      <div class="module-list">
 
-      <div class="module-item active" data-module="0">
+      <button type="button" class="module-item active" data-module="0" aria-current="true">
         <span class="module-icon">🪣</span>
-        <div class="module-info">
-          <div class="module-name">S3 Bucket Exposure</div>
-          <div class="module-meta">AWS ·
+        <span class="module-info">
+          <span class="module-name">S3 Bucket Exposure</span>
+          <span class="module-meta">AWS ·
             <span class="difficulty">
               <span class="diff-dot lit"></span><span class="diff-dot"></span><span class="diff-dot"></span>
             </span>
-          </div>
-        </div>
+          </span>
+        </span>
         <span class="module-status" id="status-0">○</span>
-      </div>
+      </button>
 
-      <div class="module-item" data-module="1">
+      <button type="button" class="module-item" data-module="1">
         <span class="module-icon">🔑</span>
-        <div class="module-info">
-          <div class="module-name">IAM Privilege Escalation</div>
-          <div class="module-meta">AWS ·
+        <span class="module-info">
+          <span class="module-name">IAM Privilege Escalation</span>
+          <span class="module-meta">AWS ·
             <span class="difficulty">
               <span class="diff-dot lit"></span><span class="diff-dot lit"></span><span class="diff-dot"></span>
             </span>
-          </div>
-        </div>
+          </span>
+        </span>
         <span class="module-status" id="status-1">○</span>
-      </div>
+      </button>
 
-      <div class="module-item" data-module="2">
+      <button type="button" class="module-item" data-module="2">
         <span class="module-icon">⚙️</span>
-        <div class="module-info">
-          <div class="module-name">Metadata Service Attack</div>
-          <div class="module-meta">Cloud ·
+        <span class="module-info">
+          <span class="module-name">Metadata Service Attack</span>
+          <span class="module-meta">Cloud ·
             <span class="difficulty">
               <span class="diff-dot lit"></span><span class="diff-dot lit"></span><span class="diff-dot"></span>
             </span>
-          </div>
-        </div>
+          </span>
+        </span>
         <span class="module-status" id="status-2">○</span>
-      </div>
+      </button>
 
-      <div class="module-item" data-module="3">
+      <button type="button" class="module-item" data-module="3">
         <span class="module-icon">🐳</span>
-        <div class="module-info">
-          <div class="module-name">Container Escape</div>
-          <div class="module-meta">K8s ·
+        <span class="module-info">
+          <span class="module-name">Container Escape</span>
+          <span class="module-meta">K8s ·
             <span class="difficulty">
               <span class="diff-dot lit"></span><span class="diff-dot lit"></span><span class="diff-dot lit"></span>
             </span>
-          </div>
-        </div>
+          </span>
+        </span>
         <span class="module-status" id="status-3">○</span>
-      </div>
+      </button>
 
-      <div class="module-item" data-module="4">
+      <button type="button" class="module-item" data-module="4">
         <span class="module-icon">🔐</span>
-        <div class="module-info">
-          <div class="module-name">Secrets in Git History</div>
-          <div class="module-meta">DevOps ·
+        <span class="module-info">
+          <span class="module-name">Secrets in Git History</span>
+          <span class="module-meta">DevOps ·
             <span class="difficulty">
               <span class="diff-dot lit"></span><span class="diff-dot"></span><span class="diff-dot"></span>
             </span>
-          </div>
-        </div>
+          </span>
+        </span>
         <span class="module-status" id="status-4">○</span>
+      </button>
       </div>
     </div>
   </aside>
@@ -428,7 +598,7 @@
           </div>
           <div class="terminal-title">student@cloudsec-lab:~$</div>
         </div>
-        <div class="terminal-output" id="termOutput"></div>
+        <div class="terminal-output" id="termOutput" role="log" aria-live="polite"></div>
         <div class="terminal-input-row">
           <span class="t-prompt-inline">student@lab:~$</span>
           <input class="terminal-input" id="termInput" type="text"
@@ -438,21 +608,21 @@
 
       <!-- Right panel -->
       <div class="right-panel">
-        <div class="panel-tabs">
-          <div class="ptab active" data-tab="objectives">Objectives</div>
-          <div class="ptab"        data-tab="hints">Hints</div>
+        <div class="panel-tabs" role="tablist">
+          <button type="button" class="ptab active" data-tab="objectives" role="tab" aria-selected="true"  aria-controls="tab-objectives">Objectives</button>
+          <button type="button" class="ptab"        data-tab="hints"      role="tab" aria-selected="false" aria-controls="tab-hints">Hints</button>
         </div>
 
         <div class="panel-content">
 
           <!-- Objectives -->
-          <div class="tab-panel active" id="tab-objectives">
+          <div class="tab-panel active" id="tab-objectives" role="tabpanel">
             <div class="panel-label">Mission Objectives</div>
             <div id="objectivesList"></div>
 
             <div id="completeBanner" class="complete-banner">
               <span>✓ All objectives complete!</span>
-              <button class="next-btn" onclick="nextModule()">Next Module →</button>
+              <button type="button" class="next-btn" onclick="nextModule()">Next Module →</button>
             </div>
 
             <div class="obj-progress-wrap">
@@ -467,7 +637,7 @@
           </div>
 
           <!-- Hints -->
-          <div class="tab-panel" id="tab-hints">
+          <div class="tab-panel" id="tab-hints" role="tabpanel">
             <div class="panel-label">Available Hints</div>
             <div id="hintsList"></div>
             <p style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:12px;">
@@ -967,6 +1137,171 @@ const MODULES = [
 let currentModule   = 0;
 let moduleStates    = MODULES.map(() => ({}));
 let moduleCompleted = MODULES.map(() => false);
+let revealedHints   = MODULES.map(() => []);
+let student         = { first: '', last: '' };  // as typed (persisted); trimmed when checked
+let completedAt     = null;  // ISO string, recorded once by Finish Lab (persisted)
+
+// ═══════════════════════════════════════════════════════
+//  SAVED PROGRESS (localStorage — optional, fails silently)
+// ═══════════════════════════════════════════════════════
+const STORAGE_KEY = 'cloud-lab-progress-v1';
+
+function saveProgress() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      currentModule,
+      completed:  moduleCompleted,
+      objectives: MODULES.map(m => m.objectives.filter(o => o.done).map(o => o.id)),
+      states:     moduleStates,
+      hints:      revealedHints,
+      student,
+      completedAt,
+    }));
+  } catch (e) { /* storage unavailable — progress just won't persist */ }
+}
+
+// Returns the module index to open, applying any saved progress to state.
+function restoreProgress() {
+  let data = null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) data = JSON.parse(raw);
+  } catch (e) { data = null; }
+  // Always sync the name fields from storage so browser form-restore can't
+  // leave stale names behind (e.g. right after a reset).
+  firstInput.value = lastInput.value = '';
+  if (!data || typeof data !== 'object') return 0;
+
+  // Older saves have no student / completedAt fields; they load with blanks.
+  const st = data.student && typeof data.student === 'object' ? data.student : {};
+  student.first = typeof st.first === 'string' ? st.first.slice(0, 50) : '';
+  student.last  = typeof st.last  === 'string' ? st.last.slice(0, 50)  : '';
+  firstInput.value = student.first;
+  lastInput.value  = student.last;
+  // A completion only counts if it was saved together with a full name.
+  completedAt = (typeof data.completedAt === 'string' && !isNaN(Date.parse(data.completedAt)) && hasFullName())
+    ? data.completedAt : null;
+
+  MODULES.forEach((mod, i) => {
+    const doneIds = Array.isArray(data.objectives) && Array.isArray(data.objectives[i]) ? data.objectives[i] : [];
+    mod.objectives.forEach(o => { o.done = doneIds.includes(o.id); });
+    if (Array.isArray(data.states) && data.states[i] && typeof data.states[i] === 'object') {
+      moduleStates[i] = data.states[i];
+    }
+    if (Array.isArray(data.hints) && Array.isArray(data.hints[i])) {
+      revealedHints[i] = data.hints[i].filter(h => Number.isInteger(h) && h >= 0 && h < mod.hints.length);
+    }
+    moduleCompleted[i] = !!(Array.isArray(data.completed) && data.completed[i]) ||
+                         mod.objectives.every(o => o.done);
+    if (moduleCompleted[i]) {
+      const statusEl = document.getElementById(`status-${i}`);
+      if (statusEl) { statusEl.textContent = '✓'; statusEl.classList.add('complete'); }
+      document.querySelector(`[data-module="${i}"]`).classList.add('done-mod');
+    }
+  });
+
+  const idx = data.currentModule;
+  return (Number.isInteger(idx) && idx >= 0 && idx < MODULES.length) ? idx : 0;
+}
+
+function resetProgress() {
+  if (!confirm('Reset all lab progress? Completed modules, objectives, revealed hints, your name and your Finish Lab completion record will be cleared.')) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+  // Clear names + completion right away (unlocks fields, hides the card)
+  // in case the reload is slow or blocked.
+  student = { first: '', last: '' };
+  completedAt = null;
+  firstInput.value = lastInput.value = '';
+  updateFinishUI();
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════════
+//  STUDENT / FINISH LAB
+// ═══════════════════════════════════════════════════════
+const firstInput     = document.getElementById('firstName');
+const lastInput      = document.getElementById('lastName');
+const finishBtn      = document.getElementById('finishBtn');
+const finishHint     = document.getElementById('finishHint');
+const completionCard = document.getElementById('completionCard');
+
+function hasFullName() { return !!(student.first.trim() && student.last.trim()); }
+function fullName()    { return `${student.first.trim()} ${student.last.trim()}`; }
+function modulesDone() { return moduleCompleted.filter(Boolean).length; }
+
+// e.g. "October 8, 2026, 2:35 PM"
+function formatCompletion(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) + ', ' +
+    d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+}
+
+// Only touch the live region when the message actually changes, so typing a
+// name doesn't re-announce the same hint on every keystroke.
+function setFinishHint(text) {
+  if (finishHint.textContent !== text) finishHint.textContent = text;
+}
+
+// Re-evaluated whenever a module completes, a name changes, progress is
+// restored, or the lab is reset.
+function updateFinishUI() {
+  const finished = completedAt !== null;
+  firstInput.readOnly = finished;
+  lastInput.readOnly  = finished;
+  finishBtn.hidden    = finished;
+  completionCard.hidden = !finished;
+
+  const done = modulesDone(), total = MODULES.length;
+  if (finished) {
+    const objDone  = MODULES.reduce((a, m) => a + m.objectives.filter(o => o.done).length, 0);
+    const objTotal = MODULES.reduce((a, m) => a + m.objectives.length, 0);
+    document.getElementById('certName').textContent    = fullName();
+    document.getElementById('certTime').textContent    = formatCompletion(completedAt);
+    document.getElementById('certSummary').textContent =
+      `${done}/${total} modules complete, ${objDone}/${objTotal} objectives complete`;
+    setFinishHint(`Lab complete. Recorded ${formatCompletion(completedAt)}.`);
+    return;
+  }
+
+  const allDone = done === total;
+  const named   = hasFullName();
+  finishBtn.disabled = !(allDone && named);
+
+  const left = total - done;
+  const f = student.first.trim(), l = student.last.trim();
+  const nameTask = (!f && !l) ? 'enter your first and last name'
+                 : !f ? 'enter your first name'
+                 : !l ? 'enter your last name' : '';
+  const modTask = `complete ${left} more module${left === 1 ? '' : 's'}`;
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  if (allDone && named) setFinishHint('Ready. Click Finish Lab to record your completion.');
+  else if (allDone)     setFinishHint(`All ${total} modules complete. ${cap(nameTask)} to finish.`);
+  else if (named)       setFinishHint(`${cap(modTask)} to finish (${done}/${total} done).`);
+  else                  setFinishHint(`${cap(modTask)} and ${nameTask} to finish.`);
+}
+
+function onNameInput() {
+  if (completedAt !== null) return;  // locked after finishing
+  student.first = firstInput.value;
+  student.last  = lastInput.value;
+  saveProgress();
+  updateFinishUI();
+}
+
+function finishLab() {
+  if (completedAt !== null) return;  // timestamp is recorded once
+  if (modulesDone() !== MODULES.length || !hasFullName()) { updateFinishUI(); return; }
+  student.first = firstInput.value = student.first.trim();
+  student.last  = lastInput.value  = student.last.trim();
+  completedAt = new Date().toISOString();
+  saveProgress();
+  updateFinishUI();
+  completionCard.focus();  // the button is now hidden; keep focus on the result
+  // appendLine renders HTML, so escape the user-supplied name
+  appendLine('t-success', esc(`✓ Lab complete: ${fullName()}, ${formatCompletion(completedAt)}`), true);
+  appendLine('', '', false);
+}
 
 // ═══════════════════════════════════════════════════════
 //  INIT
@@ -975,9 +1310,10 @@ function init() {
   // Tab switching
   document.querySelectorAll('.ptab').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.ptab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
       document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     });
   });
@@ -995,19 +1331,29 @@ function init() {
     }
   });
 
-  loadModule(0);
+  document.getElementById('resetProgress').addEventListener('click', resetProgress);
+
+  // Student name + Finish Lab
+  firstInput.addEventListener('input', onNameInput);
+  lastInput.addEventListener('input', onNameInput);
+  finishBtn.addEventListener('click', finishLab);
+
+  loadModule(restoreProgress(), true);
+  updateFinishUI();
 }
 
 // ═══════════════════════════════════════════════════════
 //  LOAD MODULE
 // ═══════════════════════════════════════════════════════
-function loadModule(idx) {
+function loadModule(idx, restoring) {
   currentModule = idx;
   const mod = MODULES[idx];
 
   // Sidebar
-  document.querySelectorAll('.module-item').forEach(i => i.classList.remove('active'));
-  document.querySelector(`[data-module="${idx}"]`).classList.add('active');
+  document.querySelectorAll('.module-item').forEach(i => { i.classList.remove('active'); i.removeAttribute('aria-current'); });
+  const activeItem = document.querySelector(`[data-module="${idx}"]`);
+  activeItem.classList.add('active');
+  activeItem.setAttribute('aria-current', 'true');
 
   // Header
   document.getElementById('moduleCategory').textContent = mod.category;
@@ -1026,8 +1372,8 @@ function loadModule(idx) {
   ];
   [...header, ...mod.intro].forEach(l => appendLine(l.cls, l.text, false));
 
-  // Reset state unless already completed
-  if (!moduleCompleted[idx]) {
+  // Reset state unless already completed (or restoring saved progress on page load)
+  if (!moduleCompleted[idx] && !restoring) {
     moduleStates[idx] = {};
     mod.objectives.forEach(o => { o.done = false; });
   }
@@ -1038,6 +1384,7 @@ function loadModule(idx) {
   document.getElementById('completeBanner').classList.remove('show');
   updateObjProgress();
   updateGlobalProgress();
+  saveProgress();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1079,7 +1426,14 @@ function runCommand(cmd) {
     document.querySelector(`[data-module="${currentModule}"]`).classList.add('done-mod');
     setTimeout(() => document.getElementById('completeBanner').classList.add('show'), 350);
     updateGlobalProgress();
+    if (modulesDone() === MODULES.length && completedAt === null) {
+      appendLine('t-info', 'All modules complete! Enter your name in the Student panel and click  Finish Lab.', true);
+      appendLine('', '', false);
+    }
   }
+  if (anyNew) updateFinishUI();
+
+  if (anyNew) saveProgress();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1097,8 +1451,10 @@ function renderObjectives() {
 
 function renderHints() {
   const mod = MODULES[currentModule];
+  const revealed = revealedHints[currentModule];
   document.getElementById('hintsList').innerHTML = mod.hints.map((h, i) => `
-    <div class="hint-card" id="hint-${i}" onclick="revealHint(${i})">
+    <div class="hint-card${revealed.includes(i) ? ' revealed' : ''}" id="hint-${i}" role="button" tabindex="0"
+      aria-expanded="${revealed.includes(i)}" onclick="revealHint(${i})" onkeydown="hintKey(event, ${i})">
       <div class="hint-header">Hint #${i + 1}</div>
       <div class="hint-body">${h.text}</div>
       <div class="hint-lock">🔒 Click to reveal</div>
@@ -1110,7 +1466,14 @@ function revealHint(idx) {
   const card = document.getElementById('hint-' + idx);
   if (card && !card.classList.contains('revealed')) {
     card.classList.add('revealed');
+    card.setAttribute('aria-expanded', 'true');
+    if (!revealedHints[currentModule].includes(idx)) revealedHints[currentModule].push(idx);
+    saveProgress();
   }
+}
+
+function hintKey(e, idx) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); revealHint(idx); }
 }
 
 function updateObjProgress() {
