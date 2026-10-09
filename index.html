@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Materials</title>
+
+    <style>
+        :root {
+            --bg: #f7f8fa;
+            --surface: #ffffff;
+            --text: #1f2933;
+            --muted: #5f6b7a;
+            --border: #e3e7ed;
+            --accent: #2563eb;
+            --accent-soft: #eaf1ff;
+            --lab: #0f766e;
+            --lab-soft: #e6f6f4;
+            --util: #b45309;
+            --util-soft: #fdf3e7;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 32px 16px 48px;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        header {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-top: 4px solid var(--accent);
+            padding: 24px 28px;
+            border-radius: 10px;
+            margin-bottom: 32px;
+        }
+
+        header h1 {
+            margin: 0 0 6px 0;
+            font-size: 28px;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        section { margin-bottom: 36px; }
+
+        section h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .count {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 9px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        #labs .count {
+            background: var(--lab-soft);
+            color: var(--lab);
+        }
+
+        .page-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page a {
+            display: block;
+            height: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 16px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text);
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+        }
+
+        #labs .page a { border-left-color: var(--lab); }
+
+        .page a:hover,
+        .page a:focus-visible {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+            outline: none;
+        }
+
+        .title {
+            display: block;
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--accent);
+        }
+
+        #labs .title { color: var(--lab); }
+
+        #utilities .count {
+            background: var(--util-soft);
+            color: var(--util);
+        }
+
+        #utilities .page a { border-left-color: var(--util); }
+
+        #utilities .title { color: var(--util); }
+
+        .filename {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            word-break: break-all;
+        }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Course Materials</h1>
+    <p>Course Labs and Demos created with Claude(AI) ... my AI Slop Page</p>
+</header>
+
+<section id="demos">
+    <h2>Demos <span class="count">10</span></h2>
+    <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/Bell-LaPadula-Lattice-Demo.html"><span class="title">Bell-LaPadula Lattice Demo</span><span class="filename">Bell-LaPadula-Lattice-Demo.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/CIT-2808-Midterm-Study-Guide.html"><span class="title">CIT-2808 Midterm Lab Study Guide</span><span class="filename">CIT-2808-Midterm-Study-Guide.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/crypto-randomness-nonce-keyspace.html"><span class="title">Randomness, Nonces &amp; Key Space</span><span class="filename">crypto-randomness-nonce-keyspace.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/Hidden-in-Plain%20Sight.html"><span class="title">Hidden in Plain Sight</span><span class="filename">Hidden-in-Plain Sight.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/mac-selinux-demo.html"><span class="title">MAC &amp; SELinux Demo</span><span class="filename">mac-selinux-demo.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/RSA_Calculator.html"><span class="title">RSA Calculator</span><span class="filename">RSA_Calculator.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/shors-algorithm-demo.html"><span class="title">Shor's Algorithm Demo</span><span class="filename">shors-algorithm-demo.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/sinclair-ctf.html"><span class="title">Sinclair CTF // Ghost Protocol</span><span class="filename">sinclair-ctf.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/vigenere.html"><span class="title">Vigenère Cipher Encoder / Decoder</span><span class="filename">vigenere.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/xor-stream-block-ciphers.html"><span class="title">Stream &amp; Block Ciphers (XOR) Demo</span><span class="filename">xor-stream-block-ciphers.html</span></a></li>
+    </ul>
+</section>
+
+<section id="labs">
+    <h2>Labs <span class="count">9</span></h2>
+    <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/buffer-overflow-lab.html"><span class="title">Buffer Overflow Lab</span><span class="filename">buffer-overflow-lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/CIT2808_Module1_ChainOfCustody_Lab.html"><span class="title">Chain of Custody Lab</span><span class="filename">CIT2808_Module1_ChainOfCustody_Lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/cloud-security-lab.html"><span class="title">Cloud Security Lab</span><span class="filename">cloud-security-lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/cit2640_module2_crypto_lab.html"><span class="title">Cryptography Concepts Lab</span><span class="filename">cit2640_module2_crypto_lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/forensics_lab.html"><span class="title">Digital Forensics: Operation Stolen Cards</span><span class="filename">forensics_lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/emotet-lab.html"><span class="title">Emotet Malware Analysis Lab</span><span class="filename">emotet-lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/iot-security-lab.html"><span class="title">IoT Security Lab</span><span class="filename">iot-security-lab.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/CIT2640_Module1_Lab_SocialEngineeringAttack.html"><span class="title">Social Engineering Attack Lab</span><span class="filename">CIT2640_Module1_Lab_SocialEngineeringAttack.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/tcp_wrappers_lab.html"><span class="title">TCP Wrappers Lab</span><span class="filename">tcp_wrappers_lab.html</span></a></li>
+    </ul>
+</section>
+
+<section id="utilities">
+    <h2>Utilities <span class="count">1</span></h2>
+    <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/netlab-diagnostics.html"><span class="title">Netlab Reachability Console</span><span class="filename">netlab-diagnostics.html</span></a></li>
+    </ul>
+</section>
+
+<footer>
+    Course Materials &middot; Sinclair College
+</footer>
+
+</body>
+</html>
