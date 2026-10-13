@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shor's Algorithm — Interactive Demo</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  /* ---------- shared additions for pages 02-09 ---------- */
+  .hero-seq{display:flex; gap:10px; flex-wrap:wrap; font-size:20px;}
+  .hero-seq span{color:var(--text-dim); padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--panel-alt);}
+  .hero-seq span.hit{color:#ffffff; background:var(--cyan); border-color:var(--cyan);}
+  .seq-track{display:flex; gap:8px; flex-wrap:wrap; min-height:44px; align-items:center;}
+  .seq-chip{padding:8px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel-alt);
+    font-size:14px; color:var(--text-dim); opacity:0; transform:translateY(6px); animation:pop 0.35s ease forwards;}
+  .seq-chip .exp{color:var(--text-dim); font-size:11px;}
+  .seq-chip.repeat{border-color:var(--green); color:var(--green); background:rgba(21,122,74,0.08);}
+  @keyframes pop{ to{opacity:1; transform:translateY(0);} }
+  .step-log{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .step-log .step-line{opacity:0; animation:fadeIn 0.3s ease forwards;}
+  .step-line.ok{color:var(--green); border-left-color:var(--green);}
+  .step-line.bad{color:var(--red); border-left-color:var(--red);}
+  @keyframes fadeIn{ to{opacity:1;} }
+  .factor-banner{margin-top:18px; padding:20px; border-radius:10px; text-align:center; display:none;}
+  .factor-banner.show{display:block;}
+  .factor-banner .big{font-size:24px; font-weight:750; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .factor-banner.ok{border:1px solid var(--green); background:rgba(21,122,74,0.06);}
+  .factor-banner.fail{border:1px solid var(--red); background:rgba(192,41,61,0.06);}
+  .factor-banner .sub{margin-top:6px; font-size:13px; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+
+  /* circuits */
+  .circuit{display:flex; align-items:center; flex-wrap:wrap; row-gap:8px; font-family: ui-monospace, monospace; font-size:14px; margin:14px 0;}
+  .circuit .wire{height:2px; background:var(--text-dim); width:22px; flex:none;}
+  .circuit .lbl{color:var(--cyan); font-weight:700; margin-right:2px;}
+  .gate{border:1px solid var(--cyan); background:#ffffff; color:var(--cyan); border-radius:6px; padding:5px 10px; font-weight:700; white-space:nowrap;}
+  .gate.meas{border-color:var(--amber); color:var(--amber);}
+  .gate.off{opacity:0.35; border-style:dashed;}
+  .gate.dim{color:var(--text-dim); border-color:var(--border);}
+
+  /* bloch canvas */
+  .canvas-wrap{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;}
+  .canvas-wrap > .side{flex:1; min-width:240px;}
+  canvas.bloch{width:300px; height:300px; max-width:100%; background:#ffffff; border:1px solid var(--border);
+    border-radius:10px; cursor:grab; touch-action:none; flex:none;}
+  canvas.bloch:active{cursor:grabbing;}
+  canvas.bloch:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .canvas-note{font-size:11.5px; color:var(--text-dim); margin-top:6px; text-align:center; width:300px; max-width:100%;}
+
+  /* tables */
+  .qtable-wrap{overflow-x:auto; margin-top:14px; border:1px solid var(--border); border-radius:8px; background:#ffffff;}
+  table.qtable{border-collapse:collapse; width:100%; font-size:12.5px; font-family: ui-monospace, monospace;}
+  .qtable th, .qtable td{padding:5px 8px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .qtable th{color:var(--text-dim); font-weight:600; background:var(--panel-alt);}
+  .qtable tr:last-child td{border-bottom:none;}
+  .qtable tr.keep td{background:rgba(21,122,74,0.07);}
+  .qtable tr.drop td{color:#a9b3be;}
+  .qtable tr.sample td{background:rgba(168,86,10,0.08);}
+  .qtable td.err{color:var(--red); font-weight:700;}
+  .qtable td.eve{color:var(--red);}
+  .qtable td.l, .qtable th.l{text-align:left;}
+
+  /* 4x4 matrix */
+  .mat4{display:inline-grid; grid-template-columns:repeat(4, 28px); text-align:center; padding:4px 6px; line-height:1.6;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;}
+  .mat4 span{color:var(--text-dim);}
+  .mat4 span.col{background:rgba(15,116,144,0.09);}
+  .mat4 span.one{color:var(--text-bright); font-weight:700;}
+  .mat4 span.hit{color:#ffffff; background:var(--cyan); border-radius:4px;}
+
+  /* signed amplitude bars */
+  .sbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:7px; font-size:13px;}
+  .sbar-row .k{color:var(--cyan); font-weight:700; font-family: ui-monospace, monospace;}
+  .sbar-row .v{text-align:right; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .sbar-bg{position:relative; height:14px; background:#ffffff; border:1px solid var(--border); border-radius:6px; overflow:hidden;}
+  .sbar-bg::after{content:''; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--text-dim);}
+  .sbar{position:absolute; top:0; bottom:0; transition:width 0.25s ease;}
+  .sbar.pos{left:50%; background:var(--cyan);}
+  .sbar.neg{right:50%; background:var(--red);}
+
+  /* form bits */
+  label.check{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-bright); cursor:pointer;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+  label.check input{accent-color:var(--red); width:16px; height:16px;}
+  input[type=number]{font-family: ui-monospace, monospace; font-size:14px; width:72px; padding:8px 10px;
+    border:1px solid var(--border); border-radius:7px; background:#ffffff; color:var(--text-bright);}
+  input[type=number]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  .slider-block{margin-bottom:14px;}
+
+  /* query cells */
+  .qgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:8px; margin-top:12px;}
+  button.qcell{font-family: ui-monospace, monospace; font-size:13px; padding:10px 4px; border-radius:7px; cursor:pointer;
+    background:#ffffff; border:1px solid var(--cyan-dim); color:var(--text-bright);}
+  button.qcell:hover{border-color:var(--cyan);}
+  button.qcell:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.qcell.v0{background:var(--panel-alt); border-color:var(--border); cursor:default;}
+  button.qcell.v1{background:rgba(168,86,10,0.1); border-color:var(--amber); cursor:default;}
+  button.qcell .fx{display:block; font-size:16px; font-weight:750;}
+
+  /* timeline */
+  .tl{position:relative; height:30px; border-radius:6px; background:#ffffff; border:1px solid var(--border); margin:30px 0 8px;}
+  .tl .seg{position:absolute; top:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    font-size:11.5px; color:#ffffff; overflow:hidden; white-space:nowrap; transition:left 0.2s ease, width 0.2s ease;}
+  .tl .seg.x{background:var(--cyan); border-radius:5px 0 0 5px;}
+  .tl .seg.y{background:var(--amber);}
+  .tl .mark{position:absolute; top:-26px; bottom:-4px; width:2px; background:var(--red); transition:left 0.2s ease;}
+  .tl .mark span{position:absolute; top:0; left:6px; font-size:11.5px; color:var(--red); white-space:nowrap;}
+  .tl-axis{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    .seq-chip, .step-log .step-line{animation:none; opacity:1; transform:none;}
+    .sbar, .tl .seg, .tl .mark{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>QUANTUM 08</b> :: shor's algorithm</div>
+  <nav>
+    <a href="quantum-index.html">Series</a>
+    <a href="#basics">RSA basics</a>
+    <a href="#period">Period finder</a>
+    <a href="#qft">Quantum step</a>
+    <a href="#factors">Factors</a>
+    <a href="#scale">Real-world scale</a>
+    <a href="#defense">Defense</a>
+  </nav>
+</div>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>Why a quantum computer can break RSA</h1>
+    <p class="lede">RSA encryption relies on one thing being hard for a classical computer: factoring a very large number <code>N</code> into its two secret primes. Shor's algorithm gives a quantum computer a way to find those primes efficiently, not by guessing, but by finding a hidden <span class="gterm" data-g="periodicity">repeating pattern</span> in a sequence of numbers.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+    <div class="hero-visual">
+      <div>
+        <div class="hero-seq" id="heroSeq"></div>
+        <p class="hero-note">2¹, 2², 2³, 2⁴ … mod 15. Watch it repeat every 4 steps. That repeat length is the "period," and it's the key to everything below.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="basics">
+    <p class="eyebrow">01 &middot; Refresher</p>
+    <h2>The RSA pieces Shor's algorithm attacks</h2>
+    <p class="subhead">Click a term to see how it fits together. The example uses tiny numbers so you can check everything by hand.</p>
+    <div class="term-grid" id="termGrid"></div>
+    <div class="keychain">
+      <div class="keybox pub"><div class="label">PUBLIC KEY</div>N = 15, e = 3. Shared with anyone who wants to send you an encrypted message.</div>
+      <div class="keybox priv"><div class="label">PRIVATE KEY</div>d = 11, since 3 × 11 = 33 = 4 × 8 + 1. Kept secret. This is what Shor's algorithm exposes.</div>
+    </div>
+  </section>
+
+  <section id="period">
+    <p class="eyebrow">02 &middot; The core idea</p>
+    <h2>Find the period, and the factors fall out</h2>
+    <p>Shor's algorithm doesn't factor <code>N</code> directly. Instead, it picks a random number <code>a</code> and looks at the sequence <code>a¹, a², a³, …</code>, each one reduced <span class="gterm" data-g="mod">mod</span> <code>N</code>. Because there are only a limited number of possible remainders, this sequence always eventually repeats. The length of that repeat is called the <span class="gterm" data-g="periodicity">period</span>, written <code>r</code>. A quantum computer finds <code>r</code> efficiently using superposition and interference, a step that would take a classical computer an impractically long time for large <code>N</code>.</p>
+    <div class="gpop" id="gpop-periodicity"><b>Periodicity</b> — how often a repeating sequence cycles back to its starting value. Here, it's how many multiplications it takes before <code>aˣ mod N</code> returns to 1.</div>
+    <div class="gpop" id="gpop-mod">"mod N" means "the remainder after dividing by N." <code>17 mod 15 = 2</code>, because 17 divided by 15 leaves a remainder of 2.</div>
+    <div class="gpop" id="gpop-gcd"><b>Greatest Common Divisor (GCD)</b> — the largest number that divides evenly into two other numbers. <code>gcd(12, 18) = 6</code>. The Euclidean algorithm finds it quickly by repeated division.</div>
+
+    <div class="panel">
+      <h3>Try it: pick a starting number and watch the period appear</h3>
+      <p class="subhead" style="margin-bottom:16px;">We'll keep N = 15 (factors 3 &times; 5) so you can check the math by hand. Not every choice of <code>a</code> works on the first try; that's part of the real algorithm too.</p>
+      <div class="sim-controls">
+        <label class="inline">a =
+          <select id="aSelect">
+            <option value="2">2</option><option value="4">4</option><option value="7">7</option><option value="8">8</option>
+            <option value="11">11</option><option value="13">13</option><option value="14">14</option>
+          </select>
+        </label>
+        <button class="btn primary" id="runBtn">Run Shor's algorithm</button>
+        <button class="btn" id="resetBtn" disabled>Reset</button>
+      </div>
+      <div class="seq-track" id="seqTrack"></div>
+      <div class="result-line" id="periodResult"></div>
+    </div>
+  </section>
+
+  <section id="qft">
+    <p class="eyebrow">03 &middot; Inside the quantum step</p>
+    <h2>What the quantum computer actually measures</h2>
+    <p>The simulator above lists the sequence one term at a time, which is the slow classical way. The quantum computer instead puts an input register into superposition over every <code>x</code> at once, computes <code>aˣ mod N</code> into a second register, and then applies the <span class="gterm" data-g="qft">quantum Fourier transform (QFT)</span>. Interference makes the measurement land on a multiple of <code>Q/r</code>, where <code>Q</code> is the size of the input register.</p>
+    <div class="gpop" id="gpop-qft"><b>Quantum Fourier transform</b> — the quantum version of the discrete Fourier transform, which picks out repeating frequencies in a signal. Applied to a periodic register, it concentrates the amplitude on outcomes spaced Q/r apart.</div>
+    <div class="notation-box">
+      <div class="eq-row"><span>1/√Q Σ<sub>x</sub></span><span class="ket">|x⟩</span><span class="ket">|0⟩</span><span class="op">→</span><span>1/√Q Σ<sub>x</sub></span><span class="ket">|x⟩</span><span class="ket">|aˣ mod N⟩</span><span class="op">→ QFT →</span><span>peaks at k = j·Q/r</span></div>
+    </div>
+    <div class="panel">
+      <h3>Try it: see the peaks, then sample one</h3>
+      <p class="subhead" style="margin-bottom:16px;">Uses the <code>a</code> selected above, with a 4-qubit input register (Q = 16). A real attack uses a register around N² in size, but the pattern is the same.</p>
+      <div class="pbars" id="qftBars"></div>
+      <div class="sim-controls" style="margin-top:14px; margin-bottom:0;"><button class="btn primary" id="sampleBtn">Measure the input register</button></div>
+      <div class="step-log" id="qftLog"></div>
+    </div>
+  </section>
+
+  <section id="factors">
+    <p class="eyebrow">04 &middot; From period to factors</p>
+    <h2>Turning r into the actual primes</h2>
+    <p>Once the period <code>r</code> is known, ordinary classical math finishes the job. If <code>r</code> is even, compute <code>a<sup>r/2</sup> mod N</code>, then take the <span class="gterm" data-g="gcd">GCD</span> of that value ±1 with <code>N</code>. Those two GCDs are usually the hidden prime factors.</p>
+    <div class="panel">
+      <h3>Step-by-step factor extraction</h3>
+      <p class="subhead" style="margin-bottom:16px;">This fills in automatically once you've run the period finder in section 02.</p>
+      <div class="step-log" id="stepLog"><div class="step-line">Run the period finder above to populate this section.</div></div>
+      <div class="factor-banner" id="factorBanner"><div class="big" id="factorBig"></div><div class="sub" id="factorSub"></div></div>
+    </div>
+  </section>
+
+  <section id="scale">
+    <p class="eyebrow">05 &middot; Why this actually matters</p>
+    <h2>From N = 15 to a real RSA key</h2>
+    <p>Factoring 15 is something you could do in your head. RSA in the real world uses numbers that are hundreds of digits long, and that gap in scale is the entire reason quantum computing is a cybersecurity concern rather than a party trick.</p>
+    <div class="scale">
+      <div class="scale-row">
+        <div class="scale-label"><span>This demo: N = 15</span><span>trivial, even by hand</span></div>
+        <div class="scale-bar-bg"><div class="scale-bar" style="width:2%"></div></div>
+      </div>
+      <div class="scale-row">
+        <div class="scale-label"><span>Real-world RSA-2048: a 617-digit N</span><span>far beyond today's hardware</span></div>
+        <div class="scale-bar-bg"><div class="scale-bar over" style="width:100%"></div></div>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><div class="label">2019 ESTIMATE (GIDNEY &amp; EKERÅ)</div><div class="stat-num">~20M qubits</div><p class="hero-note" style="margin:4px 0 0;">noisy physical qubits, about 8 hours</p></div>
+      <div class="stat q"><div class="label">2025 ESTIMATE (GIDNEY)</div><div class="stat-num">&lt; 1M qubits</div><p class="hero-note" style="margin:4px 0 0;">noisy physical qubits, under a week</p></div>
+    </div>
+    <p style="margin-top:18px;">The estimate dropped about twentyfold in six years through better algorithms and error-correction techniques, not bigger hardware. Today's largest processors have on the order of a thousand physical qubits, and none yet run the error correction Shor's algorithm needs at scale. RSA is still safe for now, but the target keeps getting closer.</p>
+  </section>
+
+  <section id="defense">
+    <p class="eyebrow">06 &middot; The defense</p>
+    <h2>Fighting quantum with quantum-resistant math</h2>
+    <p>If a large enough quantum computer eventually makes Shor's algorithm practical, the fix isn't to abandon math-based security. It's to stop relying on problems that <em>quantum</em> computers happen to be good at. That's the idea behind <span class="gterm" data-g="pqc">post-quantum cryptography (PQC)</span>.</p>
+    <div class="gpop" id="gpop-pqc"><b>Post-quantum cryptography</b> — cryptography designed to run on today's ordinary (classical) computers, but built on problems believed to resist attack from quantum computers too, unlike factoring or discrete log.</div>
+    <div class="term-grid" id="pqcGrid"></div>
+    <p style="margin-top:20px;">In 2024, NIST finalized its first PQC standards, which are expected to gradually replace RSA and elliptic-curve cryptography across the internet. Page 09 goes deeper into how they work and how organizations migrate.</p>
+    <div class="callout">
+      <b>A different approach, QKD:</b> instead of a new hard math problem, quantum key distribution protocols like <b>BB84</b> use quantum mechanics itself for security. Measuring a quantum-encoded key reveals any eavesdropper by disturbing the system. Page 07 has the hands-on simulation.
+    </div>
+  </section>
+
+</main>
+
+<div class="slides-cta">
+  <a href="quantum-08-slides.html"><span class="ico" aria-hidden="true"></span><span class="txt"><span class="dir">SUMMARY SLIDES</span><span class="ttl">View the Quantum 08 slide deck: Shor's Algorithm</span></span></a>
+</div>
+
+<div class="series-nav">
+  <a href="quantum-07-qkd-bb84.html"><span class="dir">PREVIOUS</span><span class="ttl">07 &middot; Quantum key distribution</span></a>
+  <a class="next" href="quantum-09-post-quantum-crypto.html"><span class="dir">NEXT</span><span class="ttl">09 &middot; Quantum-resistant cryptography</span></a>
+</div>
+
+<footer>
+  Sinclair College - Dr. Mike Libassi &middot; interactive demo &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">Quantum 08 &middot; Shor's Algorithm</span>
+</footer>
+
+<script>
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fmt(x, d=3){ let s = x.toFixed(d); if(s.indexOf('.')>=0) s = s.replace(/0+$/,'').replace(/\.$/,''); if(s==='-0') s='0'; return s.replace('-','−'); }
+function sleep(ms){ return new Promise(res=>setTimeout(res, reduceMotion ? 0 : ms)); }
+function $(id){ return document.getElementById(id); }
+function addLine(box, text, cls=''){
+  const line = document.createElement('div');
+  line.className = 'step-line' + (cls ? ' '+cls : '');
+  line.innerHTML = text;
+  box.appendChild(line);
+  return line;
+}
+
+// ---------- glossary popovers ----------
+document.querySelectorAll('.gterm').forEach(g=>{
+  g.setAttribute('tabindex','0');
+  const toggle = ()=>{
+    const pop = document.getElementById('gpop-'+g.dataset.g);
+    if(!pop) return;
+    const isShown = pop.classList.contains('show');
+    document.querySelectorAll('.gpop').forEach(p=>p.classList.remove('show'));
+    if(!isShown){ pop.classList.add('show'); }
+  };
+  g.addEventListener('click', toggle);
+  g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+});
+
+// ---------- term grid ----------
+function buildTermGrid(gridId, items, prefix){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  items.forEach((t,idx)=>{
+    const card = document.createElement('div');
+    card.className='term-card';
+    card.setAttribute('tabindex','0');
+    card.innerHTML = `<div class="term-sym">${t.sym}</div><div class="term-name">${t.name}</div>`;
+    const open = ()=>{
+      let def = document.getElementById(prefix+'-def-'+idx);
+      if(def){ def.remove(); card.classList.remove('open'); return; }
+      grid.querySelectorAll('.term-def').forEach(d=>d.remove());
+      grid.querySelectorAll('.term-card').forEach(c=>c.classList.remove('open'));
+      def = document.createElement('div');
+      def.className='term-def show';
+      def.id=prefix+'-def-'+idx;
+      def.innerHTML = t.def;
+      card.classList.add('open');
+      card.after(def);
+    };
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+    grid.appendChild(card);
+  });
+}
+
+
+function modpow(base, exp, mod){ let r = 1; base %= mod; for(let i=0;i<exp;i++){ r = (r*base) % mod; } return r; }
+function gcd(a,b){ while(b){ [a,b] = [b, a%b]; } return a; }
+const N = 15;
+function periodOf(a){ for(let x=1;x<=N;x++){ if(modpow(a,x,N)===1) return x; } return 0; }
+
+// hero
+(function(){
+  const el = $('heroSeq');
+  [2,4,8,1].forEach(v=>{ const s=document.createElement('span'); s.textContent=v; el.appendChild(s); });
+  if(reduceMotion) return;
+  let i=0;
+  setInterval(()=>{ [...el.children].forEach(c=>c.classList.remove('hit')); el.children[i].classList.add('hit'); i=(i+1)%4; }, 900);
+})();
+
+buildTermGrid('termGrid', [
+  {sym:'p, q', name:'secret primes', def:'Two randomly chosen primes, kept secret. Here p = 3 and q = 5. Real keys use primes over 300 digits long.'},
+  {sym:'N', name:'modulus', def:'N = p × q = 15. Published as part of the public key, and the number Shor\'s algorithm factors back into p and q.'},
+  {sym:'φ(N)', name:'totient', def:'φ(N) = (p − 1)(q − 1) = 2 × 4 = 8. Easy to compute if you know p and q, and believed hard if you only know N. (Written φ here so it isn\'t confused with the period r below.)'},
+  {sym:'e', name:'public exponent', def:'A number that shares no factors with φ(N). Here e = 3. Part of the public key. Encryption is c = mᵉ mod N.'},
+  {sym:'d', name:'private exponent', def:'The number that satisfies e × d ≡ 1 (mod φ(N)). Here d = 11, because 3 × 11 = 33 and 33 mod 8 = 1. Decryption is m = cᵈ mod N.'},
+  {sym:'attack', name:'why factoring wins', def:'Anyone who factors N learns p and q, computes φ(N), and then solves for d exactly as the key owner did. Factoring breaks the whole key.'},
+], 'rsa');
+
+buildTermGrid('pqcGrid', [
+  {sym:'ML-KEM', name:'lattice key exchange', def:'(Formerly CRYSTALS-Kyber.) A lattice-based method for two parties to agree on a shared secret key. Finalized by NIST in 2024 as FIPS 203, the leading replacement for RSA and Diffie-Hellman key exchange.'},
+  {sym:'ML-DSA', name:'lattice signatures', def:'(Formerly CRYSTALS-Dilithium.) A lattice-based digital signature scheme, finalized as FIPS 204. A quantum-resistant replacement for RSA and ECDSA signatures.'},
+  {sym:'SLH-DSA', name:'hash-based signatures', def:'(Formerly SPHINCS+.) A signature scheme built only from hash functions, a conservative backup approach standardized as FIPS 205.'},
+  {sym:'QKD', name:'quantum key distribution', def:'A different strategy entirely: instead of a hard math problem, use the physics of quantum measurement to detect eavesdroppers. BB84 is the classic example (page 07).'},
+], 'pqc');
+
+// ---------- period finder ----------
+const aSelect = $('aSelect'), runBtn = $('runBtn'), resetBtn = $('resetBtn');
+const seqTrack = $('seqTrack'), periodResult = $('periodResult'), stepLog = $('stepLog');
+const factorBanner = $('factorBanner'), factorBig = $('factorBig'), factorSub = $('factorSub');
+function resetSim(){
+  seqTrack.innerHTML=''; periodResult.className='result-line'; periodResult.textContent='';
+  stepLog.innerHTML = '<div class="step-line">Run the period finder above to populate this section.</div>';
+  factorBanner.className='factor-banner';
+  runBtn.disabled = false; resetBtn.disabled = true; aSelect.disabled = false;
+}
+resetBtn.addEventListener('click', resetSim);
+runBtn.addEventListener('click', async ()=>{
+  runBtn.disabled = true; aSelect.disabled = true; resetBtn.disabled = true;
+  seqTrack.innerHTML = ''; periodResult.className = 'result-line'; stepLog.innerHTML = ''; factorBanner.className = 'factor-banner';
+  const a = +aSelect.value; let r = 0;
+  for(let x=1; x<=N; x++){
+    const val = modpow(a, x, N);
+    const chip = document.createElement('div'); chip.className = 'seq-chip';
+    chip.innerHTML = `${a}<span class="exp">^${x}</span> mod 15 = <b>${val}</b>`;
+    seqTrack.appendChild(chip);
+    await sleep(420);
+    if(val === 1){ r = x; chip.classList.add('repeat'); break; }
+  }
+  periodResult.className = 'result-line show ok';
+  periodResult.textContent = `Period found: r = ${r}  (a = ${a} returns to 1 after ${r} steps)`;
+  resetBtn.disabled = false;
+  await sleep(300);
+  runFactorStep(a, r);
+});
+function logStep(text, hi=false){ addLine(stepLog, text, hi ? 'hi' : ''); }
+async function runFactorStep(a, r){
+  stepLog.innerHTML = '';
+  logStep(`Period r = ${r} found for a = ${a}.`); await sleep(300);
+  if(r % 2 !== 0){
+    logStep(`r is odd, so this choice of a can't be used to extract factors. Try a different a.`, true);
+    factorBanner.className = 'factor-banner show fail'; factorBig.textContent = 'No factors this time';
+    factorSub.textContent = 'Pick a different value of a and run again. This is a normal part of the real algorithm.'; return;
+  }
+  const half = r/2, mid = modpow(a, half, N);
+  logStep(`r is even. Compute a^(r/2) mod N = ${a}^${half} mod 15 = ${mid}.`); await sleep(400);
+  if(mid === N-1){
+    logStep(`a^(r/2) ≡ −1 mod N (${mid} ≡ −1 mod 15). This is the "trivial" case where no useful factor appears.`, true);
+    factorBanner.className = 'factor-banner show fail'; factorBig.textContent = 'No factors this time';
+    factorSub.textContent = 'This a landed on the trivial square root of 1. Try a different a; most choices work.'; return;
+  }
+  const g1 = gcd(mid - 1, N), g2 = gcd(mid + 1, N);
+  logStep(`gcd(${mid} − 1, 15) = gcd(${mid-1}, 15) = ${g1}`); await sleep(350);
+  logStep(`gcd(${mid} + 1, 15) = gcd(${mid+1}, 15) = ${g2}`); await sleep(350);
+  if(g1>1 && g1<N && g2>1 && g2<N){
+    factorBanner.className = 'factor-banner show ok'; factorBig.textContent = `15 = ${Math.min(g1,g2)} × ${Math.max(g1,g2)}`;
+    factorSub.textContent = 'Factors found. With p = 3 and q = 5, an attacker computes φ(N) = 8 and recovers the private key d = 11 from e = 3.';
+  } else {
+    factorBanner.className = 'factor-banner show fail'; factorBig.textContent = 'No factors this time';
+    factorSub.textContent = "That combination didn't split N cleanly. Try another a.";
+  }
+}
+resetSim();
+
+// ---------- QFT peaks ----------
+const Q = 16;
+function qftDist(a){
+  const outs = [...new Set([...Array(Q).keys()].map(x=>modpow(a,x,N)))];
+  const f0 = outs[Math.floor(Math.random()*outs.length)];
+  const xs = [...Array(Q).keys()].filter(x=>modpow(a,x,N)===f0);
+  const P = [];
+  for(let k=0;k<Q;k++){
+    let re=0, im=0;
+    xs.forEach(x=>{ const t = 2*Math.PI*k*x/Q; re += Math.cos(t); im += Math.sin(t); });
+    P.push((re*re+im*im)/(xs.length*Q));
+  }
+  return {P, f0};
+}
+let dist;
+function drawQFT(){
+  const a = +aSelect.value, r = periodOf(a);
+  dist = qftDist(a);
+  $('qftBars').innerHTML = `<p class="hero-note" style="margin:0 0 10px;">a = ${a}, true period r = ${r} → peaks every Q/r = ${Q/r} positions</p>` +
+    dist.P.map((p,k)=>`<div class="pbar-row"><span class="k mono">k=${k}</span><div class="pbar-bg"><div class="pbar ${p>0.01?'':'b1'}" style="width:${p*100}%"></div></div><span class="v mono">${(p*100).toFixed(1)}%</span></div>`).join('');
+  $('qftLog').innerHTML = '';
+}
+aSelect.addEventListener('change', drawQFT);
+$('sampleBtn').addEventListener('click', ()=>{
+  const a = +aSelect.value;
+  let rnd = Math.random(), acc = 0, k = 0;
+  for(; k<Q; k++){ acc += dist.P[k]; if(rnd < acc) break; }
+  k = Math.min(k, Q-1);
+  const log = $('qftLog'); log.innerHTML = '';
+  addLine(log, `Measured k = ${k}. Classical post-processing: k / Q = ${k}/${Q}.`);
+  if(k===0){ addLine(log, `k = 0 carries no information about r. Run the circuit again (this happens 1 time in r).`, 'bad'); return; }
+  const g = gcd(k, Q), num = k/g, den = Q/g;
+  addLine(log, `Reduce the fraction: ${k}/${Q} = ${num}/${den}. The denominator ${den} is a candidate for r.`);
+  if(modpow(a, den, N)===1) addLine(log, `Check: ${a}^${den} mod 15 = 1. Period confirmed, r = ${den}. Section 04 turns this into factors.`, 'ok');
+  else addLine(log, `Check: ${a}^${den} mod 15 = ${modpow(a,den,N)} ≠ 1. The fraction reduced too far; try a multiple of ${den} or measure again.`, 'hi');
+});
+drawQFT();
+
+</script>
+
+</body>
+</html>

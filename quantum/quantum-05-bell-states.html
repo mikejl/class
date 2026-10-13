@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bell States &amp; Entanglement — Interactive Demo</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  /* ---------- shared additions for pages 02-09 ---------- */
+  .hero-seq{display:flex; gap:10px; flex-wrap:wrap; font-size:20px;}
+  .hero-seq span{color:var(--text-dim); padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--panel-alt);}
+  .hero-seq span.hit{color:#ffffff; background:var(--cyan); border-color:var(--cyan);}
+  .seq-track{display:flex; gap:8px; flex-wrap:wrap; min-height:44px; align-items:center;}
+  .seq-chip{padding:8px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel-alt);
+    font-size:14px; color:var(--text-dim); opacity:0; transform:translateY(6px); animation:pop 0.35s ease forwards;}
+  .seq-chip .exp{color:var(--text-dim); font-size:11px;}
+  .seq-chip.repeat{border-color:var(--green); color:var(--green); background:rgba(21,122,74,0.08);}
+  @keyframes pop{ to{opacity:1; transform:translateY(0);} }
+  .step-log{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .step-log .step-line{opacity:0; animation:fadeIn 0.3s ease forwards;}
+  .step-line.ok{color:var(--green); border-left-color:var(--green);}
+  .step-line.bad{color:var(--red); border-left-color:var(--red);}
+  @keyframes fadeIn{ to{opacity:1;} }
+  .factor-banner{margin-top:18px; padding:20px; border-radius:10px; text-align:center; display:none;}
+  .factor-banner.show{display:block;}
+  .factor-banner .big{font-size:24px; font-weight:750; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .factor-banner.ok{border:1px solid var(--green); background:rgba(21,122,74,0.06);}
+  .factor-banner.fail{border:1px solid var(--red); background:rgba(192,41,61,0.06);}
+  .factor-banner .sub{margin-top:6px; font-size:13px; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+
+  /* circuits */
+  .circuit{display:flex; align-items:center; flex-wrap:wrap; row-gap:8px; font-family: ui-monospace, monospace; font-size:14px; margin:14px 0;}
+  .circuit .wire{height:2px; background:var(--text-dim); width:22px; flex:none;}
+  .circuit .lbl{color:var(--cyan); font-weight:700; margin-right:2px;}
+  .gate{border:1px solid var(--cyan); background:#ffffff; color:var(--cyan); border-radius:6px; padding:5px 10px; font-weight:700; white-space:nowrap;}
+  .gate.meas{border-color:var(--amber); color:var(--amber);}
+  .gate.off{opacity:0.35; border-style:dashed;}
+  .gate.dim{color:var(--text-dim); border-color:var(--border);}
+
+  /* bloch canvas */
+  .canvas-wrap{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;}
+  .canvas-wrap > .side{flex:1; min-width:240px;}
+  canvas.bloch{width:300px; height:300px; max-width:100%; background:#ffffff; border:1px solid var(--border);
+    border-radius:10px; cursor:grab; touch-action:none; flex:none;}
+  canvas.bloch:active{cursor:grabbing;}
+  canvas.bloch:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .canvas-note{font-size:11.5px; color:var(--text-dim); margin-top:6px; text-align:center; width:300px; max-width:100%;}
+
+  /* tables */
+  .qtable-wrap{overflow-x:auto; margin-top:14px; border:1px solid var(--border); border-radius:8px; background:#ffffff;}
+  table.qtable{border-collapse:collapse; width:100%; font-size:12.5px; font-family: ui-monospace, monospace;}
+  .qtable th, .qtable td{padding:5px 8px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .qtable th{color:var(--text-dim); font-weight:600; background:var(--panel-alt);}
+  .qtable tr:last-child td{border-bottom:none;}
+  .qtable tr.keep td{background:rgba(21,122,74,0.07);}
+  .qtable tr.drop td{color:#a9b3be;}
+  .qtable tr.sample td{background:rgba(168,86,10,0.08);}
+  .qtable td.err{color:var(--red); font-weight:700;}
+  .qtable td.eve{color:var(--red);}
+  .qtable td.l, .qtable th.l{text-align:left;}
+
+  /* 4x4 matrix */
+  .mat4{display:inline-grid; grid-template-columns:repeat(4, 28px); text-align:center; padding:4px 6px; line-height:1.6;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;}
+  .mat4 span{color:var(--text-dim);}
+  .mat4 span.col{background:rgba(15,116,144,0.09);}
+  .mat4 span.one{color:var(--text-bright); font-weight:700;}
+  .mat4 span.hit{color:#ffffff; background:var(--cyan); border-radius:4px;}
+
+  /* signed amplitude bars */
+  .sbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:7px; font-size:13px;}
+  .sbar-row .k{color:var(--cyan); font-weight:700; font-family: ui-monospace, monospace;}
+  .sbar-row .v{text-align:right; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .sbar-bg{position:relative; height:14px; background:#ffffff; border:1px solid var(--border); border-radius:6px; overflow:hidden;}
+  .sbar-bg::after{content:''; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--text-dim);}
+  .sbar{position:absolute; top:0; bottom:0; transition:width 0.25s ease;}
+  .sbar.pos{left:50%; background:var(--cyan);}
+  .sbar.neg{right:50%; background:var(--red);}
+
+  /* form bits */
+  label.check{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-bright); cursor:pointer;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+  label.check input{accent-color:var(--red); width:16px; height:16px;}
+  input[type=number]{font-family: ui-monospace, monospace; font-size:14px; width:72px; padding:8px 10px;
+    border:1px solid var(--border); border-radius:7px; background:#ffffff; color:var(--text-bright);}
+  input[type=number]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  .slider-block{margin-bottom:14px;}
+
+  /* query cells */
+  .qgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:8px; margin-top:12px;}
+  button.qcell{font-family: ui-monospace, monospace; font-size:13px; padding:10px 4px; border-radius:7px; cursor:pointer;
+    background:#ffffff; border:1px solid var(--cyan-dim); color:var(--text-bright);}
+  button.qcell:hover{border-color:var(--cyan);}
+  button.qcell:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.qcell.v0{background:var(--panel-alt); border-color:var(--border); cursor:default;}
+  button.qcell.v1{background:rgba(168,86,10,0.1); border-color:var(--amber); cursor:default;}
+  button.qcell .fx{display:block; font-size:16px; font-weight:750;}
+
+  /* timeline */
+  .tl{position:relative; height:30px; border-radius:6px; background:#ffffff; border:1px solid var(--border); margin:30px 0 8px;}
+  .tl .seg{position:absolute; top:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    font-size:11.5px; color:#ffffff; overflow:hidden; white-space:nowrap; transition:left 0.2s ease, width 0.2s ease;}
+  .tl .seg.x{background:var(--cyan); border-radius:5px 0 0 5px;}
+  .tl .seg.y{background:var(--amber);}
+  .tl .mark{position:absolute; top:-26px; bottom:-4px; width:2px; background:var(--red); transition:left 0.2s ease;}
+  .tl .mark span{position:absolute; top:0; left:6px; font-size:11.5px; color:var(--red); white-space:nowrap;}
+  .tl-axis{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    .seq-chip, .step-log .step-line{animation:none; opacity:1; transform:none;}
+    .sbar, .tl .seg, .tl .mark{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>QUANTUM 05</b> :: bell states</div>
+  <nav>
+    <a href="quantum-index.html">Series</a>
+    <a href="#refresher">Refresher</a>
+    <a href="#circuit">Circuit</a>
+    <a href="#measure">Measure</a>
+    <a href="#four">All four</a>
+    <a href="#security">Security</a>
+  </nav>
+</div>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>Two qubits, one shared answer</h1>
+    <p class="lede">A Bell state is the simplest example of <span class="gterm" data-g="ent">entanglement</span>. Each qubit on its own gives a random 0 or 1, yet the two results always match. It takes only two gates to build one, and the effect holds no matter how far apart the qubits travel.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+    <div class="gpop" id="gpop-ent"><b>Entanglement</b> — a state of two or more qubits that cannot be written as separate states for each qubit. Measuring one tells you about the other, because only the pair has a well-defined state.</div>
+    <div class="hero-visual">
+      <div>
+        <div class="hero-seq" id="heroPairs"></div>
+        <p class="hero-note">Each pair is a fresh measurement of |Φ⁺⟩. Individually random, always in agreement.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="refresher">
+    <p class="eyebrow">01 &middot; Refresher</p>
+    <h2>Two-qubit states need four amplitudes</h2>
+    <p>From page 01: two qubits have four basis states, <code>|00⟩ |01⟩ |10⟩ |11⟩</code>. Some two-qubit states can be split into "qubit A is this, qubit B is that." For example, <code>|0⟩⊗|+⟩</code>. A Bell state can't be split that way at all.</p>
+    <div class="notation-box">
+      <div class="eq-row"><span class="ket">|Φ⁺⟩</span><span class="op">=</span><span>1/√2 <span class="ket">|00⟩</span> + 1/√2 <span class="ket">|11⟩</span></span><span class="op">=</span>
+        <span class="mat"><span class="hl">1/√2</span><span>0</span><span>0</span><span class="hl">1/√2</span></span></div>
+      <div class="eq-row" style="font-size:13.5px; color:var(--text-dim);">no choice of (a|0⟩+b|1⟩) ⊗ (c|0⟩+d|1⟩) produces this vector: it would need ad = 0 and bc = 0 while ac and bd are both nonzero</div>
+    </div>
+  </section>
+
+  <section id="circuit">
+    <p class="eyebrow">02 &middot; The core idea</p>
+    <h2>Build a Bell state with H and CNOT</h2>
+    <p>Put the first qubit into superposition with a Hadamard, then use it as the control for a CNOT. The target gets flipped "in the |1⟩ branch only," so the two qubits become correlated branch by branch.</p>
+    <div class="panel">
+      <h3>Try it: choose the input and step through</h3>
+      <p class="subhead" style="margin-bottom:16px;">Each of the four inputs produces a different Bell state. The vector shows all four amplitudes after each gate.</p>
+      <div class="sim-controls" id="inBtns"></div>
+      <div class="circuit">
+        <span class="lbl" id="q0lbl">q0 |0⟩</span><span class="wire"></span><span class="gate">H</span><span class="wire"></span><span class="gate">● control</span><span class="wire"></span>
+      </div>
+      <div class="circuit" style="margin-top:-6px;">
+        <span class="lbl" id="q1lbl">q1 |0⟩</span><span class="wire" style="width:68px;"></span><span class="gate">⊕ target</span><span class="wire"></span>
+      </div>
+      <div class="step-log" id="bSteps"></div>
+      <div class="factor-banner ok show" id="bBanner"><div class="big" id="bName"></div><div class="sub" id="bSub"></div></div>
+    </div>
+  </section>
+
+  <section id="measure">
+    <p class="eyebrow">03 &middot; Measuring the pair</p>
+    <h2>Random on its own, perfect together</h2>
+    <p>Alice takes one qubit and Bob takes the other. Each can measure in the Z basis (0 or 1) or the X basis (+ or −, by applying H first). Run many shots and compare their results.</p>
+    <div class="panel">
+      <h3>Try it: measure the Bell state built above</h3>
+      <p class="subhead" style="margin-bottom:16px;">Start with both in Z. Then try putting both in X, and finally use different bases.</p>
+      <div class="sim-controls">
+        <label class="inline">Alice basis <select id="aBasis"><option value="Z">Z (0/1)</option><option value="X">X (+/−)</option></select></label>
+        <label class="inline">Bob basis <select id="bBasis"><option value="Z">Z (0/1)</option><option value="X">X (+/−)</option></select></label>
+      </div>
+      <div class="sim-controls" style="margin-bottom:0;">
+        <button class="btn primary" id="mOne">Measure one pair</button>
+        <button class="btn" id="mMany">Measure 200 pairs</button>
+        <button class="btn" id="mReset">Reset tally</button>
+      </div>
+      <div class="outcome mono" id="mOut">No pairs measured yet.</div>
+      <div class="pbars" id="mTally"></div>
+      <div class="result-line" id="mResult"></div>
+    </div>
+    <div class="callout">
+      <b>No faster-than-light messages:</b> Alice can't choose her result, so she can't use entanglement to send Bob anything. Bob's results look like random coin flips until the two compare notes over an ordinary channel. The correlation is real, but it carries no message by itself.
+    </div>
+  </section>
+
+  <section id="four">
+    <p class="eyebrow">04 &middot; The full set</p>
+    <h2>The four Bell states</h2>
+    <p class="subhead">Click a state to see its formula and which input creates it.</p>
+    <div class="term-grid" id="bellGrid"></div>
+  </section>
+
+  <section id="security">
+    <p class="eyebrow">05 &middot; Security connection</p>
+    <h2>Entanglement as a security tool</h2>
+    <p>The <b>E91</b> protocol (Artur Ekert, 1991) distributes Bell pairs to Alice and Bob. When they measure in matching bases, their results agree and become shared key bits. An eavesdropper who intercepts and measures a qubit breaks the entanglement, and the correlations weaken in a way Alice and Bob can test statistically.</p>
+    <div class="keychain">
+      <div class="keybox pub"><div class="label">BB84 (PAGE 07)</div>Alice sends single prepared qubits to Bob. Security comes from measurement disturbing the state.</div>
+      <div class="keybox pub"><div class="label">E91</div>A source sends Bell pairs to both. Security comes from testing that the entanglement is intact.</div>
+    </div>
+  </section>
+
+</main>
+
+<div class="slides-cta">
+  <a href="quantum-05-slides.html"><span class="ico" aria-hidden="true"></span><span class="txt"><span class="dir">SUMMARY SLIDES</span><span class="ttl">View the Quantum 05 slide deck: Bell States &amp; Entanglement</span></span></a>
+</div>
+
+<div class="series-nav">
+  <a href="quantum-04-quantum-gates.html"><span class="dir">PREVIOUS</span><span class="ttl">04 &middot; Quantum gates</span></a>
+  <a class="next" href="quantum-06-deutsch-jozsa.html"><span class="dir">NEXT</span><span class="ttl">06 &middot; Deutsch-Jozsa algorithm</span></a>
+</div>
+
+<footer>
+  Sinclair College - Dr. Mike Libassi &middot; interactive demo &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">Quantum 05 &middot; Bell States</span>
+</footer>
+
+<script>
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fmt(x, d=3){ let s = x.toFixed(d); if(s.indexOf('.')>=0) s = s.replace(/0+$/,'').replace(/\.$/,''); if(s==='-0') s='0'; return s.replace('-','−'); }
+function sleep(ms){ return new Promise(res=>setTimeout(res, reduceMotion ? 0 : ms)); }
+function $(id){ return document.getElementById(id); }
+function addLine(box, text, cls=''){
+  const line = document.createElement('div');
+  line.className = 'step-line' + (cls ? ' '+cls : '');
+  line.innerHTML = text;
+  box.appendChild(line);
+  return line;
+}
+
+// ---------- glossary popovers ----------
+document.querySelectorAll('.gterm').forEach(g=>{
+  g.setAttribute('tabindex','0');
+  const toggle = ()=>{
+    const pop = document.getElementById('gpop-'+g.dataset.g);
+    if(!pop) return;
+    const isShown = pop.classList.contains('show');
+    document.querySelectorAll('.gpop').forEach(p=>p.classList.remove('show'));
+    if(!isShown){ pop.classList.add('show'); }
+  };
+  g.addEventListener('click', toggle);
+  g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+});
+
+// ---------- term grid ----------
+function buildTermGrid(gridId, items, prefix){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  items.forEach((t,idx)=>{
+    const card = document.createElement('div');
+    card.className='term-card';
+    card.setAttribute('tabindex','0');
+    card.innerHTML = `<div class="term-sym">${t.sym}</div><div class="term-name">${t.name}</div>`;
+    const open = ()=>{
+      let def = document.getElementById(prefix+'-def-'+idx);
+      if(def){ def.remove(); card.classList.remove('open'); return; }
+      grid.querySelectorAll('.term-def').forEach(d=>d.remove());
+      grid.querySelectorAll('.term-card').forEach(c=>c.classList.remove('open'));
+      def = document.createElement('div');
+      def.className='term-def show';
+      def.id=prefix+'-def-'+idx;
+      def.innerHTML = t.def;
+      card.classList.add('open');
+      card.after(def);
+    };
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+    grid.appendChild(card);
+  });
+}
+
+
+const s2 = Math.SQRT1_2;
+const LABELS = ['00','01','10','11'];
+const BELL = {
+  '00':{name:'|Φ⁺⟩', f:'1/√2 (|00⟩ + |11⟩)', note:'Results always match in both Z and X.'},
+  '01':{name:'|Ψ⁺⟩', f:'1/√2 (|01⟩ + |10⟩)', note:'Results always differ in Z, always match in X.'},
+  '10':{name:'|Φ⁻⟩', f:'1/√2 (|00⟩ − |11⟩)', note:'Results always match in Z, always differ in X.'},
+  '11':{name:'|Ψ⁻⟩', f:'1/√2 (|01⟩ − |10⟩)', note:'Results always differ, in every basis.'},
+};
+function coef(x){
+  if(Math.abs(Math.abs(x)-s2)<1e-6) return (x<0?'−':'')+'1/√2';
+  if(Math.abs(Math.abs(x)-0.5)<1e-6) return (x<0?'−':'')+'1/2';
+  return fmt(x);
+}
+function ket(v){
+  const t = [];
+  v.forEach((a,i)=>{ if(Math.abs(a)>1e-9){ const c = coef(a); t.push((c[0]==='−'?'− ':'+ ') + c.replace('−','') + ` <span class="ket">|${LABELS[i]}⟩</span>`); } });
+  return t.join(' ').replace(/^\+ /,'');
+}
+function vec(v){ return `<span class="mat">${v.map(a=>`<span class="${Math.abs(a)>1e-9?'hl':''}">${Math.abs(a)>1e-9?coef(a):0}</span>`).join('')}</span>`; }
+function H0(v){ return [(v[0]+v[2])*s2, (v[1]+v[3])*s2, (v[0]-v[2])*s2, (v[1]-v[3])*s2]; }
+function H1(v){ return [(v[0]+v[1])*s2, (v[0]-v[1])*s2, (v[2]+v[3])*s2, (v[2]-v[3])*s2]; }
+function CNOT(v){ return [v[0], v[1], v[3], v[2]]; }
+
+let input = '00', bell;
+function build(){
+  const v0 = [0,0,0,0]; v0[parseInt(input,2)] = 1;
+  const v1 = H0(v0), v2 = CNOT(v1);
+  bell = v2;
+  $('q0lbl').textContent = `q0 |${input[0]}⟩`; $('q1lbl').textContent = `q1 |${input[1]}⟩`;
+  const box = $('bSteps'); box.innerHTML = '';
+  addLine(box, `Start:&nbsp; |${input}⟩ = ${vec(v0).replace(/class="mat"/,'class="mat" style="vertical-align:middle"')}`);
+  addLine(box, `After H on q0:&nbsp; ${ket(v1)}`);
+  addLine(box, `After CNOT (q0 controls q1):&nbsp; ${ket(v2)}`, 'hi');
+  const B = BELL[input];
+  $('bName').innerHTML = `${B.name} = ${B.f}`;
+  $('bSub').textContent = B.note;
+  document.querySelectorAll('#inBtns .btn').forEach(b=>b.classList.toggle('sel', b.dataset.in===input));
+  resetTally();
+}
+LABELS.forEach(l=>{
+  const b = document.createElement('button'); b.className='btn'; b.dataset.in=l; b.textContent = `input |${l}⟩`;
+  b.addEventListener('click', ()=>{ input = l; build(); }); $('inBtns').appendChild(b);
+});
+
+// ---------- measurement ----------
+let tally = [0,0,0,0];
+const sym = (basis, bit)=> basis==='Z' ? bit : (bit ? '−' : '+');
+function probs(){
+  let v = bell.slice();
+  if($('aBasis').value==='X') v = H0(v);
+  if($('bBasis').value==='X') v = H1(v);
+  return v.map(a=>a*a);
+}
+function sample(p){ let r = Math.random(), acc = 0; for(let i=0;i<4;i++){ acc += p[i]; if(r < acc) return i; } return 3; }
+function drawTally(){
+  const total = tally.reduce((a,b)=>a+b,0);
+  const ab = $('aBasis').value, bb = $('bBasis').value;
+  $('mTally').innerHTML = total ? LABELS.map((l,i)=>`
+    <div class="pbar-row"><span class="k mono">${sym(ab,+l[0])} ${sym(bb,+l[1])}</span><div class="pbar-bg"><div class="pbar ${l[0]===l[1]?'':'b1'}" style="width:${tally[i]/total*100}%"></div></div><span class="v mono">${tally[i]}</span></div>`).join('') : '';
+  const r = $('mResult');
+  if(!total){ r.className = 'result-line'; return; }
+  const agree = (tally[0]+tally[3])/total*100;
+  r.className = 'result-line show ' + ((agree>99||agree<1) ? 'ok' : 'fail');
+  r.textContent = (agree>99) ? `Agreement ${agree.toFixed(0)}%. Every pair matched.` :
+                  (agree<1) ? `Agreement ${agree.toFixed(0)}%. Every pair was opposite, which is just as perfectly correlated.` :
+                  `Agreement ${agree.toFixed(0)}%. With different bases the correlation vanishes: the results look unrelated.`;
+}
+function resetTally(){ tally = [0,0,0,0]; $('mOut').textContent = 'No pairs measured yet.'; drawTally(); }
+['aBasis','bBasis'].forEach(id=>$(id).addEventListener('change', resetTally));
+$('mReset').addEventListener('click', resetTally);
+$('mOne').addEventListener('click', ()=>{
+  const i = sample(probs()); tally[i]++;
+  const l = LABELS[i], ab = $('aBasis').value, bb = $('bBasis').value;
+  $('mOut').innerHTML = `Alice (${ab}) got <b>${sym(ab,+l[0])}</b>, Bob (${bb}) got <b>${sym(bb,+l[1])}</b>.`;
+  drawTally();
+});
+$('mMany').addEventListener('click', ()=>{
+  const p = probs();
+  for(let k=0;k<200;k++) tally[sample(p)]++;
+  $('mOut').innerHTML = `Measured 200 more pairs. Alice alone sees about 50% each outcome; so does Bob.`;
+  drawTally();
+});
+build();
+
+buildTermGrid('bellGrid', Object.entries(BELL).map(([inp,B])=>({
+  sym:B.name, name:'from input |'+inp+'⟩', def:`${B.name} = ${B.f}. Made by H then CNOT on |${inp}⟩. ${B.note}`
+})), 'bell');
+
+// hero
+(function(){
+  const el = $('heroPairs');
+  const pairs = [];
+  for(let i=0;i<8;i++){ const b = Math.random()<0.5?0:1; const s = document.createElement('span'); s.textContent = `${b}${b}`; el.appendChild(s); pairs.push(s); }
+  if(reduceMotion) return;
+  let i = 0;
+  setInterval(()=>{
+    pairs.forEach(p=>p.classList.remove('hit'));
+    const b = Math.random()<0.5?0:1;
+    pairs[i].textContent = `${b}${b}`; pairs[i].classList.add('hit');
+    i = (i+1) % pairs.length;
+  }, 900);
+})();
+
+</script>
+
+</body>
+</html>

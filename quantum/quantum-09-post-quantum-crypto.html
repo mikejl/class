@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum-Resistant Cryptography — Interactive Demo</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  /* ---------- shared additions for pages 02-09 ---------- */
+  .hero-seq{display:flex; gap:10px; flex-wrap:wrap; font-size:20px;}
+  .hero-seq span{color:var(--text-dim); padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--panel-alt);}
+  .hero-seq span.hit{color:#ffffff; background:var(--cyan); border-color:var(--cyan);}
+  .seq-track{display:flex; gap:8px; flex-wrap:wrap; min-height:44px; align-items:center;}
+  .seq-chip{padding:8px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel-alt);
+    font-size:14px; color:var(--text-dim); opacity:0; transform:translateY(6px); animation:pop 0.35s ease forwards;}
+  .seq-chip .exp{color:var(--text-dim); font-size:11px;}
+  .seq-chip.repeat{border-color:var(--green); color:var(--green); background:rgba(21,122,74,0.08);}
+  @keyframes pop{ to{opacity:1; transform:translateY(0);} }
+  .step-log{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .step-log .step-line{opacity:0; animation:fadeIn 0.3s ease forwards;}
+  .step-line.ok{color:var(--green); border-left-color:var(--green);}
+  .step-line.bad{color:var(--red); border-left-color:var(--red);}
+  @keyframes fadeIn{ to{opacity:1;} }
+  .factor-banner{margin-top:18px; padding:20px; border-radius:10px; text-align:center; display:none;}
+  .factor-banner.show{display:block;}
+  .factor-banner .big{font-size:24px; font-weight:750; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .factor-banner.ok{border:1px solid var(--green); background:rgba(21,122,74,0.06);}
+  .factor-banner.fail{border:1px solid var(--red); background:rgba(192,41,61,0.06);}
+  .factor-banner .sub{margin-top:6px; font-size:13px; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+
+  /* circuits */
+  .circuit{display:flex; align-items:center; flex-wrap:wrap; row-gap:8px; font-family: ui-monospace, monospace; font-size:14px; margin:14px 0;}
+  .circuit .wire{height:2px; background:var(--text-dim); width:22px; flex:none;}
+  .circuit .lbl{color:var(--cyan); font-weight:700; margin-right:2px;}
+  .gate{border:1px solid var(--cyan); background:#ffffff; color:var(--cyan); border-radius:6px; padding:5px 10px; font-weight:700; white-space:nowrap;}
+  .gate.meas{border-color:var(--amber); color:var(--amber);}
+  .gate.off{opacity:0.35; border-style:dashed;}
+  .gate.dim{color:var(--text-dim); border-color:var(--border);}
+
+  /* bloch canvas */
+  .canvas-wrap{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;}
+  .canvas-wrap > .side{flex:1; min-width:240px;}
+  canvas.bloch{width:300px; height:300px; max-width:100%; background:#ffffff; border:1px solid var(--border);
+    border-radius:10px; cursor:grab; touch-action:none; flex:none;}
+  canvas.bloch:active{cursor:grabbing;}
+  canvas.bloch:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .canvas-note{font-size:11.5px; color:var(--text-dim); margin-top:6px; text-align:center; width:300px; max-width:100%;}
+
+  /* tables */
+  .qtable-wrap{overflow-x:auto; margin-top:14px; border:1px solid var(--border); border-radius:8px; background:#ffffff;}
+  table.qtable{border-collapse:collapse; width:100%; font-size:12.5px; font-family: ui-monospace, monospace;}
+  .qtable th, .qtable td{padding:5px 8px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .qtable th{color:var(--text-dim); font-weight:600; background:var(--panel-alt);}
+  .qtable tr:last-child td{border-bottom:none;}
+  .qtable tr.keep td{background:rgba(21,122,74,0.07);}
+  .qtable tr.drop td{color:#a9b3be;}
+  .qtable tr.sample td{background:rgba(168,86,10,0.08);}
+  .qtable td.err{color:var(--red); font-weight:700;}
+  .qtable td.eve{color:var(--red);}
+  .qtable td.l, .qtable th.l{text-align:left;}
+
+  /* 4x4 matrix */
+  .mat4{display:inline-grid; grid-template-columns:repeat(4, 28px); text-align:center; padding:4px 6px; line-height:1.6;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;}
+  .mat4 span{color:var(--text-dim);}
+  .mat4 span.col{background:rgba(15,116,144,0.09);}
+  .mat4 span.one{color:var(--text-bright); font-weight:700;}
+  .mat4 span.hit{color:#ffffff; background:var(--cyan); border-radius:4px;}
+
+  /* signed amplitude bars */
+  .sbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:7px; font-size:13px;}
+  .sbar-row .k{color:var(--cyan); font-weight:700; font-family: ui-monospace, monospace;}
+  .sbar-row .v{text-align:right; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .sbar-bg{position:relative; height:14px; background:#ffffff; border:1px solid var(--border); border-radius:6px; overflow:hidden;}
+  .sbar-bg::after{content:''; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--text-dim);}
+  .sbar{position:absolute; top:0; bottom:0; transition:width 0.25s ease;}
+  .sbar.pos{left:50%; background:var(--cyan);}
+  .sbar.neg{right:50%; background:var(--red);}
+
+  /* form bits */
+  label.check{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-bright); cursor:pointer;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+  label.check input{accent-color:var(--red); width:16px; height:16px;}
+  input[type=number]{font-family: ui-monospace, monospace; font-size:14px; width:72px; padding:8px 10px;
+    border:1px solid var(--border); border-radius:7px; background:#ffffff; color:var(--text-bright);}
+  input[type=number]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  .slider-block{margin-bottom:14px;}
+
+  /* query cells */
+  .qgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:8px; margin-top:12px;}
+  button.qcell{font-family: ui-monospace, monospace; font-size:13px; padding:10px 4px; border-radius:7px; cursor:pointer;
+    background:#ffffff; border:1px solid var(--cyan-dim); color:var(--text-bright);}
+  button.qcell:hover{border-color:var(--cyan);}
+  button.qcell:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.qcell.v0{background:var(--panel-alt); border-color:var(--border); cursor:default;}
+  button.qcell.v1{background:rgba(168,86,10,0.1); border-color:var(--amber); cursor:default;}
+  button.qcell .fx{display:block; font-size:16px; font-weight:750;}
+
+  /* timeline */
+  .tl{position:relative; height:30px; border-radius:6px; background:#ffffff; border:1px solid var(--border); margin:30px 0 8px;}
+  .tl .seg{position:absolute; top:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    font-size:11.5px; color:#ffffff; overflow:hidden; white-space:nowrap; transition:left 0.2s ease, width 0.2s ease;}
+  .tl .seg.x{background:var(--cyan); border-radius:5px 0 0 5px;}
+  .tl .seg.y{background:var(--amber);}
+  .tl .mark{position:absolute; top:-26px; bottom:-4px; width:2px; background:var(--red); transition:left 0.2s ease;}
+  .tl .mark span{position:absolute; top:0; left:6px; font-size:11.5px; color:var(--red); white-space:nowrap;}
+  .tl-axis{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    .seq-chip, .step-log .step-line{animation:none; opacity:1; transform:none;}
+    .sbar, .tl .seg, .tl .mark{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>QUANTUM 09</b> :: post-quantum crypto</div>
+  <nav>
+    <a href="quantum-index.html">Series</a>
+    <a href="#threat">Threat</a>
+    <a href="#grover">Grover</a>
+    <a href="#lattice">Lattices</a>
+    <a href="#standards">Standards</a>
+    <a href="#mosca">Timeline</a>
+    <a href="#migrate">Migration</a>
+  </nav>
+</div>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>Replacing the math before the quantum computer arrives</h1>
+    <p class="lede">Shor's algorithm breaks RSA, Diffie-Hellman, and elliptic-curve cryptography, which together protect almost every secure connection on the internet. No quantum computer can do that yet. But encrypted data recorded today can be decrypted later, so the replacement has to happen first. That replacement is <span class="gterm" data-g="pqc">post-quantum cryptography</span>.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+    <div class="gpop" id="gpop-pqc"><b>Post-quantum cryptography (PQC)</b> — algorithms that run on ordinary computers today but rely on math problems that neither classical nor quantum computers are known to solve efficiently. Not to be confused with quantum cryptography (QKD), which needs quantum hardware.</div>
+    <div class="hero-visual">
+      <div class="hbox">
+        <div class="label">BROKEN BY SHOR'S ALGORITHM</div>
+        <div class="hket mono" style="white-space:normal;">RSA &middot; DH &middot; ECDH &middot; ECDSA &middot; Ed25519</div>
+        <p class="hero-note">Factoring and discrete logarithms: the public-key layer.</p>
+      </div>
+      <div class="hbox q">
+        <div class="label">WEAKENED BY GROVER'S ALGORITHM</div>
+        <div class="hket mono" style="white-space:normal;">AES &middot; SHA-2 &middot; SHA-3</div>
+        <p class="hero-note">Symmetric ciphers and hashes: fixed by using longer keys and outputs.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="threat">
+    <p class="eyebrow">01 &middot; The threat model</p>
+    <h2>Harvest now, decrypt later</h2>
+    <p>An attacker doesn't need a quantum computer today to cause harm later. They can record encrypted traffic now and store it until a <span class="gterm" data-g="crqc">cryptographically relevant quantum computer</span> exists. Anything that must stay secret for years, such as medical records, government data, or trade secrets, is already exposed to this risk.</p>
+    <div class="gpop" id="gpop-crqc"><b>CRQC</b> (cryptographically relevant quantum computer) — a quantum computer large and reliable enough to run Shor's algorithm against real key sizes like RSA-2048. None exists today.</div>
+    <div class="keychain">
+      <div class="keybox priv"><div class="label">KEY EXCHANGE: URGENT</div>Recorded sessions can be decrypted later. This is why encryption is being migrated first.</div>
+      <div class="keybox pub"><div class="label">SIGNATURES: LESS URGENT</div>A forged signature only matters once a CRQC exists, but long-lived roots of trust (firmware, certificates) take years to replace.</div>
+    </div>
+  </section>
+
+  <section id="grover">
+    <p class="eyebrow">02 &middot; Symmetric crypto</p>
+    <h2>Grover's algorithm halves the key strength</h2>
+    <p><span class="gterm" data-g="grover">Grover's algorithm</span> searches an unsorted space of 2ⁿ possibilities in roughly 2<sup>n/2</sup> steps. Applied to brute-forcing a key, it cuts the effective security in half: a 128-bit key behaves like a 64-bit key. The defense is simple: use longer keys.</p>
+    <div class="gpop" id="gpop-grover"><b>Grover's algorithm</b> (1996) — a quantum search algorithm with a quadratic (square-root) speedup. It's provably optimal: no quantum algorithm can brute-force a key faster. Its steps must also run one after another, which limits it in practice.</div>
+    <div class="panel">
+      <h3>Try it: choose a key length</h3>
+      <p class="subhead" style="margin-bottom:16px;">Compare a classical brute-force search with Grover's search.</p>
+      <div class="slider-head"><span>symmetric key length</span><b id="kLabel">128 bits</b></div>
+      <input type="range" id="kSlider" min="40" max="256" step="8" value="128" aria-label="key length in bits">
+      <div class="stat-grid">
+        <div class="stat"><div class="label">CLASSICAL BRUTE FORCE</div><div class="stat-num" id="kClass"></div></div>
+        <div class="stat q"><div class="label">GROVER ITERATIONS</div><div class="stat-num" id="kQuant"></div></div>
+      </div>
+      <div class="scale">
+        <div class="scale-row"><div class="scale-label"><span>classical security</span><span id="kcBits"></span></div><div class="scale-bar-bg"><div class="scale-bar" id="kcBar"></div></div></div>
+        <div class="scale-row"><div class="scale-label"><span>post-quantum security</span><span id="kqBits"></span></div><div class="scale-bar-bg"><div class="scale-bar" id="kqBar"></div></div></div>
+      </div>
+      <div class="result-line show" id="kVerdict"></div>
+    </div>
+  </section>
+
+  <section id="lattice">
+    <p class="eyebrow">03 &middot; The core idea</p>
+    <h2>Hard problems with a little noise: learning with errors</h2>
+    <p>ML-KEM and ML-DSA are built on <span class="gterm" data-g="lwe">learning with errors (LWE)</span>. Solving a system of linear equations is easy; high school algebra does it. Add a small random error to each equation and the system becomes extremely hard to solve, for classical and quantum computers alike, once there are hundreds of unknowns.</p>
+    <div class="gpop" id="gpop-lwe"><b>Learning with errors</b> — given many equations a·s + e = b (mod q), where s is secret and each e is small random noise, recover s. It reduces to hard problems on high-dimensional lattices. ML-KEM-768 works with 768 unknowns modulo q = 3329.</div>
+    <div class="panel">
+      <h3>Try it: recover the secret (s₁, s₂), with and without noise</h3>
+      <p class="subhead" style="margin-bottom:16px;">Four equations mod 17. Use elimination on the first two equations, then check whether the answer fits the other two. Toggle the noise and try again.</p>
+      <div class="sim-controls">
+        <label class="check"><input type="checkbox" id="noiseOn" checked> add noise (e = −1, 0, or +1)</label>
+        <button class="btn" id="lweNew">New secret</button>
+      </div>
+      <div class="qtable-wrap"><table class="qtable" id="lweTbl"></table></div>
+      <div class="sim-controls" style="margin-top:14px;">
+        <label class="inline">your guess s₁ <input type="number" id="g1" min="0" max="16" value="0"></label>
+        <label class="inline">s₂ <input type="number" id="g2" min="0" max="16" value="0"></label>
+        <button class="btn" id="checkGuess">Check guess</button>
+        <button class="btn primary" id="solve">Solve by elimination</button>
+        <button class="btn" id="revealS">Reveal secret</button>
+      </div>
+      <div class="step-log" id="lweLog"></div>
+    </div>
+    <div class="callout">
+      <b>Scale is everything:</b> with 2 unknowns mod 17 you could try all 289 combinations by hand. With 768 unknowns mod 3329, there are more possibilities than atoms in the universe, and the noise blocks the algebra shortcuts. Shor's period-finding trick doesn't apply, because there's no repeating structure to find.
+    </div>
+  </section>
+
+  <section id="standards">
+    <p class="eyebrow">04 &middot; The standards</p>
+    <h2>NIST's post-quantum toolkit</h2>
+    <p class="subhead">Click an algorithm for its role and status.</p>
+    <div class="term-grid" id="stdGrid"></div>
+    <div class="panel">
+      <h3>Try it: compare the sizes</h3>
+      <p class="subhead" style="margin-bottom:16px;">Post-quantum security costs bandwidth. Sizes in bytes; cyan is the public key, amber is the ciphertext or signature.</p>
+      <div class="sim-controls">
+        <button class="btn sel" data-grp="kem">Key exchange</button>
+        <button class="btn" data-grp="sig">Signatures</button>
+      </div>
+      <div id="sizeRows"></div>
+    </div>
+  </section>
+
+  <section id="mosca">
+    <p class="eyebrow">05 &middot; When to start</p>
+    <h2>Mosca's inequality</h2>
+    <p>Michele Mosca framed the timing question as simple arithmetic. Let <b>x</b> be how long your data must stay secret, <b>y</b> how long migration will take, and <b>z</b> the years until a CRQC exists. If <code>x + y &gt; z</code>, your data will still be sensitive when it becomes readable, and you're already late.</p>
+    <div class="panel">
+      <h3>Try it: plug in your own numbers</h3>
+      <p class="subhead" style="margin-bottom:16px;">Nobody knows z. Try a cautious and an optimistic estimate.</p>
+      <div class="slider-block"><div class="slider-head"><span>x · data shelf life (years)</span><b id="xL"></b></div><input type="range" id="xS" min="0" max="30" value="10" aria-label="data shelf life"></div>
+      <div class="slider-block"><div class="slider-head"><span>y · migration time (years)</span><b id="yL"></b></div><input type="range" id="yS" min="1" max="15" value="5" aria-label="migration time"></div>
+      <div class="slider-block"><div class="slider-head"><span>z · years until a CRQC</span><b id="zL"></b></div><input type="range" id="zS" min="3" max="30" value="12" aria-label="years until quantum computer"></div>
+      <div class="tl" id="tl"><div class="seg y" id="segY"></div><div class="seg x" id="segX"></div><div class="mark" id="markZ"><span>CRQC</span></div></div>
+      <div class="tl-axis"><span>today</span><span>+15 yrs</span><span>+30 yrs</span><span>+45 yrs</span></div>
+      <div class="result-line show" id="mVerdict"></div>
+    </div>
+  </section>
+
+  <section id="migrate">
+    <p class="eyebrow">06 &middot; Migration</p>
+    <h2>How organizations are switching</h2>
+    <div class="step-log">
+      <div class="step-line"><b>Inventory.</b> Find every place public-key crypto is used: TLS, VPNs, SSH, code signing, certificates, firmware, hardware security modules, and vendor products.</div>
+      <div class="step-line"><b>Prioritize.</b> Start with long-lived secrets and key exchange, where harvest-now-decrypt-later applies.</div>
+      <div class="step-line"><b>Go hybrid.</b> Combine a classical algorithm with a post-quantum one so the connection stays secure if either holds. Major browsers already use hybrid X25519 + ML-KEM key exchange in TLS by default.</div>
+      <div class="step-line hi"><b>Build crypto agility.</b> Design systems so algorithms can be swapped through configuration rather than rewrites. The next migration should be easier than this one.</div>
+    </div>
+    <p style="margin-top:18px;">NIST's transition plan (IR 8547) proposes deprecating today's quantum-vulnerable public-key algorithms after 2030 and disallowing them after 2035. The NSA's CNSA 2.0 sets similar deadlines for national security systems and requires AES-256.</p>
+    <div class="callout">
+      <b>Two answers to one problem:</b> PQC (this page) changes the math and runs on existing hardware. QKD (page 07) changes the physics and needs special equipment. Most government guidance today favors PQC for broad deployment.
+    </div>
+  </section>
+
+</main>
+
+<div class="slides-cta">
+  <a href="quantum-09-slides.html"><span class="ico" aria-hidden="true"></span><span class="txt"><span class="dir">SUMMARY SLIDES</span><span class="ttl">View the Quantum 09 slide deck: Quantum-Resistant Cryptography</span></span></a>
+</div>
+
+<div class="series-nav">
+  <a href="quantum-08-shors-algorithm.html"><span class="dir">PREVIOUS</span><span class="ttl">08 &middot; Shor's algorithm</span></a>
+  <a class="next" href="quantum-index.html"><span class="dir">NEXT</span><span class="ttl">Back to the series index</span></a>
+</div>
+
+<footer>
+  Sinclair College - Dr. Mike Libassi &middot; interactive demo &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">Quantum 09 &middot; Post-Quantum Crypto</span>
+</footer>
+
+<script>
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fmt(x, d=3){ let s = x.toFixed(d); if(s.indexOf('.')>=0) s = s.replace(/0+$/,'').replace(/\.$/,''); if(s==='-0') s='0'; return s.replace('-','−'); }
+function sleep(ms){ return new Promise(res=>setTimeout(res, reduceMotion ? 0 : ms)); }
+function $(id){ return document.getElementById(id); }
+function addLine(box, text, cls=''){
+  const line = document.createElement('div');
+  line.className = 'step-line' + (cls ? ' '+cls : '');
+  line.innerHTML = text;
+  box.appendChild(line);
+  return line;
+}
+
+// ---------- glossary popovers ----------
+document.querySelectorAll('.gterm').forEach(g=>{
+  g.setAttribute('tabindex','0');
+  const toggle = ()=>{
+    const pop = document.getElementById('gpop-'+g.dataset.g);
+    if(!pop) return;
+    const isShown = pop.classList.contains('show');
+    document.querySelectorAll('.gpop').forEach(p=>p.classList.remove('show'));
+    if(!isShown){ pop.classList.add('show'); }
+  };
+  g.addEventListener('click', toggle);
+  g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+});
+
+// ---------- term grid ----------
+function buildTermGrid(gridId, items, prefix){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  items.forEach((t,idx)=>{
+    const card = document.createElement('div');
+    card.className='term-card';
+    card.setAttribute('tabindex','0');
+    card.innerHTML = `<div class="term-sym">${t.sym}</div><div class="term-name">${t.name}</div>`;
+    const open = ()=>{
+      let def = document.getElementById(prefix+'-def-'+idx);
+      if(def){ def.remove(); card.classList.remove('open'); return; }
+      grid.querySelectorAll('.term-def').forEach(d=>d.remove());
+      grid.querySelectorAll('.term-card').forEach(c=>c.classList.remove('open'));
+      def = document.createElement('div');
+      def.className='term-def show';
+      def.id=prefix+'-def-'+idx;
+      def.innerHTML = t.def;
+      card.classList.add('open');
+      card.after(def);
+    };
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+    grid.appendChild(card);
+  });
+}
+
+
+// ---------- Grover ----------
+(function(){
+  const s = $('kSlider');
+  const pow = (n)=> n<=60 ? (2**n).toLocaleString() : `2^${n} ≈ 10^${Math.round(n*Math.log10(2))}`;
+  function draw(){
+    const n = +s.value, q = n/2;
+    $('kLabel').textContent = n+' bits';
+    $('kClass').textContent = n<=40 ? pow(n) : `2^${n} ≈ 10^${Math.round(n*Math.log10(2))}`;
+    $('kQuant').textContent = `~2^${q} ≈ 10^${Math.round(q*Math.log10(2))}`;
+    $('kcBits').textContent = n+' bits'; $('kqBits').textContent = q+' bits';
+    $('kcBar').style.width = n/256*100+'%'; $('kqBar').style.width = q/256*100+'%';
+    $('kqBar').classList.toggle('over', q<128);
+    const v = $('kVerdict');
+    if(q>=128){ v.className='result-line show ok'; v.textContent = `${n}-bit keys keep ${q} bits of security against Grover. This meets the 128-bit post-quantum bar (AES-256 is the standard choice).`; }
+    else if(q>=64){ v.className='result-line show fail'; v.textContent = `${n}-bit keys drop to about ${q} bits against Grover. NIST still considers AES-128 adequate because Grover's steps are slow and serial, but high-security guidance such as CNSA 2.0 requires AES-256.`; }
+    else { v.className='result-line show fail'; v.textContent = `${n}-bit keys are weak even classically. Against Grover they offer only about ${q} bits.`; }
+  }
+  s.addEventListener('input', draw); draw();
+})();
+
+// ---------- LWE toy ----------
+(function(){
+  const p = 17;
+  let A, s, e, b;
+  const mod = x => ((x % p) + p) % p;
+  function inv(x){ for(let i=1;i<p;i++) if(mod(x*i)===1) return i; return null; }
+  function gen(){
+    do {
+      A = [...Array(4)].map(()=>[1+Math.floor(Math.random()*16), 1+Math.floor(Math.random()*16)]);
+    } while(mod(A[0][0]*A[1][1] - A[0][1]*A[1][0]) === 0);
+    s = [Math.floor(Math.random()*17), Math.floor(Math.random()*17)];
+    makeB();
+  }
+  function makeB(){
+    const noisy = $('noiseOn').checked;
+    e = A.map((_,i)=> noisy ? [-1,1,-1,1,0][Math.floor(Math.random()*5)] : 0);
+    if(noisy && e[0]===0 && e[1]===0) e[0] = 1;
+    b = A.map((r,i)=>mod(r[0]*s[0] + r[1]*s[1] + e[i]));
+    draw(); $('lweLog').innerHTML = '';
+  }
+  function draw(guess){
+    let h = `<tr><th>eq</th><th class="l">equation (mod 17)</th>${guess?'<th>your guess gives</th><th>fits?</th>':''}</tr>`;
+    A.forEach((r,i)=>{
+      h += `<tr><td>${i+1}</td><td class="l">${r[0]}·s₁ + ${r[1]}·s₂ ${$('noiseOn').checked?'+ e':''} ≡ ${b[i]}</td>`;
+      if(guess){ const v = mod(r[0]*guess[0]+r[1]*guess[1]); h += `<td>${v}</td><td class="${v===b[i]?'':'err'}">${v===b[i]?'yes':'off by '+Math.min(mod(v-b[i]),mod(b[i]-v))}</td>`; }
+      h += '</tr>';
+    });
+    $('lweTbl').innerHTML = h;
+  }
+  function check(g){
+    draw(g);
+    const fits = A.filter((r,i)=>mod(r[0]*g[0]+r[1]*g[1])===b[i]).length;
+    return fits;
+  }
+  $('noiseOn').addEventListener('change', makeB);
+  $('lweNew').addEventListener('click', gen);
+  $('checkGuess').addEventListener('click', ()=>{
+    const g = [mod(+$('g1').value), mod(+$('g2').value)];
+    const fits = check(g), log = $('lweLog'); log.innerHTML='';
+    addLine(log, `Guess (${g[0]}, ${g[1]}) satisfies ${fits} of 4 equations exactly.`, fits===4?'ok':'');
+  });
+  $('solve').addEventListener('click', ()=>{
+    const det = mod(A[0][0]*A[1][1] - A[0][1]*A[1][0]), di = inv(det);
+    const s1 = mod((b[0]*A[1][1] - A[0][1]*b[1]) * di), s2 = mod((A[0][0]*b[1] - b[0]*A[1][0]) * di);
+    const fits = check([s1,s2]), log = $('lweLog'); log.innerHTML='';
+    addLine(log, `Elimination on equations 1 and 2 gives s₁ = ${s1}, s₂ = ${s2}.`);
+    if(fits===4) addLine(log, `It satisfies all four equations. Without noise, the secret falls out instantly.`, 'ok');
+    else addLine(log, `It fails ${4-fits} of the equations. The small errors threw the algebra off completely, and you can't tell which equations to trust.`, 'bad');
+  });
+  $('revealS').addEventListener('click', ()=>{
+    const log = $('lweLog'); log.innerHTML=''; check(s);
+    addLine(log, `Secret: s₁ = ${s[0]}, s₂ = ${s[1]}. Errors used: ${e.map(x=>x>0?'+'+x:x).join(', ')}. With noise, even the true secret is "off by 1" on noisy equations; only the receiver who knows s can strip the noise away.`, 'hi');
+  });
+  gen();
+})();
+
+// ---------- standards ----------
+buildTermGrid('stdGrid', [
+  {sym:'ML-KEM', name:'FIPS 203 · key exchange', def:'Module-Lattice Key Encapsulation Mechanism (formerly Kyber). Final since August 2024. The primary replacement for RSA and Diffie-Hellman key exchange. Three sizes: 512, 768, 1024.'},
+  {sym:'ML-DSA', name:'FIPS 204 · signatures', def:'Module-Lattice Digital Signature Algorithm (formerly Dilithium). Final since August 2024. The general-purpose replacement for RSA and ECDSA signatures.'},
+  {sym:'SLH-DSA', name:'FIPS 205 · signatures', def:'Stateless Hash-Based Digital Signature Algorithm (formerly SPHINCS+). Final since August 2024. Relies only on hash functions, so its security assumptions are very conservative, at the cost of large signatures.'},
+  {sym:'FN-DSA', name:'FIPS 206 · draft', def:'FFT over NTRU-Lattice Digital Signature Algorithm (based on Falcon). Smaller signatures than ML-DSA but harder to implement safely. As of mid-2026 it was still a draft, with the final standard expected around late 2026 or early 2027.'},
+  {sym:'HQC', name:'backup key exchange', def:'Hamming Quasi-Cyclic, a code-based KEM selected by NIST in 2025 as a backup to ML-KEM. It uses different math, so a breakthrough against lattices wouldn\'t break both.'},
+  {sym:'hybrid', name:'belt and suspenders', def:'Running a classical algorithm (such as X25519) and a PQC algorithm (such as ML-KEM) together and combining their secrets. An attacker must break both.'},
+], 'std');
+
+// ---------- size comparison ----------
+(function(){
+  const DATA = {
+    kem:{lab:'ciphertext', rows:[
+      ['X25519 (classical)',32,32],['RSA-2048 (classical)',256,256],['ML-KEM-512',800,768],['ML-KEM-768',1184,1088],['ML-KEM-1024',1568,1568]]},
+    sig:{lab:'signature', rows:[
+      ['Ed25519 (classical)',32,64],['ECDSA P-256 (classical)',64,64],['RSA-2048 (classical)',256,256],['ML-DSA-44',1312,2420],['ML-DSA-65',1952,3309],['SLH-DSA-128s',32,7856]]},
+  };
+  function draw(g){
+    const d = DATA[g], max = Math.max(...d.rows.map(r=>Math.max(r[1],r[2])));
+    $('sizeRows').innerHTML = d.rows.map(([n,pk,x])=>`
+      <div class="scale-row" style="margin-top:12px;">
+        <div class="scale-label"><span style="color:var(--text-bright)">${n}</span><span>key ${pk.toLocaleString()} B · ${d.lab} ${x.toLocaleString()} B</span></div>
+        <div class="pbar-bg" style="height:9px; margin-bottom:3px;"><div class="pbar" style="width:${Math.max(pk/max*100,0.6)}%"></div></div>
+        <div class="pbar-bg" style="height:9px;"><div class="pbar b1" style="width:${Math.max(x/max*100,0.6)}%"></div></div>
+      </div>`).join('');
+    document.querySelectorAll('[data-grp]').forEach(b=>b.classList.toggle('sel', b.dataset.grp===g));
+  }
+  document.querySelectorAll('[data-grp]').forEach(b=>b.addEventListener('click', ()=>draw(b.dataset.grp)));
+  draw('kem');
+})();
+
+// ---------- Mosca ----------
+(function(){
+  const S = 45;
+  function draw(){
+    const x = +$('xS').value, y = +$('yS').value, z = +$('zS').value;
+    $('xL').textContent = x; $('yL').textContent = y; $('zL').textContent = z;
+    $('segY').style.left = '0%'; $('segY').style.width = y/S*100+'%'; $('segY').textContent = y>=3 ? 'migrate' : '';
+    $('segX').style.left = y/S*100+'%'; $('segX').style.width = x/S*100+'%'; $('segX').textContent = x>=4 ? 'data must stay secret' : '';
+    $('segX').style.borderRadius = '0'; $('segY').style.borderRadius = '5px 0 0 5px';
+    $('markZ').style.left = z/S*100+'%';
+    const v = $('mVerdict');
+    if(x + y > z){ v.className = 'result-line show fail'; v.textContent = `x + y = ${x+y} > z = ${z}. Data encrypted at the end of your migration will still be sensitive for ${x+y-z} year${x+y-z===1?'':'s'} after a CRQC appears. Start now.`; }
+    else { v.className = 'result-line show ok'; v.textContent = `x + y = ${x+y} ≤ z = ${z}. You have about ${z-x-y} year${z-x-y===1?'':'s'} of margin, if the estimate for z holds.`; }
+  }
+  ['xS','yS','zS'].forEach(id=>$(id).addEventListener('input', draw));
+  draw();
+})();
+
+</script>
+
+</body>
+</html>

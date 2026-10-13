@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Key Distribution (BB84) — Interactive Demo</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  /* ---------- shared additions for pages 02-09 ---------- */
+  .hero-seq{display:flex; gap:10px; flex-wrap:wrap; font-size:20px;}
+  .hero-seq span{color:var(--text-dim); padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--panel-alt);}
+  .hero-seq span.hit{color:#ffffff; background:var(--cyan); border-color:var(--cyan);}
+  .seq-track{display:flex; gap:8px; flex-wrap:wrap; min-height:44px; align-items:center;}
+  .seq-chip{padding:8px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel-alt);
+    font-size:14px; color:var(--text-dim); opacity:0; transform:translateY(6px); animation:pop 0.35s ease forwards;}
+  .seq-chip .exp{color:var(--text-dim); font-size:11px;}
+  .seq-chip.repeat{border-color:var(--green); color:var(--green); background:rgba(21,122,74,0.08);}
+  @keyframes pop{ to{opacity:1; transform:translateY(0);} }
+  .step-log{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .step-log .step-line{opacity:0; animation:fadeIn 0.3s ease forwards;}
+  .step-line.ok{color:var(--green); border-left-color:var(--green);}
+  .step-line.bad{color:var(--red); border-left-color:var(--red);}
+  @keyframes fadeIn{ to{opacity:1;} }
+  .factor-banner{margin-top:18px; padding:20px; border-radius:10px; text-align:center; display:none;}
+  .factor-banner.show{display:block;}
+  .factor-banner .big{font-size:24px; font-weight:750; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .factor-banner.ok{border:1px solid var(--green); background:rgba(21,122,74,0.06);}
+  .factor-banner.fail{border:1px solid var(--red); background:rgba(192,41,61,0.06);}
+  .factor-banner .sub{margin-top:6px; font-size:13px; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+
+  /* circuits */
+  .circuit{display:flex; align-items:center; flex-wrap:wrap; row-gap:8px; font-family: ui-monospace, monospace; font-size:14px; margin:14px 0;}
+  .circuit .wire{height:2px; background:var(--text-dim); width:22px; flex:none;}
+  .circuit .lbl{color:var(--cyan); font-weight:700; margin-right:2px;}
+  .gate{border:1px solid var(--cyan); background:#ffffff; color:var(--cyan); border-radius:6px; padding:5px 10px; font-weight:700; white-space:nowrap;}
+  .gate.meas{border-color:var(--amber); color:var(--amber);}
+  .gate.off{opacity:0.35; border-style:dashed;}
+  .gate.dim{color:var(--text-dim); border-color:var(--border);}
+
+  /* bloch canvas */
+  .canvas-wrap{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;}
+  .canvas-wrap > .side{flex:1; min-width:240px;}
+  canvas.bloch{width:300px; height:300px; max-width:100%; background:#ffffff; border:1px solid var(--border);
+    border-radius:10px; cursor:grab; touch-action:none; flex:none;}
+  canvas.bloch:active{cursor:grabbing;}
+  canvas.bloch:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .canvas-note{font-size:11.5px; color:var(--text-dim); margin-top:6px; text-align:center; width:300px; max-width:100%;}
+
+  /* tables */
+  .qtable-wrap{overflow-x:auto; margin-top:14px; border:1px solid var(--border); border-radius:8px; background:#ffffff;}
+  table.qtable{border-collapse:collapse; width:100%; font-size:12.5px; font-family: ui-monospace, monospace;}
+  .qtable th, .qtable td{padding:5px 8px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .qtable th{color:var(--text-dim); font-weight:600; background:var(--panel-alt);}
+  .qtable tr:last-child td{border-bottom:none;}
+  .qtable tr.keep td{background:rgba(21,122,74,0.07);}
+  .qtable tr.drop td{color:#a9b3be;}
+  .qtable tr.sample td{background:rgba(168,86,10,0.08);}
+  .qtable td.err{color:var(--red); font-weight:700;}
+  .qtable td.eve{color:var(--red);}
+  .qtable td.l, .qtable th.l{text-align:left;}
+
+  /* 4x4 matrix */
+  .mat4{display:inline-grid; grid-template-columns:repeat(4, 28px); text-align:center; padding:4px 6px; line-height:1.6;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;}
+  .mat4 span{color:var(--text-dim);}
+  .mat4 span.col{background:rgba(15,116,144,0.09);}
+  .mat4 span.one{color:var(--text-bright); font-weight:700;}
+  .mat4 span.hit{color:#ffffff; background:var(--cyan); border-radius:4px;}
+
+  /* signed amplitude bars */
+  .sbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:7px; font-size:13px;}
+  .sbar-row .k{color:var(--cyan); font-weight:700; font-family: ui-monospace, monospace;}
+  .sbar-row .v{text-align:right; color:var(--text-bright); font-family: ui-monospace, monospace;}
+  .sbar-bg{position:relative; height:14px; background:#ffffff; border:1px solid var(--border); border-radius:6px; overflow:hidden;}
+  .sbar-bg::after{content:''; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--text-dim);}
+  .sbar{position:absolute; top:0; bottom:0; transition:width 0.25s ease;}
+  .sbar.pos{left:50%; background:var(--cyan);}
+  .sbar.neg{right:50%; background:var(--red);}
+
+  /* form bits */
+  label.check{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-bright); cursor:pointer;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+  label.check input{accent-color:var(--red); width:16px; height:16px;}
+  input[type=number]{font-family: ui-monospace, monospace; font-size:14px; width:72px; padding:8px 10px;
+    border:1px solid var(--border); border-radius:7px; background:#ffffff; color:var(--text-bright);}
+  input[type=number]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  .slider-block{margin-bottom:14px;}
+
+  /* query cells */
+  .qgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:8px; margin-top:12px;}
+  button.qcell{font-family: ui-monospace, monospace; font-size:13px; padding:10px 4px; border-radius:7px; cursor:pointer;
+    background:#ffffff; border:1px solid var(--cyan-dim); color:var(--text-bright);}
+  button.qcell:hover{border-color:var(--cyan);}
+  button.qcell:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.qcell.v0{background:var(--panel-alt); border-color:var(--border); cursor:default;}
+  button.qcell.v1{background:rgba(168,86,10,0.1); border-color:var(--amber); cursor:default;}
+  button.qcell .fx{display:block; font-size:16px; font-weight:750;}
+
+  /* timeline */
+  .tl{position:relative; height:30px; border-radius:6px; background:#ffffff; border:1px solid var(--border); margin:30px 0 8px;}
+  .tl .seg{position:absolute; top:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    font-size:11.5px; color:#ffffff; overflow:hidden; white-space:nowrap; transition:left 0.2s ease, width 0.2s ease;}
+  .tl .seg.x{background:var(--cyan); border-radius:5px 0 0 5px;}
+  .tl .seg.y{background:var(--amber);}
+  .tl .mark{position:absolute; top:-26px; bottom:-4px; width:2px; background:var(--red); transition:left 0.2s ease;}
+  .tl .mark span{position:absolute; top:0; left:6px; font-size:11.5px; color:var(--red); white-space:nowrap;}
+  .tl-axis{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    .seq-chip, .step-log .step-line{animation:none; opacity:1; transform:none;}
+    .sbar, .tl .seg, .tl .mark{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>QUANTUM 07</b> :: bb84 qkd</div>
+  <nav>
+    <a href="quantum-index.html">Series</a>
+    <a href="#bases">Bases</a>
+    <a href="#protocol">Protocol</a>
+    <a href="#sim">Simulation</a>
+    <a href="#stats">Eve's fingerprint</a>
+    <a href="#reality">Reality check</a>
+  </nav>
+</div>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>A key exchange that exposes eavesdroppers</h1>
+    <p class="lede">Every classical key exchange can, in principle, be copied silently. BB84 (Bennett and Brassard, 1984) sends key bits on single photons instead. Because measuring a quantum state disturbs it, anyone listening in leaves errors behind, and Alice and Bob can detect them before they ever use the key.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+    <div class="hero-visual">
+      <div style="flex:1;">
+        <div class="hero-seq" id="heroPhotons"></div>
+        <p class="hero-note">Photons polarized in two bases: + (→ ↑) and × (↗ ↖). Only someone using the right basis reads the bit reliably.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="bases">
+    <p class="eyebrow">01 &middot; Refresher</p>
+    <h2>Two bases, four polarizations</h2>
+    <p>From pages 02 and 03: the Z basis distinguishes <code>|0⟩</code> from <code>|1⟩</code>, and the X basis distinguishes <code>|+⟩</code> from <code>|−⟩</code>. With photons, these are directions of polarization. Measuring in the wrong basis gives a 50/50 random result and destroys the original.</p>
+    <p class="subhead">Click an encoding to see how it's measured.</p>
+    <div class="term-grid" id="encGrid"></div>
+  </section>
+
+  <section id="protocol">
+    <p class="eyebrow">02 &middot; The protocol</p>
+    <h2>Four steps from photons to a shared key</h2>
+    <div class="step-log">
+      <div class="step-line"><b>1 · Send.</b> Alice picks a random bit and a random basis (+ or ×) for each photon and sends it to Bob.</div>
+      <div class="step-line"><b>2 · Measure.</b> Bob picks his own random basis for each photon. He doesn't know Alice's choices.</div>
+      <div class="step-line"><b>3 · Sift.</b> Over an ordinary public channel, they compare <i>bases only</i>, never bits. They keep the positions where the bases matched (about half) and discard the rest.</div>
+      <div class="step-line hi"><b>4 · Check.</b> They publicly compare a sample of the kept bits. If the <span class="gterm" data-g="qber">error rate</span> is too high, someone was listening and they throw the key away. Otherwise, the unrevealed bits become the key.</div>
+    </div>
+    <div class="gpop" id="gpop-qber"><b>QBER</b> (quantum bit error rate) — the fraction of sifted bits where Alice and Bob disagree. Without an eavesdropper and with perfect equipment it is 0%. Real channels have a few percent of natural noise; protocols commonly abort above roughly 11%.</div>
+  </section>
+
+  <section id="sim">
+    <p class="eyebrow">03 &middot; The core idea</p>
+    <h2>Run BB84, with or without Eve</h2>
+    <div class="panel">
+      <h3>Try it: send photons and look for an eavesdropper</h3>
+      <p class="subhead" style="margin-bottom:16px;">Run it once with Eve off, then turn Eve on. She intercepts every photon, measures it in a random basis, and sends Bob a replacement.</p>
+      <div class="sim-controls">
+        <label class="inline">photons
+          <select id="nPh"><option>16</option><option selected>24</option><option>32</option></select>
+        </label>
+        <label class="check"><input type="checkbox" id="eveOn"> Eve intercepts</label>
+        <button class="btn primary" id="runBB">Send photons</button>
+        <button class="btn" id="resetBB" disabled>Reset</button>
+      </div>
+      <div class="qtable-wrap" id="tblWrap" style="display:none;">
+        <table class="qtable" id="tbl"></table>
+      </div>
+      <div class="step-log" id="bbLog"></div>
+      <div class="factor-banner" id="bbBanner"><div class="big" id="bbBig"></div><div class="sub" id="bbSub"></div></div>
+    </div>
+  </section>
+
+  <section id="stats">
+    <p class="eyebrow">04 &middot; Eve's fingerprint</p>
+    <h2>Why intercepting costs Eve 25%</h2>
+    <p>For every sifted bit, Eve guesses the wrong basis half the time. When she does, she sends Bob a photon in the wrong basis, and Bob's result is a coin flip, wrong half the time. So <code>½ × ½ = ¼</code> of the sifted bits become errors. Small runs are noisy, so run thousands of photons to see the numbers settle.</p>
+    <div class="panel">
+      <h3>Try it: large-scale runs</h3>
+      <p class="subhead" style="margin-bottom:16px;">Simulates 5,000 photons each way and compares the error rates.</p>
+      <div class="sim-controls"><button class="btn primary" id="runStats">Run 5,000 photons each way</button></div>
+      <div class="scale" id="statRows"></div>
+    </div>
+  </section>
+
+  <section id="reality">
+    <p class="eyebrow">05 &middot; Reality check</p>
+    <h2>Where QKD works, and where it doesn't</h2>
+    <p class="subhead">Click a term for the practical limits.</p>
+    <div class="term-grid" id="realGrid"></div>
+    <div class="callout">
+      <b>The bigger picture:</b> because of these limits, the U.S. NSA does not recommend QKD for protecting national security systems and instead points to post-quantum cryptography. QKD remains an active research area and is deployed in some specialized networks. Page 09 covers the post-quantum approach.
+    </div>
+  </section>
+
+</main>
+
+<div class="slides-cta">
+  <a href="quantum-07-slides.html"><span class="ico" aria-hidden="true"></span><span class="txt"><span class="dir">SUMMARY SLIDES</span><span class="ttl">View the Quantum 07 slide deck: Quantum Key Distribution (BB84)</span></span></a>
+</div>
+
+<div class="series-nav">
+  <a href="quantum-06-deutsch-jozsa.html"><span class="dir">PREVIOUS</span><span class="ttl">06 &middot; Deutsch-Jozsa algorithm</span></a>
+  <a class="next" href="quantum-08-shors-algorithm.html"><span class="dir">NEXT</span><span class="ttl">08 &middot; Shor's algorithm</span></a>
+</div>
+
+<footer>
+  Sinclair College - Dr. Mike Libassi &middot; interactive demo &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">Quantum 07 &middot; BB84 QKD</span>
+</footer>
+
+<script>
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fmt(x, d=3){ let s = x.toFixed(d); if(s.indexOf('.')>=0) s = s.replace(/0+$/,'').replace(/\.$/,''); if(s==='-0') s='0'; return s.replace('-','−'); }
+function sleep(ms){ return new Promise(res=>setTimeout(res, reduceMotion ? 0 : ms)); }
+function $(id){ return document.getElementById(id); }
+function addLine(box, text, cls=''){
+  const line = document.createElement('div');
+  line.className = 'step-line' + (cls ? ' '+cls : '');
+  line.innerHTML = text;
+  box.appendChild(line);
+  return line;
+}
+
+// ---------- glossary popovers ----------
+document.querySelectorAll('.gterm').forEach(g=>{
+  g.setAttribute('tabindex','0');
+  const toggle = ()=>{
+    const pop = document.getElementById('gpop-'+g.dataset.g);
+    if(!pop) return;
+    const isShown = pop.classList.contains('show');
+    document.querySelectorAll('.gpop').forEach(p=>p.classList.remove('show'));
+    if(!isShown){ pop.classList.add('show'); }
+  };
+  g.addEventListener('click', toggle);
+  g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+});
+
+// ---------- term grid ----------
+function buildTermGrid(gridId, items, prefix){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  items.forEach((t,idx)=>{
+    const card = document.createElement('div');
+    card.className='term-card';
+    card.setAttribute('tabindex','0');
+    card.innerHTML = `<div class="term-sym">${t.sym}</div><div class="term-name">${t.name}</div>`;
+    const open = ()=>{
+      let def = document.getElementById(prefix+'-def-'+idx);
+      if(def){ def.remove(); card.classList.remove('open'); return; }
+      grid.querySelectorAll('.term-def').forEach(d=>d.remove());
+      grid.querySelectorAll('.term-card').forEach(c=>c.classList.remove('open'));
+      def = document.createElement('div');
+      def.className='term-def show';
+      def.id=prefix+'-def-'+idx;
+      def.innerHTML = t.def;
+      card.classList.add('open');
+      card.after(def);
+    };
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+    grid.appendChild(card);
+  });
+}
+
+
+const PH = {'+':['→','↑'], '×':['↗','↖']};
+const KET = {'+':['|0⟩','|1⟩'], '×':['|+⟩','|−⟩']};
+const rb = ()=>Math.random()<0.5?0:1;
+const rbasis = ()=>Math.random()<0.5?'+':'×';
+
+buildTermGrid('encGrid', [
+  {sym:'→ = 0', name:'+ basis · |0⟩', def:'Horizontal polarization encodes 0 in the rectilinear (+) basis. Measured in + it reads 0 every time; measured in × it reads randomly.'},
+  {sym:'↑ = 1', name:'+ basis · |1⟩', def:'Vertical polarization encodes 1 in the + basis.'},
+  {sym:'↗ = 0', name:'× basis · |+⟩', def:'45° polarization encodes 0 in the diagonal (×) basis. Measured in × it reads 0 every time; measured in + it reads randomly.'},
+  {sym:'↖ = 1', name:'× basis · |−⟩', def:'135° polarization encodes 1 in the × basis.'},
+], 'enc');
+buildTermGrid('realGrid', [
+  {sym:'distance', name:'photon loss', def:'Photons get absorbed in fiber. Practical point-to-point QKD links reach roughly a hundred to a few hundred kilometers. Quantum states can\'t be amplified like normal signals, because amplifying means copying.'},
+  {sym:'trusted nodes', name:'relays', def:'Long networks chain links together through relay stations that decrypt and re-encrypt the key. Each relay must be trusted, which reintroduces a classic weak point.'},
+  {sym:'auth', name:'classical channel', def:'The public discussion must be authenticated, or an attacker can impersonate Bob. That authentication itself relies on conventional cryptography or pre-shared keys.'},
+  {sym:'hardware', name:'side channels', def:'The physics is secure, but real devices aren\'t perfect. Researchers have attacked QKD systems by blinding detectors or exploiting multi-photon pulses.'},
+], 'real');
+
+// hero
+(function(){
+  const el = $('heroPhotons'), spans = [];
+  for(let i=0;i<10;i++){ const s=document.createElement('span'); const b=rbasis(); s.textContent = PH[b][rb()]; el.appendChild(s); spans.push(s); }
+  if(reduceMotion) return;
+  let i=0;
+  setInterval(()=>{ spans.forEach(s=>s.classList.remove('hit')); const b=rbasis(); spans[i].textContent = PH[b][rb()]; spans[i].classList.add('hit'); i=(i+1)%spans.length; }, 700);
+})();
+
+// core photon model
+function sendPhoton(eve){
+  const aBit = rb(), aBasis = rbasis();
+  let photonBasis = aBasis, photonBit = aBit, eBasis = null, eBit = null;
+  if(eve){
+    eBasis = rbasis();
+    eBit = (eBasis===photonBasis) ? photonBit : rb();
+    photonBasis = eBasis; photonBit = eBit;
+  }
+  const bBasis = rbasis();
+  const bBit = (bBasis===photonBasis) ? photonBit : rb();
+  return {aBit, aBasis, eBasis, eBit, bBasis, bBit};
+}
+
+const tbl = $('tbl');
+let rows = [];
+function header(eve){
+  return `<tr><th>#</th><th>Alice bit</th><th>Alice basis</th><th>photon</th>${eve?'<th>Eve basis</th><th>Eve resends</th>':''}<th>Bob basis</th><th>Bob reads</th><th>bases match?</th></tr>`;
+}
+function rowHTML(r, i, eve){
+  return `<tr id="r${i}"><td>${i+1}</td><td>${r.aBit}</td><td>${r.aBasis}</td><td>${PH[r.aBasis][r.aBit]}</td>` +
+    (eve ? `<td class="eve">${r.eBasis}</td><td class="eve">${PH[r.eBasis][r.eBit]}</td>` : '') +
+    `<td>${r.bBasis}</td><td>${r.bBit}</td><td id="m${i}"></td></tr>`;
+}
+$('resetBB').addEventListener('click', ()=>{
+  $('tblWrap').style.display = 'none'; $('bbLog').innerHTML=''; $('bbBanner').className='factor-banner';
+  $('runBB').disabled = false; $('resetBB').disabled = true; $('eveOn').disabled = false; $('nPh').disabled = false;
+});
+$('runBB').addEventListener('click', async ()=>{
+  const eve = $('eveOn').checked, N = +$('nPh').value, log = $('bbLog');
+  $('runBB').disabled = true; $('resetBB').disabled = true; $('eveOn').disabled = true; $('nPh').disabled = true;
+  log.innerHTML = ''; $('bbBanner').className = 'factor-banner';
+  rows = []; tbl.innerHTML = header(eve); $('tblWrap').style.display = 'block';
+  addLine(log, `<b>Step 1–2:</b> Alice sends ${N} photons; Bob measures each in a random basis.${eve ? ' Eve is intercepting every one.' : ''}`);
+  for(let i=0;i<N;i++){
+    const r = sendPhoton(eve); rows.push(r);
+    tbl.insertAdjacentHTML('beforeend', rowHTML(r, i, eve));
+    await sleep(60);
+  }
+  await sleep(300);
+  // sift
+  const kept = [];
+  rows.forEach((r,i)=>{
+    const match = r.aBasis===r.bBasis;
+    $('m'+i).textContent = match ? 'yes · keep' : 'no · discard';
+    $('r'+i).className = match ? 'keep' : 'drop';
+    if(match) kept.push(i);
+  });
+  addLine(log, `<b>Step 3 · Sift:</b> they compare bases publicly. ${kept.length} of ${N} positions matched and are kept.`);
+  await sleep(500);
+  // sample check: half of kept
+  const shuffled = kept.slice().sort(()=>Math.random()-0.5);
+  const sample = shuffled.slice(0, Math.max(1, Math.floor(kept.length/2)));
+  const keyIdx = kept.filter(i=>!sample.includes(i));
+  let errs = 0;
+  sample.forEach(i=>{
+    const r = rows[i]; $('r'+i).className = 'sample';
+    if(r.aBit !== r.bBit){ errs++; $('r'+i).children[eve?7:5].className = 'err'; }
+  });
+  const qber = sample.length ? errs/sample.length : 0;
+  addLine(log, `<b>Step 4 · Check:</b> they reveal ${sample.length} of the kept bits (amber rows). ${errs} disagree → error rate ${(qber*100).toFixed(0)}%.`, errs ? 'bad' : 'ok');
+  await sleep(400);
+  const aKey = keyIdx.map(i=>rows[i].aBit).join(''), bKey = keyIdx.map(i=>rows[i].bBit).join('');
+  const banner = $('bbBanner');
+  if(qber > 0.11){
+    banner.className = 'factor-banner show fail';
+    $('bbBig').textContent = 'Eavesdropper detected · key discarded';
+    $('bbSub').textContent = `Error rate ${(qber*100).toFixed(0)}% is above the ~11% threshold. Alice and Bob throw this key away and try again on another channel.`;
+  } else {
+    banner.className = 'factor-banner show ok';
+    $('bbBig').textContent = `Shared key: ${aKey || '(too few bits; send more photons)'}`;
+    $('bbSub').textContent = (aKey===bKey)
+      ? `No errors in the check sample. The ${keyIdx.length} unrevealed bits become the key, and Alice's and Bob's copies are identical.`
+      : `The sample passed, but Eve got lucky: the unrevealed bits still differ (Bob has ${bKey}). Bigger samples catch her; real systems check hundreds of bits.`;
+  }
+  $('resetBB').disabled = false;
+});
+
+// statistics
+$('runStats').addEventListener('click', ()=>{
+  const res = [false, true].map(eve=>{
+    let sifted=0, errs=0;
+    for(let i=0;i<5000;i++){ const r = sendPhoton(eve); if(r.aBasis===r.bBasis){ sifted++; if(r.aBit!==r.bBit) errs++; } }
+    return {eve, sifted, errs, q: errs/sifted};
+  });
+  $('statRows').innerHTML = res.map(r=>`
+    <div class="scale-row">
+      <div class="scale-label"><span>${r.eve ? 'Eve intercepting' : 'No eavesdropper'} · ${r.sifted.toLocaleString()} sifted bits</span><span class="${r.q>0.11?'nofit':'fits'}">${(r.q*100).toFixed(1)}% errors</span></div>
+      <div class="scale-bar-bg"><div class="scale-bar ${r.q>0.11?'over':''}" style="width:${Math.max(r.q/0.3*100,1)}%"></div></div>
+    </div>`).join('') +
+    `<p class="hero-note" style="margin-top:0;">Bar scale runs to 30%. The ~11% abort threshold sits well between the two results.</p>`;
+});
+
+</script>
+
+</body>
+</html>
