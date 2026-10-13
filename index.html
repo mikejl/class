@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Materials</title>
+    <title>Dr. Mike's Course Material</title>
 
     <style>
         :root {
@@ -20,6 +20,8 @@
             --util-soft: #fdf3e7;
             --pres: #7c3aed;
             --pres-soft: #f3edff;
+            --quantum: #be185d;
+            --quantum-soft: #fdf2f8;
         }
 
         * { box-sizing: border-box; }
@@ -137,6 +139,15 @@
 
         #presentations .title { color: var(--pres); }
 
+        #quantum .count {
+            background: var(--quantum-soft);
+            color: var(--quantum);
+        }
+
+        #quantum .page a { border-left-color: var(--quantum); }
+
+        #quantum .title { color: var(--quantum); }
+
         .filename {
             display: block;
             color: var(--muted);
@@ -158,8 +169,8 @@
 <body>
 
 <header>
-    <h1>Course Materials</h1>
-    <p>Course Labs and Demos created with Claude(AI) ... my AI Slop Page</p>
+    <h1>Dr. Mike's Course Material</h1>
+    <p>Course Labs and Demos created with Claude(AI)</p>
 </header>
 
 <section id="demos">
@@ -204,6 +215,13 @@
     <h2>Utilities <span class="count">1</span></h2>
     <ul class="page-list">
         <li class="page"><a href="https://mikejl.github.io/class/netlab-diagnostics.html"><span class="title">Netlab Reachability Console</span><span class="filename">netlab-diagnostics.html</span></a></li>
+    </ul>
+</section>
+
+<section id="quantum">
+    <h2>Quantum Course <span class="count">1</span></h2>
+    <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/quantum/quantum-index.html"><span class="title">Quantum Computing for Cybersecurity &mdash; Series Index</span><span class="filename">quantum/quantum-index.html</span></a></li>
     </ul>
 </section>
 
