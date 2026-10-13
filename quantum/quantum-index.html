@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Computing for Cybersecurity — Series Index</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  main.wide{max-width:1140px;}
+  .hero .lede{max-width:70ch;}
+  .index-layout{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:34px; align-items:start; margin-top:30px;}
+  .topic-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  a.topic{display:flex; flex-direction:column; gap:4px; text-decoration:none; padding:16px 16px 18px;
+    border:1px solid var(--border); border-top-width:3px; border-radius:10px; background:var(--panel); min-height:150px;}
+  a.topic:hover{background:var(--panel-alt); border-color:var(--cyan-dim);}
+  a.topic:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  a.topic .num{font-size:22px; font-weight:750; line-height:1.1;}
+  a.topic .t{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15.5px; font-weight:650; color:var(--text-bright);}
+  a.topic .d{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; color:var(--text); line-height:1.45;}
+  a.topic.s1{border-top-color:var(--cyan);} a.topic.s1 .num{color:var(--cyan);}
+  a.topic.s2{border-top-color:var(--amber);} a.topic.s2 .num{color:var(--amber);}
+  a.topic.s3{border-top-color:var(--red);} a.topic.s3 .num{color:var(--red);}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:16px; font-size:12.5px; color:var(--text-dim);}
+  .legend span{display:flex; align-items:center; gap:7px;}
+  .legend i{display:inline-block; width:14px; height:3px; border-radius:2px;}
+  figure.fridge{margin:0; padding:18px 14px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; position:sticky; top:64px;}
+  figure.fridge svg{width:100%; height:auto; display:block;}
+  figure.fridge figcaption{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; line-height:1.5; color:var(--text-dim); padding:10px 6px 2px; border-top:1px solid var(--border); margin-top:8px;}
+  figure.fridge figcaption b{color:var(--text-bright);}
+  .qbit{animation:qpulse 2.6s ease-in-out infinite;}
+  @keyframes qpulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  @media (prefers-reduced-motion: reduce){ .qbit{animation:none;} }
+  @media (max-width:900px){
+    .index-layout{grid-template-columns:1fr;}
+    figure.fridge{position:static; max-width:420px; margin:0 auto;}
+  }
+  @media (max-width:640px){ .topic-grid{grid-template-columns:1fr;} a.topic{min-height:0;} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>QUANTUM SERIES</b> :: index</div>
+  <nav>
+    <a href="#topics">Topics</a>
+    <a href="quantum-01-bits-qubits.html">Start with 01</a>
+  </nav>
+</div>
+
+<main class="wide">
+  <section class="hero" id="topics" style="border-bottom:none;">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>Quantum computing, from one qubit to breaking RSA</h1>
+    <p class="lede">Nine interactive pages that build on each other. Start with what a qubit is, work up through gates and entanglement, and finish with the quantum algorithms that matter most to cybersecurity, along with the cryptography designed to survive them.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+
+    <div class="index-layout">
+      <div>
+        <div class="topic-grid">
+        <a class="topic s1" href="quantum-01-bits-qubits.html">
+          <span class="num mono">01</span>
+          <span class="t">Bits vs. qubits</span>
+          <span class="d">Ket notation, measurement, and why 2ⁿ amplitudes overwhelm classical simulation.</span>
+        </a>
+        <a class="topic s1" href="quantum-02-superposition.html">
+          <span class="num mono">02</span>
+          <span class="t">Superposition</span>
+          <span class="d">Amplitudes, collapse, and the interference that powers quantum algorithms.</span>
+        </a>
+        <a class="topic s1" href="quantum-03-bloch-sphere.html">
+          <span class="num mono">03</span>
+          <span class="t">Bloch sphere</span>
+          <span class="d">Picture any single-qubit state, phase included, as a point on a sphere.</span>
+        </a>
+        <a class="topic s2" href="quantum-04-quantum-gates.html">
+          <span class="num mono">04</span>
+          <span class="t">Quantum gates</span>
+          <span class="d">Pauli-X, Y, Z, S, T, Hadamard, and CNOT as matrices and rotations.</span>
+        </a>
+        <a class="topic s2" href="quantum-05-bell-states.html">
+          <span class="num mono">05</span>
+          <span class="t">Bell states</span>
+          <span class="d">Build entanglement with H + CNOT and watch correlated measurements.</span>
+        </a>
+        <a class="topic s2" href="quantum-06-deutsch-jozsa.html">
+          <span class="num mono">06</span>
+          <span class="t">Deutsch-Jozsa</span>
+          <span class="d">One quantum query versus many classical ones.</span>
+        </a>
+        <a class="topic s3" href="quantum-07-qkd-bb84.html">
+          <span class="num mono">07</span>
+          <span class="t">QKD &amp; BB84</span>
+          <span class="d">Send a key on photons and catch an eavesdropper by her errors.</span>
+        </a>
+        <a class="topic s3" href="quantum-08-shors-algorithm.html">
+          <span class="num mono">08</span>
+          <span class="t">Shor's algorithm</span>
+          <span class="d">Find a hidden period and RSA's secret primes fall out.</span>
+        </a>
+        <a class="topic s3" href="quantum-09-post-quantum-crypto.html">
+          <span class="num mono">09</span>
+          <span class="t">Post-quantum crypto</span>
+          <span class="d">ML-KEM, ML-DSA, Grover's effect on AES, and planning the migration.</span>
+        </a>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--cyan)"></i>Foundations &middot; 01–03</span>
+          <span><i style="background:var(--amber)"></i>Building blocks &middot; 04–06</span>
+          <span><i style="background:var(--red)"></i>Security &middot; 07–09</span>
+        </div>
+      </div>
+      <figure class="fridge">
+<svg viewBox="0 40 420 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="figTitle figDesc">
+<title id="figTitle">Dilution refrigerator for superconducting qubits</title>
+<desc id="figDesc">Illustration of a gold-plated dilution refrigerator: five stacked cooling plates from 300 kelvin at the top to 10 millikelvin at the bottom, linked by support rods and coaxial control cables, with the qubit chip mounted at the base.</desc>
+<defs>
+  <linearGradient id="gold" x1="0" x2="1"><stop offset="0" stop-color="#8a5a12"/><stop offset=".35" stop-color="#e7c46a"/><stop offset=".55" stop-color="#f6e2a4"/><stop offset=".8" stop-color="#c9952f"/><stop offset="1" stop-color="#7a4d0c"/></linearGradient>
+  <linearGradient id="goldTop" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f8e6ad"/><stop offset="1" stop-color="#d8aa48"/></linearGradient>
+  <linearGradient id="rod" x1="0" x2="1"><stop offset="0" stop-color="#9aa6b2"/><stop offset=".5" stop-color="#eef2f6"/><stop offset="1" stop-color="#8794a1"/></linearGradient>
+  <linearGradient id="can" x1="0" x2="1"><stop offset="0" stop-color="#7a4d0c"/><stop offset=".5" stop-color="#e2b65a"/><stop offset="1" stop-color="#7a4d0c"/></linearGradient>
+  <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#5cb8cf" stop-opacity=".55"/><stop offset="1" stop-color="#5cb8cf" stop-opacity="0"/></radialGradient>
+</defs>
+<path d="M100.5 78 L112.5 165" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M161.8 78 L166.3 165" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M238.2 78 L233.7 165" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M299.4 78 L287.5 165" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M112.5 173 L124.4 255" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M166.3 173 L170.9 255" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M233.7 173 L229.1 255" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M287.5 173 L275.6 255" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M124.4 263 L136.4 338" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M170.9 263 L175.5 338" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M229.1 263 L224.5 338" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M275.6 263 L263.6 338" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M136.4 346 L148.3 414" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M175.5 346 L180.1 414" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M224.5 346 L219.9 414" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M263.6 346 L251.7 414" stroke="url(#rod)" stroke-width="4" fill="none" opacity=".9"/>
+<path d="M87.9 80 C81.3 102.5 115.0 132.5 108.4 165 C119.1 195.0 112.9 225.0 123.6 255 C117.3 281.5 145.0 311.5 138.7 338 C130.8 361.0 154.9 391.0 147.0 414 L147.0 434" stroke="#b87333" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M103.8 80 C90.2 102.5 140.0 132.5 126.4 165 C115.8 195.0 145.8 225.0 135.2 255 C128.8 281.5 150.1 311.5 143.7 338 C153.1 361.0 148.5 391.0 157.8 414 L157.8 434" stroke="#c7834a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M114.7 80 C107.9 102.5 137.8 132.5 130.9 165 C122.0 195.0 151.2 225.0 142.3 255 C131.7 281.5 161.8 311.5 151.3 338 C162.7 361.0 149.6 391.0 161.1 414 L161.1 434" stroke="#a8560a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M137.3 80 C146.2 102.5 141.2 132.5 150.1 165 C138.5 195.0 166.7 225.0 155.1 255 C165.3 281.5 151.7 311.5 161.9 338 C170.2 361.0 165.4 391.0 173.7 414 L173.7 434" stroke="#cfd6dd" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M144.1 80 C151.3 102.5 147.8 132.5 155.1 165 C141.4 195.0 175.4 225.0 161.7 255 C170.4 281.5 155.7 311.5 164.4 338 C175.1 361.0 162.0 391.0 172.6 414 L172.6 434" stroke="#b87333" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M158.2 80 C168.0 102.5 153.8 132.5 163.6 165 C151.8 195.0 184.5 225.0 172.7 255 C181.0 281.5 166.1 311.5 174.4 338 C180.6 361.0 173.3 391.0 179.5 414 L179.5 434" stroke="#d9a066" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M176.3 80 C182.7 102.5 175.6 132.5 182.1 165 C170.2 195.0 197.8 225.0 185.9 255 C192.6 281.5 178.9 311.5 185.5 338 C198.6 361.0 175.4 391.0 188.5 414 L188.5 434" stroke="#b87333" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M197.0 80 C210.9 102.5 182.0 132.5 195.9 165 C209.5 195.0 185.8 225.0 199.4 255 C192.2 281.5 202.7 311.5 195.5 338 C185.6 361.0 209.8 391.0 199.9 414 L199.9 434" stroke="#c7834a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M203.5 80 C194.2 102.5 210.4 132.5 201.0 165 C214.7 195.0 187.7 225.0 201.4 255 C191.7 281.5 213.2 311.5 203.6 338 C212.7 361.0 195.4 391.0 204.6 414 L204.6 434" stroke="#a8560a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M217.2 80 C209.7 102.5 222.3 132.5 214.7 165 C222.0 195.0 208.4 225.0 215.7 255 C208.9 281.5 215.5 311.5 208.7 338 C195.1 361.0 222.2 391.0 208.6 414 L208.6 434" stroke="#cfd6dd" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M231.0 80 C238.2 102.5 220.3 132.5 227.5 165 C238.3 195.0 208.4 225.0 219.2 255 C206.4 281.5 230.4 311.5 217.6 338 C227.5 361.0 208.6 391.0 218.4 414 L218.4 434" stroke="#b87333" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M246.4 80 C258.3 102.5 221.6 132.5 233.5 165 C223.4 195.0 241.7 225.0 231.5 255 C238.7 281.5 217.2 311.5 224.3 338 C212.3 361.0 234.1 391.0 222.0 414 L222.0 434" stroke="#d9a066" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M271.7 80 C281.9 102.5 249.6 132.5 259.7 165 C271.9 195.0 240.2 225.0 252.3 255 C263.4 281.5 230.5 311.5 241.6 338 C229.1 361.0 246.9 391.0 234.5 414 L234.5 434" stroke="#b87333" stroke-width="2" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M283.5 80 C292.4 102.5 255.1 132.5 264.0 165 C251.7 195.0 265.7 225.0 253.4 255 C241.8 281.5 259.4 311.5 247.9 338 C260.4 361.0 230.3 391.0 242.8 414 L242.8 434" stroke="#c7834a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M301.2 80 C307.8 102.5 277.1 132.5 283.8 165 C291.4 195.0 258.5 225.0 266.0 255 C256.2 281.5 265.8 311.5 255.9 338 C243.2 361.0 261.3 391.0 248.6 414 L248.6 434" stroke="#a8560a" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".95"/>
+<path d="M314.9 80 C305.1 102.5 303.1 132.5 293.3 165 C300.0 195.0 269.3 225.0 276.0 255 C285.7 281.5 260.1 311.5 269.8 338 C258.0 361.0 267.5 391.0 255.7 414 L255.7 434" stroke="#cfd6dd" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".95"/>
+<rect x="50" y="70" width="300" height="10" fill="url(#gold)"/>
+<ellipse cx="200" cy="80" rx="150" ry="21.0" fill="url(#gold)"/>
+<ellipse cx="200" cy="70" rx="150" ry="21.0" fill="url(#goldTop)" stroke="#a87a26" stroke-width=".8"/>
+<circle cx="101.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="134.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="167.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="200.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="233.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="266.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="299.0" cy="69.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<line x1="352" y1="75" x2="366" y2="75" stroke="#6b7684" stroke-width="1"/>
+<text x="370" y="79" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">300 K</text>
+<text x="370" y="93" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">top plate</text>
+<rect x="68" y="165" width="264" height="10" fill="url(#gold)"/>
+<ellipse cx="200" cy="175" rx="132" ry="18.5" fill="url(#gold)"/>
+<ellipse cx="200" cy="165" rx="132" ry="18.5" fill="url(#goldTop)" stroke="#a87a26" stroke-width=".8"/>
+<circle cx="112.9" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="141.9" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="171.0" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="200.0" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="229.0" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="258.1" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="287.1" cy="164.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<line x1="334" y1="170" x2="348" y2="170" stroke="#6b7684" stroke-width="1"/>
+<text x="352" y="174" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">4 K</text>
+<rect x="86" y="255" width="228" height="10" fill="url(#gold)"/>
+<ellipse cx="200" cy="265" rx="114" ry="16.0" fill="url(#gold)"/>
+<ellipse cx="200" cy="255" rx="114" ry="16.0" fill="url(#goldTop)" stroke="#a87a26" stroke-width=".8"/>
+<circle cx="124.8" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="149.8" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="174.9" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="200.0" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="225.1" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="250.2" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="275.2" cy="254.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<line x1="316" y1="260" x2="330" y2="260" stroke="#6b7684" stroke-width="1"/>
+<text x="334" y="264" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">800 mK</text>
+<text x="334" y="278" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">still</text>
+<rect x="104" y="338" width="192" height="10" fill="url(#gold)"/>
+<ellipse cx="200" cy="348" rx="96" ry="13.4" fill="url(#gold)"/>
+<ellipse cx="200" cy="338" rx="96" ry="13.4" fill="url(#goldTop)" stroke="#a87a26" stroke-width=".8"/>
+<circle cx="136.6" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="157.8" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="178.9" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="200.0" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="221.1" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="242.2" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="263.4" cy="337.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<line x1="298" y1="343" x2="312" y2="343" stroke="#6b7684" stroke-width="1"/>
+<text x="316" y="347" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">100 mK</text>
+<text x="316" y="361" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">cold plate</text>
+<rect x="122" y="414" width="156" height="10" fill="url(#gold)"/>
+<ellipse cx="200" cy="424" rx="78" ry="10.9" fill="url(#gold)"/>
+<ellipse cx="200" cy="414" rx="78" ry="10.9" fill="url(#goldTop)" stroke="#a87a26" stroke-width=".8"/>
+<circle cx="148.5" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="165.7" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="182.8" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="200.0" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="217.2" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="234.3" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<circle cx="251.5" cy="413.0" r="2.2" fill="#8a5a12" opacity=".7"/>
+<line x1="280" y1="419" x2="294" y2="419" stroke="#6b7684" stroke-width="1"/>
+<text x="298" y="423" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">10 mK</text>
+<text x="298" y="437" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">mixing chamber</text>
+<rect x="154" y="430" width="92" height="96" rx="6" fill="url(#can)" stroke="#7a4d0c" stroke-width="1"/>
+<ellipse cx="200" cy="526" rx="46" ry="7" fill="#9c6a1c"/>
+<circle cx="200" cy="478" r="44" fill="url(#glow)" class="qglow"/>
+<rect x="174" y="452" width="52" height="52" rx="3" fill="#0f1720" stroke="#e7c46a" stroke-width="1.5"/>
+<circle cx="184" cy="462" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:0.00s"/>
+<line x1="187.6" y1="462" x2="196.4" y2="462" stroke="#0f7490" stroke-width="1"/>
+<line x1="184" y1="465.6" x2="184" y2="474.4" stroke="#0f7490" stroke-width="1"/>
+<circle cx="200" cy="462" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:0.22s"/>
+<line x1="203.6" y1="462" x2="212.4" y2="462" stroke="#0f7490" stroke-width="1"/>
+<line x1="200" y1="465.6" x2="200" y2="474.4" stroke="#0f7490" stroke-width="1"/>
+<circle cx="216" cy="462" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:0.44s"/>
+<line x1="216" y1="465.6" x2="216" y2="474.4" stroke="#0f7490" stroke-width="1"/>
+<circle cx="184" cy="478" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:0.66s"/>
+<line x1="187.6" y1="478" x2="196.4" y2="478" stroke="#0f7490" stroke-width="1"/>
+<line x1="184" y1="481.6" x2="184" y2="490.4" stroke="#0f7490" stroke-width="1"/>
+<circle cx="200" cy="478" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:0.88s"/>
+<line x1="203.6" y1="478" x2="212.4" y2="478" stroke="#0f7490" stroke-width="1"/>
+<line x1="200" y1="481.6" x2="200" y2="490.4" stroke="#0f7490" stroke-width="1"/>
+<circle cx="216" cy="478" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:1.10s"/>
+<line x1="216" y1="481.6" x2="216" y2="490.4" stroke="#0f7490" stroke-width="1"/>
+<circle cx="184" cy="494" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:1.32s"/>
+<line x1="187.6" y1="494" x2="196.4" y2="494" stroke="#0f7490" stroke-width="1"/>
+<circle cx="200" cy="494" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:1.54s"/>
+<line x1="203.6" y1="494" x2="212.4" y2="494" stroke="#0f7490" stroke-width="1"/>
+<circle cx="216" cy="494" r="3.6" fill="#5cb8cf" class="qbit" style="animation-delay:1.76s"/>
+<line x1="247" y1="478" x2="262" y2="478" stroke="#6b7684" stroke-width="1"/>
+<text x="266" y="476" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">qubit chip</text>
+<text x="266" y="490" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">colder than deep space</text>
+</svg>
+        <figcaption><b>Where qubits live.</b> Superconducting qubits sit at the bottom of a dilution refrigerator, chilled in stages to about 10 millikelvin, a hundredth of a degree above absolute zero. The cables carry microwave pulses that act as the quantum gates.</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer style="max-width:1140px;">
+  Sinclair College - Dr. Mike Libassi &middot; interactive demos &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">Quantum series</span>
+</footer>
+
+</body>
+</html>
