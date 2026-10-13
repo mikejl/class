@@ -18,6 +18,8 @@
             --lab-soft: #e6f6f4;
             --util: #b45309;
             --util-soft: #fdf3e7;
+            --pres: #7c3aed;
+            --pres-soft: #f3edff;
         }
 
         * { box-sizing: border-box; }
@@ -126,6 +128,15 @@
 
         #utilities .title { color: var(--util); }
 
+        #presentations .count {
+            background: var(--pres-soft);
+            color: var(--pres);
+        }
+
+        #presentations .page a { border-left-color: var(--pres); }
+
+        #presentations .title { color: var(--pres); }
+
         .filename {
             display: block;
             color: var(--muted);
@@ -179,6 +190,13 @@
         <li class="page"><a href="https://mikejl.github.io/class/iot-security-lab.html"><span class="title">IoT Security Lab</span><span class="filename">iot-security-lab.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/CIT2640_Module1_Lab_SocialEngineeringAttack.html"><span class="title">Social Engineering Attack Lab</span><span class="filename">CIT2640_Module1_Lab_SocialEngineeringAttack.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/tcp_wrappers_lab.html"><span class="title">TCP Wrappers Lab</span><span class="filename">tcp_wrappers_lab.html</span></a></li>
+    </ul>
+</section>
+
+<section id="presentations">
+    <h2>Presentations <span class="count">1</span></h2>
+    <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/CIT-1107-Intro-IoT.html"><span class="title">CIT-1107: Introduction to the Internet of Things</span><span class="filename">CIT-1107-Intro-IoT.html</span></a></li>
     </ul>
 </section>
 
