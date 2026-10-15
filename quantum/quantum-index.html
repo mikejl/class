@@ -263,6 +263,18 @@
   .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
   .series-nav a.next{text-align:right;}
 
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     .pbar, .scale-bar{transition:none;}
@@ -289,6 +301,11 @@
   figure.fridge svg{width:100%; height:auto; display:block;}
   figure.fridge figcaption{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; line-height:1.5; color:var(--text-dim); padding:10px 6px 2px; border-top:1px solid var(--border); margin-top:8px;}
   figure.fridge figcaption b{color:var(--text-bright);}
+  .res-head{font-size:12.5px; color:var(--text-dim); letter-spacing:.04em; margin:30px 0 10px;}
+  .res-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+  a.topic.res{border-top-color:var(--text-dim); min-height:0;}
+  a.topic.res .num{color:var(--text-dim); font-size:15px; letter-spacing:.05em;}
+  @media (max-width:640px){ .res-grid{grid-template-columns:1fr;} }
   .qbit{animation:qpulse 2.6s ease-in-out infinite;}
   @keyframes qpulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
   @media (prefers-reduced-motion: reduce){ .qbit{animation:none;} }
@@ -305,6 +322,8 @@
   <div class="brand">&gt; <b>QUANTUM SERIES</b> :: index</div>
   <nav>
     <a href="#topics">Topics</a>
+    <a href="quantum-reference.html">Reference</a>
+    <a href="quantum-further-learning.html">Further learning</a>
     <a href="quantum-01-bits-qubits.html">Start with 01</a>
   </nav>
 </div>
@@ -369,6 +388,19 @@
           <span><i style="background:var(--cyan)"></i>Foundations &middot; 01–03</span>
           <span><i style="background:var(--amber)"></i>Building blocks &middot; 04–06</span>
           <span><i style="background:var(--red)"></i>Security &middot; 07–09</span>
+        </div>
+        <p class="res-head mono">RESOURCES</p>
+        <div class="res-grid">
+          <a class="topic res" href="quantum-reference.html">
+            <span class="num mono">REF</span>
+            <span class="t">Symbols &amp; classical gates</span>
+            <span class="d">Logic gates with live truth tables, the Greek alphabet, and how to read the notation used in every page.</span>
+          </a>
+          <a class="topic res" href="quantum-further-learning.html">
+            <span class="num mono">NEXT</span>
+            <span class="t">Further learning with Qiskit</span>
+            <span class="d">Install Qiskit, run your first real quantum program, and find the best free videos and courses.</span>
+          </a>
         </div>
       </div>
       <figure class="fridge">
