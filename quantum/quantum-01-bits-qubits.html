@@ -303,7 +303,7 @@
     <h1>A qubit is not just a fancier bit</h1>
     <p class="lede">Every computer you've ever used stores information as bits: each one is a 0 or a 1, nothing in between. A quantum computer uses <span class="gterm" data-g="qubit">qubits</span>, which can sit in a weighted blend of 0 and 1 until the moment you look. That one change is why the number of qubits matters so much more than the number of bits.</p>
     <p class="byline">Sinclair College - Dr. Mike Libassi</p>
-    <div class="gpop" id="gpop-qubit"><b>Qubit</b> (quantum bit) — the basic unit of quantum information. Physically it can be an ion, a photon, or a tiny superconducting circuit. Mathematically it's a pair of numbers (amplitudes) that describe how likely it is to read 0 or 1.</div>
+    <div class="gpop" id="gpop-qubit"><b>Qubit</b> (quantum bit) — the basic unit of quantum information. Physically it can be an ion, a photon, or a tiny superconducting circuit. Mathematically it's a pair of complex numbers (amplitudes). Their squared sizes give the odds of reading 0 or 1, and the angle between them, the <b>phase</b>, decides how they interfere.</div>
     <div class="hero-visual">
       <div class="hbox">
         <div class="label">CLASSICAL BIT</div>
@@ -423,7 +423,7 @@
   <section id="scale">
     <p class="eyebrow">04 &middot; Scaling</p>
     <h2>Add one qubit, double the work</h2>
-    <p>Describing <code>n</code> classical bits takes <code>n</code> numbers. Describing <code>n</code> qubits takes <code>2ⁿ</code> amplitudes. To simulate a quantum computer on a normal one, you must store every amplitude, roughly 16 bytes each. That doubling is why classical computers can't keep up past about 50 qubits.</p>
+    <p>Describing <code>n</code> classical bits takes <code>n</code> numbers. Describing <code>n</code> qubits takes <code>2ⁿ</code> amplitudes. To simulate a quantum computer on a normal one, you must store every amplitude, roughly 16 bytes each (two 64-bit floating-point numbers). Every added qubit doubles the memory, so storing every amplitude runs out of room somewhere around 45–50 qubits (2⁵⁰ amplitudes × 16 bytes ≈ 16 PiB). Clever simulators can go further for some circuits, but not for all of them.</p>
 
     <div class="panel">
       <h3>Try it: how many qubits can you simulate?</h3>
@@ -455,7 +455,7 @@
     </div>
 
     <div class="callout">
-      <b>Security connection:</b> breaking RSA-2048 with Shor's algorithm needs a large number of <b>error-corrected</b> qubits. Recent estimates put that around a million noisy physical qubits, far beyond today's machines. The Shor's Algorithm page in this series walks through why.
+      <b>Security connection:</b> breaking RSA-2048 with Shor's algorithm needs a large number of <b>error-corrected</b> qubits. Recent estimates, which depend on assumed hardware error rates and speeds, put that around a million noisy physical qubits, far beyond today's machines. The Shor's Algorithm page in this series walks through why.
     </div>
   </section>
 

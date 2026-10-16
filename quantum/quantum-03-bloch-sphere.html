@@ -493,13 +493,13 @@
       <div class="keybox pub"><div class="label">THE SPHERE SHOWS</div>Any single, isolated qubit state: its odds (latitude) and its phase (longitude).</div>
       <div class="keybox priv"><div class="label">IT DOESN'T SHOW</div>Global phase (it has no physical effect), and anything about entanglement between qubits.</div>
     </div>
-    <p style="margin-top:18px;">Real qubits that are losing their state to noise drift <i>inside</i> the sphere, toward the center. A point at the very center is a completely random qubit. Error correction exists to keep qubits out on the surface.</p>
+    <p style="margin-top:18px;">Real qubits that are losing their state to noise drift <i>inside</i> the sphere, toward the center. These are called <b>mixed states</b>; only pure states sit on the surface. The very center is the maximally mixed state, a completely random qubit. Quantum error correction doesn't push a qubit back to the surface. It spreads one logical qubit across many physical qubits and repeatedly checks for errors without reading the data itself, so the logical information survives even though each physical qubit is noisy.</p>
   </section>
 
   <section id="security">
     <p class="eyebrow">05 &middot; Security connection</p>
     <h2>The two axes BB84 uses</h2>
-    <p>Quantum key distribution encodes bits using two axes of this sphere. The <b>Z axis</b> (|0⟩ and |1⟩ at the poles) is the rectilinear basis. The <b>X axis</b> (|+⟩ and |−⟩ on the equator) is the diagonal basis. The two axes sit at 90° to each other, so a state that is certain along one is a 50/50 coin flip along the other.</p>
+    <p>Quantum key distribution encodes bits using two axes of this sphere. The <b>Z axis</b> (|0⟩ and |1⟩ at the poles) is the rectilinear basis. The <b>X axis</b> (|+⟩ and |−⟩ on the equator) is the diagonal basis. The two axes sit at 90° to each other, so a state that is certain along one is a 50/50 coin flip along the other. Bases related this way are called <b>mutually unbiased</b>. Don't confuse this with orthogonal states such as |0⟩ and |1⟩, which sit 180° apart at opposite ends of one axis.</p>
     <div class="callout">
       <b>Why that matters:</b> an eavesdropper who measures along the wrong axis gets a random answer and knocks the qubit onto the other axis. Page 07 turns that into an intrusion detector.
     </div>

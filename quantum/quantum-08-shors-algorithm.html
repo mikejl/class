@@ -468,14 +468,14 @@
   <section id="qft">
     <p class="eyebrow">03 &middot; Inside the quantum step</p>
     <h2>What the quantum computer actually measures</h2>
-    <p>The simulator above lists the sequence one term at a time, which is the slow classical way. The quantum computer instead puts an input register into superposition over every <code>x</code> at once, computes <code>aˣ mod N</code> into a second register, and then applies the <span class="gterm" data-g="qft">quantum Fourier transform (QFT)</span>. Interference makes the measurement land on a multiple of <code>Q/r</code>, where <code>Q</code> is the size of the input register.</p>
+    <p>The simulator above lists the sequence one term at a time, which is the slow classical way. The quantum computer instead puts an input register into superposition over every <code>x</code> at once, computes <code>aˣ mod N</code> into a second register, and then applies the <span class="gterm" data-g="qft">quantum Fourier transform (QFT)</span>. Interference makes the measurement land on or near a multiple of <code>Q/r</code>, where <code>Q</code> is the size of the input register.</p>
     <div class="gpop" id="gpop-qft"><b>Quantum Fourier transform</b> — the quantum version of the discrete Fourier transform, which picks out repeating frequencies in a signal. Applied to a periodic register, it concentrates the amplitude on outcomes spaced Q/r apart.</div>
     <div class="notation-box">
       <div class="eq-row"><span>1/√Q Σ<sub>x</sub></span><span class="ket">|x⟩</span><span class="ket">|0⟩</span><span class="op">→</span><span>1/√Q Σ<sub>x</sub></span><span class="ket">|x⟩</span><span class="ket">|aˣ mod N⟩</span><span class="op">→ QFT →</span><span>peaks at k = j·Q/r</span></div>
     </div>
     <div class="panel">
       <h3>Try it: see the peaks, then sample one</h3>
-      <p class="subhead" style="margin-bottom:16px;">Uses the <code>a</code> selected above, with a 4-qubit input register (Q = 16). A real attack uses a register around N² in size, but the pattern is the same.</p>
+      <p class="subhead" style="margin-bottom:16px;">Uses the <code>a</code> selected above, with a 4-qubit input register (Q = 16). A real attack uses a register around N² in size. Here r is 2 or 4, which divides 16, so the peaks are exact. That's a lucky special case: usually r doesn't divide Q, the peaks are smeared across neighboring values, and a classical step (continued fractions) recovers r from k/Q.</p>
       <div class="pbars" id="qftBars"></div>
       <div class="sim-controls" style="margin-top:14px; margin-bottom:0;"><button class="btn primary" id="sampleBtn">Measure the input register</button></div>
       <div class="step-log" id="qftLog"></div>
@@ -486,6 +486,7 @@
     <p class="eyebrow">04 &middot; From period to factors</p>
     <h2>Turning r into the actual primes</h2>
     <p>Once the period <code>r</code> is known, ordinary classical math finishes the job. If <code>r</code> is even, compute <code>a<sup>r/2</sup> mod N</code>, then take the <span class="gterm" data-g="gcd">GCD</span> of that value ±1 with <code>N</code>. Those two GCDs are usually the hidden prime factors.</p>
+    <p>Three things can send the algorithm back for another try. First, before any quantum work, check <code>gcd(a, N)</code>: if it is bigger than 1, you have already found a factor. (The menu above only offers values of <code>a</code> that share no factor with 15, so that never happens here.) Second, <code>r</code> can be odd. Third, <code>a<sup>r/2</sup></code> can equal <code>N − 1</code>, which is −1 mod <code>N</code>; then the two GCDs come out as 1 and <code>N</code>, which tells you nothing. Try <code>a = 14</code> to see this: its period is 2, but 14¹ = 14 ≡ −1 (mod 15). At least half of the possible choices of <code>a</code> avoid all three, so a few tries are usually enough.</p>
     <div class="panel">
       <h3>Step-by-step factor extraction</h3>
       <p class="subhead" style="margin-bottom:16px;">This fills in automatically once you've run the period finder in section 02.</p>
@@ -512,7 +513,7 @@
       <div class="stat"><div class="label">2019 ESTIMATE (GIDNEY &amp; EKERÅ)</div><div class="stat-num">~20M qubits</div><p class="hero-note" style="margin:4px 0 0;">noisy physical qubits, about 8 hours</p></div>
       <div class="stat q"><div class="label">2025 ESTIMATE (GIDNEY)</div><div class="stat-num">&lt; 1M qubits</div><p class="hero-note" style="margin:4px 0 0;">noisy physical qubits, under a week</p></div>
     </div>
-    <p style="margin-top:18px;">The estimate dropped about twentyfold in six years through better algorithms and error-correction techniques, not bigger hardware. Today's largest processors have on the order of a thousand physical qubits, and none yet run the error correction Shor's algorithm needs at scale. RSA is still safe for now, but the target keeps getting closer.</p>
+    <p style="margin-top:18px;">The estimate dropped about twentyfold in six years through better algorithms and error-correction techniques, not bigger hardware. Today's largest processors have on the order of a thousand physical qubits, and none yet run the error correction Shor's algorithm needs at scale. These figures are estimates that depend on assumed error rates and speeds, not demonstrations. Shor's algorithm threatens RSA only on a sufficiently large, fault-tolerant quantum computer; today's processors can't break RSA-2048. RSA is still safe for now, but the target keeps getting closer.</p>
   </section>
 
   <section id="defense">
@@ -523,7 +524,7 @@
     <div class="term-grid" id="pqcGrid"></div>
     <p style="margin-top:20px;">In 2024, NIST finalized its first PQC standards, which are expected to gradually replace RSA and elliptic-curve cryptography across the internet. Page 09 goes deeper into how they work and how organizations migrate.</p>
     <div class="callout">
-      <b>A different approach, QKD:</b> instead of a new hard math problem, quantum key distribution protocols like <b>BB84</b> use quantum mechanics itself for security. Measuring a quantum-encoded key reveals any eavesdropper by disturbing the system. Page 07 has the hands-on simulation.
+      <b>A different approach, QKD:</b> instead of a new hard math problem, quantum key distribution protocols like <b>BB84</b> use quantum mechanics itself for security. Measuring a quantum-encoded key disturbs it, so an eavesdropper shows up as extra errors, provided the protocol checks for them and runs over an authenticated channel. Page 07 has the hands-on simulation.
     </div>
   </section>
 
@@ -661,6 +662,7 @@ runBtn.addEventListener('click', async ()=>{
 function logStep(text, hi=false){ addLine(stepLog, text, hi ? 'hi' : ''); }
 async function runFactorStep(a, r){
   stepLog.innerHTML = '';
+  logStep(`Step 0: gcd(${a}, 15) = ${gcd(a, N)}, so a shares no factor with N and the period is needed.`);
   logStep(`Period r = ${r} found for a = ${a}.`); await sleep(300);
   if(r % 2 !== 0){
     logStep(`r is odd, so this choice of a can't be used to extract factors. Try a different a.`, true);

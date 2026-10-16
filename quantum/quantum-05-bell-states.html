@@ -417,7 +417,7 @@
   <section class="hero">
     <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
     <h1>Two qubits, one shared answer</h1>
-    <p class="lede">A Bell state is the simplest example of <span class="gterm" data-g="ent">entanglement</span>. Each qubit on its own gives a random 0 or 1, yet the two results always match. It takes only two gates to build one, and the effect holds no matter how far apart the qubits travel.</p>
+    <p class="lede">A Bell state is the simplest example of <span class="gterm" data-g="ent">entanglement</span>. Each qubit on its own gives a random 0 or 1, yet when both are measured in the same basis the results are perfectly correlated. For |Φ⁺⟩ they always match in both Z and X. It takes only two gates to build one, and the effect holds no matter how far apart the qubits travel. It still can't carry a message: each side alone just sees random bits, and the match only shows up when the two compare notes over an ordinary channel.</p>
     <p class="byline">Sinclair College - Dr. Mike Libassi</p>
     <div class="gpop" id="gpop-ent"><b>Entanglement</b> — a state of two or more qubits that cannot be written as separate states for each qubit. Measuring one tells you about the other, because only the pair has a well-defined state.</div>
     <div class="hero-visual">
@@ -493,7 +493,7 @@
   <section id="security">
     <p class="eyebrow">05 &middot; Security connection</p>
     <h2>Entanglement as a security tool</h2>
-    <p>The <b>E91</b> protocol (Artur Ekert, 1991) distributes Bell pairs to Alice and Bob. When they measure in matching bases, their results agree and become shared key bits. An eavesdropper who intercepts and measures a qubit breaks the entanglement, and the correlations weaken in a way Alice and Bob can test statistically.</p>
+    <p>The <b>E91</b> protocol (Artur Ekert, 1991) distributes Bell pairs to Alice and Bob. When they measure in matching bases, their results agree and become shared key bits. An eavesdropper who intercepts and measures a qubit disturbs the entanglement, and the correlations weaken in a way Alice and Bob can test statistically with a Bell test (CHSH).</p>
     <div class="keychain">
       <div class="keybox pub"><div class="label">BB84 (PAGE 07)</div>Alice sends single prepared qubits to Bob. Security comes from measurement disturbing the state.</div>
       <div class="keybox pub"><div class="label">E91</div>A source sends Bell pairs to both. Security comes from testing that the entanglement is intact.</div>

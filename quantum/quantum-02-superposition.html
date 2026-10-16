@@ -520,7 +520,7 @@
   <section id="security">
     <p class="eyebrow">05 &middot; Security connection</p>
     <h2>A message that changes when someone reads it</h2>
-    <p>Measurement disturbs the state, and the <span class="gterm" data-g="noclone">no-cloning theorem</span> says nobody can copy an unknown quantum state to measure the copy instead. Put those together and you get a channel where an eavesdropper can't look without leaving fingerprints.</p>
+    <p>Measurement disturbs the state, and the <span class="gterm" data-g="noclone">no-cloning theorem</span> says nobody can copy an unknown quantum state to measure the copy instead. Put those together and you get a channel where an eavesdropper can't look without leaving a detectable disturbance, as long as the protocol checks for it and the public discussion between the two parties is authenticated.</p>
     <div class="gpop" id="gpop-noclone"><b>No-cloning theorem</b> — there is no physical process that takes an unknown qubit and produces two identical copies of it. An attacker can't photocopy a quantum message and read the copy at leisure.</div>
     <div class="callout">
       <b>Where this goes:</b> BB84 quantum key distribution (page 07) encodes key bits in randomly chosen Z or X bases. An eavesdropper who guesses the wrong basis collapses the photon and introduces errors the legitimate users can detect.

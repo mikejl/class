@@ -417,7 +417,7 @@
   <section class="hero">
     <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
     <h1>A key exchange that exposes eavesdroppers</h1>
-    <p class="lede">Every classical key exchange can, in principle, be copied silently. BB84 (Bennett and Brassard, 1984) sends key bits on single photons instead. Because measuring a quantum state disturbs it, anyone listening in leaves errors behind, and Alice and Bob can detect them before they ever use the key.</p>
+    <p class="lede">A classical key exchange can be recorded without anyone noticing. Its secrecy rests on math being hard, so a recording can be broken later if the math falls. BB84 (Bennett and Brassard, 1984) sends key bits on single photons instead. Because measuring a quantum state disturbs it, anyone listening in leaves errors behind, and Alice and Bob can detect them before they ever use the key.</p>
     <p class="byline">Sinclair College - Dr. Mike Libassi</p>
     <div class="hero-visual">
       <div style="flex:1;">
@@ -437,14 +437,16 @@
 
   <section id="protocol">
     <p class="eyebrow">02 &middot; The protocol</p>
-    <h2>Four steps from photons to a shared key</h2>
+    <h2>Six steps from photons to a shared key</h2>
     <div class="step-log">
       <div class="step-line"><b>1 · Send.</b> Alice picks a random bit and a random basis (+ or ×) for each photon and sends it to Bob.</div>
       <div class="step-line"><b>2 · Measure.</b> Bob picks his own random basis for each photon. He doesn't know Alice's choices.</div>
       <div class="step-line"><b>3 · Sift.</b> Over an ordinary public channel, they compare <i>bases only</i>, never bits. They keep the positions where the bases matched (about half) and discard the rest.</div>
-      <div class="step-line hi"><b>4 · Check.</b> They publicly compare a sample of the kept bits. If the <span class="gterm" data-g="qber">error rate</span> is too high, someone was listening and they throw the key away. Otherwise, the unrevealed bits become the key.</div>
+      <div class="step-line hi"><b>4 · Check.</b> They publicly compare a sample of the kept bits. If the <span class="gterm" data-g="qber">error rate</span> is too high, they can't rule out an eavesdropper, so they throw the key away. A low error rate doesn't prove nobody listened; it limits how much an eavesdropper could have learned.</div>
+      <div class="step-line"><b>5 · Correct errors.</b> Over the authenticated public channel, Alice and Bob find and fix the few bits that still disagree (information reconciliation). This leaks a little more information, which they count.</div>
+      <div class="step-line"><b>6 · Shrink the key.</b> They hash the corrected bits down to a shorter key, sized so that whatever an eavesdropper might know is wiped out (privacy amplification). The public discussion in every step must be authenticated, or an attacker could impersonate Bob.</div>
     </div>
-    <div class="gpop" id="gpop-qber"><b>QBER</b> (quantum bit error rate) — the fraction of sifted bits where Alice and Bob disagree. Without an eavesdropper and with perfect equipment it is 0%. Real channels have a few percent of natural noise; protocols commonly abort above roughly 11%.</div>
+    <div class="gpop" id="gpop-qber"><b>QBER</b> (quantum bit error rate) — the fraction of sifted bits where Alice and Bob disagree. Without an eavesdropper and with perfect equipment it is 0%. Real channels have a few percent of natural noise. In theory BB84 can still produce a secure key up to about 11% errors (the Shor–Preskill bound); real systems with finite key lengths stop well before that, and other protocols have different limits.</div>
   </section>
 
   <section id="sim">
@@ -472,7 +474,7 @@
   <section id="stats">
     <p class="eyebrow">04 &middot; Eve's fingerprint</p>
     <h2>Why intercepting costs Eve 25%</h2>
-    <p>For every sifted bit, Eve guesses the wrong basis half the time. When she does, she sends Bob a photon in the wrong basis, and Bob's result is a coin flip, wrong half the time. So <code>½ × ½ = ¼</code> of the sifted bits become errors. Small runs are noisy, so run thousands of photons to see the numbers settle.</p>
+    <p>For every sifted bit, Eve guesses the wrong basis half the time. When she does, she sends Bob a photon in the wrong basis, and Bob's result is a coin flip, wrong half the time. So <code>½ × ½ = ¼</code> of the sifted bits become errors. That 25% is for this specific attack on every photon; if Eve intercepts only a fraction <code>f</code> of them, the error rate is about <code>f/4</code>. Small runs are noisy, so run thousands of photons to see the numbers settle.</p>
     <div class="panel">
       <h3>Try it: large-scale runs</h3>
       <p class="subhead" style="margin-bottom:16px;">Simulates 5,000 photons each way and compares the error rates.</p>
@@ -656,14 +658,14 @@ $('runBB').addEventListener('click', async ()=>{
   const banner = $('bbBanner');
   if(qber > 0.11){
     banner.className = 'factor-banner show fail';
-    $('bbBig').textContent = 'Eavesdropper detected · key discarded';
-    $('bbSub').textContent = `Error rate ${(qber*100).toFixed(0)}% is above the ~11% threshold. Alice and Bob throw this key away and try again on another channel.`;
+    $('bbBig').textContent = 'Too many errors · key discarded';
+    $('bbSub').textContent = `Error rate ${(qber*100).toFixed(0)}% is above the ~11% limit. Alice and Bob can't rule out an eavesdropper, so they throw this key away and try again.`;
   } else {
     banner.className = 'factor-banner show ok';
-    $('bbBig').textContent = `Shared key: ${aKey || '(too few bits; send more photons)'}`;
+    $('bbBig').textContent = `Raw key: ${aKey || '(too few bits; send more photons)'}`;
     $('bbSub').textContent = (aKey===bKey)
-      ? `No errors in the check sample. The ${keyIdx.length} unrevealed bits become the key, and Alice's and Bob's copies are identical.`
-      : `The sample passed, but Eve got lucky: the unrevealed bits still differ (Bob has ${bKey}). Bigger samples catch her; real systems check hundreds of bits.`;
+      ? `No errors in the check sample, and Alice's and Bob's ${keyIdx.length} unrevealed bits match. Steps 5 and 6 (not simulated) would correct any stray errors and shrink this raw key to the final, shorter key.`
+      : `The sample passed, but Eve got lucky: the unrevealed bits still differ (Bob has ${bKey}). Error correction (step 5) would expose these mismatches. Real systems check hundreds of bits, so luck like this doesn't last.`;
   }
   $('resetBB').disabled = false;
 });
@@ -680,7 +682,7 @@ $('runStats').addEventListener('click', ()=>{
       <div class="scale-label"><span>${r.eve ? 'Eve intercepting' : 'No eavesdropper'} · ${r.sifted.toLocaleString()} sifted bits</span><span class="${r.q>0.11?'nofit':'fits'}">${(r.q*100).toFixed(1)}% errors</span></div>
       <div class="scale-bar-bg"><div class="scale-bar ${r.q>0.11?'over':''}" style="width:${Math.max(r.q/0.3*100,1)}%"></div></div>
     </div>`).join('') +
-    `<p class="hero-note" style="margin-top:0;">Bar scale runs to 30%. The ~11% abort threshold sits well between the two results.</p>`;
+    `<p class="hero-note" style="margin-top:0;">Bar scale runs to 30%. The ~11% line (BB84's theoretical limit) sits well between the two results.</p>`;
 });
 
 </script>

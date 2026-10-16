@@ -448,8 +448,8 @@
 
   <section id="grover">
     <p class="eyebrow">02 &middot; Symmetric crypto</p>
-    <h2>Grover's algorithm halves the key strength</h2>
-    <p><span class="gterm" data-g="grover">Grover's algorithm</span> searches an unsorted space of 2ⁿ possibilities in roughly 2<sup>n/2</sup> steps. Applied to brute-forcing a key, it cuts the effective security in half: a 128-bit key behaves like a 64-bit key. The defense is simple: use longer keys.</p>
+    <h2>Grover's algorithm roughly halves the key-search exponent</h2>
+    <p><span class="gterm" data-g="grover">Grover's algorithm</span> searches an unsorted space of 2ⁿ possibilities in roughly 2<sup>n/2</sup> steps. Applied to brute-forcing a key, 2¹²⁸ classical tries become about 2⁶⁴ quantum steps in the idealized count. That isn't the same as a classical 64-bit search: each step is slow, error-corrected, and must run one after another, so the real cost is far higher. The defense is simple: use longer keys.</p>
     <div class="gpop" id="gpop-grover"><b>Grover's algorithm</b> (1996) — a quantum search algorithm with a quadratic (square-root) speedup. It's provably optimal: no quantum algorithm can brute-force a key faster. Its steps must also run one after another, which limits it in practice.</div>
     <div class="panel">
       <h3>Try it: choose a key length</h3>
@@ -466,13 +466,15 @@
       </div>
       <div class="result-line show" id="kVerdict"></div>
     </div>
+    <h3 style="margin-top:26px;">Hashes aren't hit the same way</h3>
+    <p><b>Preimages</b> (finding an input that produces a given n-bit hash) are a search problem, so Grover cuts them the same way it cuts keys: about 2<sup>n/2</sup> steps. <b>Collisions</b> (finding any two inputs with the same hash) are different. Classically they already take about 2<sup>n/2</sup> tries thanks to the birthday paradox. A quantum algorithm (Brassard–Høyer–Tapp) needs only about 2<sup>n/3</sup> queries on paper, but it needs an enormous quantum memory, and counting that hardware cost it isn't believed to beat the classical attack. SHA-256 keeps roughly 128-bit collision resistance.</p>
   </section>
 
   <section id="lattice">
     <p class="eyebrow">03 &middot; The core idea</p>
     <h2>Hard problems with a little noise: learning with errors</h2>
-    <p>ML-KEM and ML-DSA are built on <span class="gterm" data-g="lwe">learning with errors (LWE)</span>. Solving a system of linear equations is easy; high school algebra does it. Add a small random error to each equation and the system becomes extremely hard to solve, for classical and quantum computers alike, once there are hundreds of unknowns.</p>
-    <div class="gpop" id="gpop-lwe"><b>Learning with errors</b> — given many equations a·s + e = b (mod q), where s is secret and each e is small random noise, recover s. It reduces to hard problems on high-dimensional lattices. ML-KEM-768 works with 768 unknowns modulo q = 3329.</div>
+    <p>ML-KEM and ML-DSA are built on <span class="gterm" data-g="lwe">learning with errors (LWE)</span>. Solving a system of linear equations is easy; high school algebra does it. Add the right kind of small random error to each equation, with carefully chosen sizes, and the system becomes extremely hard to solve, for classical and quantum computers alike, once there are hundreds of unknowns. Adding noise to just any system of equations doesn't make it quantum-resistant.</p>
+    <div class="gpop" id="gpop-lwe"><b>Learning with errors</b> — given many equations a·s + e = b (mod q), where s is secret and each e is small random noise, recover s. It reduces to hard problems on high-dimensional lattices. ML-KEM-768 hides a secret made of 3 polynomials with 256 coefficients each: 768 unknown numbers modulo q = 3329. Its equations have extra structure (module-LWE) that keeps keys compact, so the simple equation in the demo shows the idea, not the exact standardized math. The "768" is not bits of security; ML-KEM-768 targets NIST security category 3, comparable to AES-192.</div>
     <div class="panel">
       <h3>Try it: recover the secret (s₁, s₂), with and without noise</h3>
       <p class="subhead" style="margin-bottom:16px;">Four equations mod 17. Use elimination on the first two equations, then check whether the answer fits the other two. Toggle the noise and try again.</p>
@@ -533,10 +535,10 @@
     <div class="step-log">
       <div class="step-line"><b>Inventory.</b> Find every place public-key crypto is used: TLS, VPNs, SSH, code signing, certificates, firmware, hardware security modules, and vendor products.</div>
       <div class="step-line"><b>Prioritize.</b> Start with long-lived secrets and key exchange, where harvest-now-decrypt-later applies.</div>
-      <div class="step-line"><b>Go hybrid.</b> Combine a classical algorithm with a post-quantum one so the connection stays secure if either holds. Major browsers already use hybrid X25519 + ML-KEM key exchange in TLS by default.</div>
+      <div class="step-line"><b>Go hybrid.</b> Combine a classical algorithm with a post-quantum one so the connection stays secure if either holds. As of 2026, Chrome and Edge (since late 2024), with Firefox and Apple platforms following, use hybrid X25519 + ML-KEM key exchange in TLS by default. Check current vendor documentation, since this changes quickly.</div>
       <div class="step-line hi"><b>Build crypto agility.</b> Design systems so algorithms can be swapped through configuration rather than rewrites. The next migration should be easier than this one.</div>
     </div>
-    <p style="margin-top:18px;">NIST's transition plan (IR 8547) proposes deprecating today's quantum-vulnerable public-key algorithms after 2030 and disallowing them after 2035. The NSA's CNSA 2.0 sets similar deadlines for national security systems and requires AES-256.</p>
+    <p style="margin-top:18px;">NIST's draft transition plan (<a href="https://csrc.nist.gov/pubs/ir/8547/ipd" target="_blank" rel="noopener">IR 8547</a>, initial public draft, Nov 2024) proposes deprecating today's quantum-vulnerable public-key algorithms after 2030 and disallowing them after 2035. These dates are provisional until the plan is final. The NSA's CNSA 2.0 sets its own deadlines for national security systems, which vary by system type, and requires AES-256.</p>
     <div class="callout">
       <b>Two answers to one problem:</b> PQC (this page) changes the math and runs on existing hardware. QKD (page 07) changes the physics and needs special equipment. Most government guidance today favors PQC for broad deployment.
     </div>
