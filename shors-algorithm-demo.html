@@ -230,15 +230,15 @@
     <p class="subhead">Click a term to see how it fits together. This is the same vocabulary from your course notes.</p>
     <div class="term-grid" id="termGrid"></div>
     <div class="keychain">
-      <div class="keybox pub"><div class="label">PUBLIC KEY</div>N = 15, e = 5 — shared with anyone who wants to send you an encrypted message.</div>
-      <div class="keybox priv"><div class="label">PRIVATE KEY</div>N = 15, d = 3 — kept secret. This is what Shor's algorithm is trying to expose.</div>
+      <div class="keybox pub"><div class="label">PUBLIC KEY</div>N = 15, e = 3 — shared with anyone who wants to send you an encrypted message.</div>
+      <div class="keybox priv"><div class="label">PRIVATE KEY</div>N = 15, d = 11 — kept secret. This is what Shor's algorithm is trying to expose.</div>
     </div>
   </section>
 
   <section id="period">
     <p class="eyebrow">02 &middot; The core idea</p>
     <h2>Find the period, and the factors fall out</h2>
-    <p>Shor's algorithm doesn't factor <code>N</code> directly. Instead, it picks a random number <code>a</code> and looks at the sequence <code>a¹, a², a³, …</code>, each one reduced <span class="gterm" data-g="mod">mod</span> <code>N</code>. Because there are only a limited number of possible remainders, this sequence always eventually repeats. The length of that repeat is called the <span class="gterm" data-g="periodicity">period</span>, written <code>r</code>. A quantum computer finds <code>r</code> almost instantly using superposition — a step that would take a classical computer a very long time for large <code>N</code>.</p>
+    <p>Shor's algorithm doesn't factor <code>N</code> directly. Instead, it picks a random number <code>a</code> and looks at the sequence <code>a¹, a², a³, …</code>, each one reduced <span class="gterm" data-g="mod">mod</span> <code>N</code>. Because there are only a limited number of possible remainders, this sequence always eventually repeats. The length of that repeat is called the <span class="gterm" data-g="periodicity">period</span>, written <code>r</code>. A quantum computer finds <code>r</code> efficiently using superposition and interference — a step that would take a classical computer an impractically long time for large <code>N</code>.</p>
     <div class="gpop" id="gpop-periodicity"><b>Periodicity</b> — how often a repeating sequence cycles back to its starting value. Here, it's how many multiplications it takes before <code>aˣ mod N</code> returns to 1.</div>
     <div class="gpop" id="gpop-mod">"mod N" means "the remainder after dividing by N." <code>17 mod 15 = 2</code>, because 17 divided by 15 leaves a remainder of 2.</div>
     <div class="gpop" id="gpop-gcd"><b>Greatest Common Divisor (GCD)</b> — the largest number that divides evenly into two other numbers. <code>gcd(12, 18) = 6</code>. The Euclidean algorithm finds it quickly by repeated division.</div>
@@ -270,6 +270,7 @@
     <p class="eyebrow">03 &middot; From period to factors</p>
     <h2>Turning r into the actual primes</h2>
     <p>Once the period <code>r</code> is known, ordinary classical math finishes the job. If <code>r</code> is even, compute <code>a<sup>r/2</sup> mod N</code>, then take the <span class="gterm" data-g="gcd">GCD</span> of that value ±1 with <code>N</code>. Those two GCDs are usually the hidden prime factors.</p>
+    <p>Three things can send the algorithm back for another try. First, before any quantum work, check <code>gcd(a, N)</code>: if it is bigger than 1, you have already found a factor. (The menu above only offers values of <code>a</code> that share no factor with 15, so that never happens here.) Second, <code>r</code> can be odd. Third, <code>a<sup>r/2</sup></code> can equal <code>N − 1</code>, which is −1 mod <code>N</code>; then the two GCDs come out as 1 and <code>N</code>, which tells you nothing. Try <code>a = 14</code> to see this: its period is 2, but 14¹ = 14 ≡ −1 (mod 15). At least half of the possible choices of <code>a</code> avoid all three, so a few tries are usually enough.</p>
     <div class="panel">
       <h3>Step-by-step factor extraction</h3>
       <p class="subhead" style="margin-bottom:16px;">This fills in automatically once you've run the simulator above.</p>
@@ -297,7 +298,7 @@
         <div class="scale-bar-bg"><div class="scale-bar b"></div></div>
       </div>
     </div>
-    <p style="margin-top:6px;">A widely cited 2019 estimate (Gidney &amp; Ekerå) put the requirement to break a 2048-bit RSA key at roughly <b>20 million error-corrected qubits</b> running for about <b>8 hours</b>. Today's largest quantum processors have on the order of a few thousand physical qubits, and none yet have the error correction Shor's algorithm needs at that scale — which is why RSA is still considered safe for now, but not indefinitely.</p>
+    <p style="margin-top:6px;">A widely cited 2019 estimate (Gidney &amp; Ekerå) put the requirement to break a 2048-bit RSA key at roughly <b>20 million noisy physical qubits</b> running for about <b>8 hours</b>. A <a href="https://arxiv.org/abs/2505.15917" target="_blank" rel="noopener">2025 estimate (Gidney)</a> lowered that to <b>under a million</b> noisy physical qubits running for under a week. Both are estimates that depend on assumed error rates and speeds, not demonstrations. Today's largest processors have on the order of a thousand physical qubits, and none yet run the error correction Shor's algorithm needs at scale. Shor's algorithm threatens RSA only on a sufficiently large, fault-tolerant quantum computer — which is why RSA is still considered safe for now, but not indefinitely.</p>
   </section>
 
   <section id="defense">
@@ -311,7 +312,7 @@
     <p style="margin-top:20px;">In 2024, <a href="https://csrc.nist.gov/pubs/fips/203/final" target="_blank" rel="noopener">NIST finalized its first PQC standards</a>, expected to gradually replace RSA and elliptic-curve cryptography across the internet over the next decade.</p>
 
     <div class="callout">
-      <b>A different approach — QKD:</b> instead of a new hard math problem, Quantum Key Distribution (QKD) protocols like <b>BB84</b> use quantum mechanics itself for security — measuring a quantum-encoded key reveals any eavesdropper by disturbing the system. See the BB84 QKD simulation for a hands-on look at how that works.
+      <b>A different approach — QKD:</b> instead of a new hard math problem, Quantum Key Distribution (QKD) protocols like <b>BB84</b> use quantum mechanics itself for security — measuring a quantum-encoded key disturbs it, so an eavesdropper shows up as extra errors, provided the protocol checks for them and runs over an authenticated channel. See the BB84 QKD simulation for a hands-on look at how that works.
     </div>
   </section>
 
@@ -392,8 +393,8 @@ const terms = [
   {sym:'q', name:'prime #2', def:'A second randomly chosen prime number. Kept secret.'},
   {sym:'N', name:'modulus', def:'N = p × q. This is the number that gets published as part of the public key — and the number Shor\'s algorithm is trying to factor back into p and q.'},
   {sym:'r', name:'totient', def:'r = (p − 1) × (q − 1). Used to generate the key pair. (Note: this is a different "r" than the period found during Shor\'s algorithm — they play related but distinct roles, which your instructor can expand on.)'},
-  {sym:'e', name:'encryption exp.', def:'A factor of the key-generating value that shares no common factors with N. Part of the public key.'},
-  {sym:'d', name:'decryption exp.', def:'The counterpart to e, kept secret. Part of the private key — this is what an attacker ultimately wants.'},
+  {sym:'e', name:'encryption exp.', def:'A number that shares no common factors with the totient (p − 1) × (q − 1). Part of the public key. Here e = 3, since 3 shares no factor with 8.'},
+  {sym:'d', name:'decryption exp.', def:'The inverse of e modulo the totient: e × d leaves a remainder of 1 when divided by (p − 1) × (q − 1). Here 3 × 11 = 33 = 4 × 8 + 1, so d = 11. Part of the private key — this is what an attacker ultimately wants.'},
 ];
 buildTermGrid('termGrid', terms, 'rsa');
 
@@ -474,6 +475,7 @@ function logStep(text, hi=false){
 
 async function runFactorStep(a, r){
   stepLog.innerHTML = '';
+  logStep(`Step 0: gcd(${a}, 15) = ${gcd(a, N)}, so a shares no factor with N and the period is needed.`);
   logStep(`Period r = ${r} found for a = ${a}.`);
   await sleep(300);
 
@@ -508,7 +510,7 @@ async function runFactorStep(a, r){
   if(g1>1 && g1<N && g2>1 && g2<N){
     factorBanner.classList.add('show','ok');
     factorBig.textContent = `15 = ${g1} × ${g2}`;
-    factorSub.textContent = `Factors found. In the RSA example from your notes, this maps to private key d = 3 and public key e = 5.`;
+    factorSub.textContent = `Factors found. With p = 3 and q = 5, an attacker computes (p − 1) × (q − 1) = 8 and recovers the private key d = 11 from the public e = 3.`;
   } else {
     factorBanner.classList.add('show','fail');
     factorBig.textContent = 'No factors this time';
