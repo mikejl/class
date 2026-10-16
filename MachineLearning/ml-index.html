@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introduction to Machine Learning — Series Index</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  main.wide{max-width:1140px;}
+  .hero .lede{max-width:70ch;}
+  .index-layout{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:34px; align-items:start; margin-top:30px;}
+  .topic-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  a.topic{display:flex; flex-direction:column; gap:4px; text-decoration:none; padding:16px 16px 18px;
+    border:1px solid var(--border); border-top-width:3px; border-radius:10px; background:var(--panel); min-height:150px;}
+  a.topic:hover{background:var(--panel-alt); border-color:var(--cyan-dim);}
+  a.topic:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  a.topic .num{font-size:22px; font-weight:750; line-height:1.1;}
+  a.topic .t{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15.5px; font-weight:650; color:var(--text-bright);}
+  a.topic .d{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; color:var(--text); line-height:1.45;}
+  a.topic.s1{border-top-color:var(--cyan);} a.topic.s1 .num{color:var(--cyan);}
+  a.topic.s2{border-top-color:var(--amber);} a.topic.s2 .num{color:var(--amber);}
+  a.topic.s3{border-top-color:var(--red);} a.topic.s3 .num{color:var(--red);}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:16px; font-size:12.5px; color:var(--text-dim);}
+  .legend span{display:flex; align-items:center; gap:7px;}
+  .legend i{display:inline-block; width:14px; height:3px; border-radius:2px;}
+  figure.fridge{margin:0; padding:18px 14px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; position:sticky; top:64px;}
+  figure.fridge svg{width:100%; height:auto; display:block;}
+  figure.fridge figcaption{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; line-height:1.5; color:var(--text-dim); padding:10px 6px 2px; border-top:1px solid var(--border); margin-top:8px;}
+  figure.fridge figcaption b{color:var(--text-bright);}
+  .res-head{font-size:12.5px; color:var(--text-dim); letter-spacing:.04em; margin:30px 0 10px;}
+  .res-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+  a.topic.res{border-top-color:var(--text-dim); min-height:0;}
+  a.topic.res .num{color:var(--text-dim); font-size:15px; letter-spacing:.05em;}
+  @media (max-width:640px){ .res-grid{grid-template-columns:1fr;} }
+  .qbit{animation:qpulse 2.6s ease-in-out infinite;}
+  @keyframes qpulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  @media (prefers-reduced-motion: reduce){ .qbit{animation:none;} }
+  @media (max-width:900px){
+    .index-layout{grid-template-columns:1fr;}
+    figure.fridge{position:static; max-width:420px; margin:0 auto;}
+  }
+  @media (max-width:640px){ .topic-grid{grid-template-columns:1fr;} a.topic{min-height:0;} }
+
+  .fire{animation:nfire 2.8s ease-in-out infinite;}
+  @keyframes nfire{0%,100%{opacity:1;} 50%{opacity:.4;}}
+  @media (prefers-reduced-motion: reduce){ .fire{animation:none;} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>ML SERIES</b> :: index</div>
+  <nav>
+    <a href="#topics">Topics</a>
+    <a href="ml-reference.html">Reference</a>
+    <a href="ml-further-learning.html">Further learning</a>
+    <a href="ml-01-what-is-ai-ml.html">Start with 01</a>
+  </nav>
+</div>
+
+<main class="wide">
+  <section class="hero" id="topics" style="border-bottom:none;">
+    <p class="eyebrow">Non-graded &middot; offline &middot; explore at your own pace</p>
+    <h1>Machine learning, from a straight line to neural networks</h1>
+    <p class="lede">Fourteen interactive pages that build on each other. Start with what it means for a machine to learn from data, fit your first model with gradient descent, learn to spot and fix overfitting, then work up through neural networks and the ways attackers target ML systems.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+
+    <div class="index-layout">
+      <div>
+        <div class="topic-grid">
+        <a class="topic s1" href="ml-01-what-is-ai-ml.html">
+          <span class="num mono">01</span>
+          <span class="t">What is AI &amp; ML</span>
+          <span class="d">How AI, machine learning, and deep learning nest, and the three ways a machine can learn.</span>
+        </a>
+        <a class="topic s1" href="ml-02-ml-system-structure.html">
+          <span class="num mono">02</span>
+          <span class="t">Structure of ML systems</span>
+          <span class="d">Features, labels, train/test splits, and the pipeline from raw data to a working model.</span>
+        </a>
+        <a class="topic s1" href="ml-03-python-toolkit.html">
+          <span class="num mono">03</span>
+          <span class="t">Python ML toolkit</span>
+          <span class="d">NumPy, pandas, and scikit-learn, plus the fit-and-predict pattern every later page uses.</span>
+        </a>
+        <a class="topic s1" href="ml-04-linear-regression.html">
+          <span class="num mono">04</span>
+          <span class="t">Linear regression</span>
+          <span class="d">Fit a line by hand, measure the error, then let gradient descent find the best fit.</span>
+        </a>
+        <a class="topic s2" href="ml-05-optimizing-training.html">
+          <span class="num mono">05</span>
+          <span class="t">Optimizing training</span>
+          <span class="d">Learning rates, feature scaling, mini-batches, and why momentum and Adam converge faster.</span>
+        </a>
+        <a class="topic s2" href="ml-06-underfit-overfit.html">
+          <span class="num mono">06</span>
+          <span class="t">Underfitting &amp; overfitting</span>
+          <span class="d">Bias versus variance, and reading training and validation error to find the sweet spot.</span>
+        </a>
+        <a class="topic s2" href="ml-07-regularization.html">
+          <span class="num mono">07</span>
+          <span class="t">Regularization</span>
+          <span class="d">L1 and L2 penalties, early stopping, and dropout to keep a model from memorizing.</span>
+        </a>
+        <a class="topic s2" href="ml-08-logistic-regression.html">
+          <span class="num mono">08</span>
+          <span class="t">Classification &amp; logistic regression</span>
+          <span class="d">The sigmoid turns a score into a probability and draws a decision boundary.</span>
+        </a>
+        <a class="topic s2" href="ml-09-evaluating-models.html">
+          <span class="num mono">09</span>
+          <span class="t">Evaluating models</span>
+          <span class="d">Confusion matrices, precision, recall, and ROC curves, and why accuracy can lie.</span>
+        </a>
+        <a class="topic s2" href="ml-10-unsupervised-learning.html">
+          <span class="num mono">10</span>
+          <span class="t">Unsupervised learning</span>
+          <span class="d">k-means clustering and anomaly detection when the data has no labels.</span>
+        </a>
+        <a class="topic s3" href="ml-11-multi-layer-networks.html">
+          <span class="num mono">11</span>
+          <span class="t">Multi-layer networks</span>
+          <span class="d">Neurons, activation functions, and backpropagation through hidden layers.</span>
+        </a>
+        <a class="topic s3" href="ml-12-convolutional-networks.html">
+          <span class="num mono">12</span>
+          <span class="t">Convolutional networks</span>
+          <span class="d">Slide small filters across an image to find edges, shapes, and objects.</span>
+        </a>
+        <a class="topic s3" href="ml-13-rnn-attention.html">
+          <span class="num mono">13</span>
+          <span class="t">Recurrent networks &amp; attention</span>
+          <span class="d">Models with memory for sequences, and the attention idea behind transformers.</span>
+        </a>
+        <a class="topic s3" href="ml-14-ml-security.html">
+          <span class="num mono">14</span>
+          <span class="t">ML security &amp; ethics</span>
+          <span class="d">Adversarial examples, data poisoning, model theft, and bias in deployed models.</span>
+        </a>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--cyan)"></i>Foundations &middot; 01–04</span>
+          <span><i style="background:var(--amber)"></i>Core techniques &middot; 05–10</span>
+          <span><i style="background:var(--red)"></i>Neural networks &amp; security &middot; 11–14</span>
+        </div>
+        <p class="res-head mono">RESOURCES</p>
+        <div class="res-grid">
+          <a class="topic res" href="ml-reference.html">
+            <span class="num mono">REF</span>
+            <span class="t">Notation &amp; glossary</span>
+            <span class="d">The math symbols, Greek letters, and key terms used across the series, with how to read each equation out loud.</span>
+          </a>
+          <a class="topic res" href="ml-further-learning.html">
+            <span class="num mono">NEXT</span>
+            <span class="t">Further learning</span>
+            <span class="d">Set up Jupyter or Google Colab, then find the best free courses, books, and datasets to keep going.</span>
+          </a>
+        </div>
+      </div>
+      <figure class="fridge">
+<svg viewBox="0 30 445 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="figTitle figDesc">
+<title id="figTitle">A small neural network classifying an email</title>
+<desc id="figDesc">Four input features at the top feed two hidden layers of five neurons each, connected by weighted lines. Two output neurons at the bottom give the probability that the email is spam (0.94) or not spam (0.06).</desc>
+<defs><radialGradient id="nglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#5cb8cf" stop-opacity=".5"/><stop offset="1" stop-color="#5cb8cf" stop-opacity="0"/></radialGradient></defs>
+<line x1="50.0" y1="92" x2="50.0" y2="188" stroke="#a8560a" stroke-width="1.45" opacity="0.37" stroke-linecap="round"/>
+<line x1="50.0" y1="92" x2="110.0" y2="188" stroke="#a8560a" stroke-width="2.28" opacity="0.56" stroke-linecap="round"/>
+<line x1="50.0" y1="92" x2="170.0" y2="188" stroke="#0f7490" stroke-width="1.32" opacity="0.35" stroke-linecap="round"/>
+<line x1="50.0" y1="92" x2="230.0" y2="188" stroke="#a8560a" stroke-width="2.65" opacity="0.65" stroke-linecap="round"/>
+<line x1="50.0" y1="92" x2="290.0" y2="188" stroke="#0f7490" stroke-width="0.77" opacity="0.22" stroke-linecap="round"/>
+<line x1="130.0" y1="92" x2="50.0" y2="188" stroke="#a8560a" stroke-width="1.24" opacity="0.33" stroke-linecap="round"/>
+<line x1="130.0" y1="92" x2="110.0" y2="188" stroke="#a8560a" stroke-width="2.72" opacity="0.67" stroke-linecap="round"/>
+<line x1="130.0" y1="92" x2="170.0" y2="188" stroke="#0f7490" stroke-width="0.64" opacity="0.19" stroke-linecap="round"/>
+<line x1="130.0" y1="92" x2="230.0" y2="188" stroke="#a8560a" stroke-width="2.82" opacity="0.69" stroke-linecap="round"/>
+<line x1="130.0" y1="92" x2="290.0" y2="188" stroke="#a8560a" stroke-width="0.92" opacity="0.25" stroke-linecap="round"/>
+<line x1="210.0" y1="92" x2="50.0" y2="188" stroke="#a8560a" stroke-width="2.66" opacity="0.65" stroke-linecap="round"/>
+<line x1="210.0" y1="92" x2="110.0" y2="188" stroke="#a8560a" stroke-width="2.56" opacity="0.63" stroke-linecap="round"/>
+<line x1="210.0" y1="92" x2="170.0" y2="188" stroke="#a8560a" stroke-width="0.96" opacity="0.26" stroke-linecap="round"/>
+<line x1="210.0" y1="92" x2="230.0" y2="188" stroke="#0f7490" stroke-width="2.17" opacity="0.54" stroke-linecap="round"/>
+<line x1="210.0" y1="92" x2="290.0" y2="188" stroke="#a8560a" stroke-width="2.41" opacity="0.59" stroke-linecap="round"/>
+<line x1="290.0" y1="92" x2="50.0" y2="188" stroke="#a8560a" stroke-width="1.93" opacity="0.48" stroke-linecap="round"/>
+<line x1="290.0" y1="92" x2="110.0" y2="188" stroke="#0f7490" stroke-width="1.21" opacity="0.32" stroke-linecap="round"/>
+<line x1="290.0" y1="92" x2="170.0" y2="188" stroke="#0f7490" stroke-width="2.75" opacity="0.67" stroke-linecap="round"/>
+<line x1="290.0" y1="92" x2="230.0" y2="188" stroke="#0f7490" stroke-width="0.97" opacity="0.26" stroke-linecap="round"/>
+<line x1="290.0" y1="92" x2="290.0" y2="188" stroke="#a8560a" stroke-width="1.10" opacity="0.29" stroke-linecap="round"/>
+<line x1="50.0" y1="212" x2="50.0" y2="308" stroke="#0f7490" stroke-width="2.89" opacity="0.70" stroke-linecap="round"/>
+<line x1="50.0" y1="212" x2="110.0" y2="308" stroke="#a8560a" stroke-width="2.78" opacity="0.68" stroke-linecap="round"/>
+<line x1="50.0" y1="212" x2="170.0" y2="308" stroke="#0f7490" stroke-width="2.32" opacity="0.57" stroke-linecap="round"/>
+<line x1="50.0" y1="212" x2="230.0" y2="308" stroke="#a8560a" stroke-width="1.61" opacity="0.41" stroke-linecap="round"/>
+<line x1="50.0" y1="212" x2="290.0" y2="308" stroke="#a8560a" stroke-width="2.31" opacity="0.57" stroke-linecap="round"/>
+<line x1="110.0" y1="212" x2="50.0" y2="308" stroke="#a8560a" stroke-width="2.43" opacity="0.60" stroke-linecap="round"/>
+<line x1="110.0" y1="212" x2="110.0" y2="308" stroke="#a8560a" stroke-width="1.52" opacity="0.39" stroke-linecap="round"/>
+<line x1="110.0" y1="212" x2="170.0" y2="308" stroke="#0f7490" stroke-width="2.12" opacity="0.53" stroke-linecap="round"/>
+<line x1="110.0" y1="212" x2="230.0" y2="308" stroke="#a8560a" stroke-width="2.13" opacity="0.53" stroke-linecap="round"/>
+<line x1="110.0" y1="212" x2="290.0" y2="308" stroke="#0f7490" stroke-width="0.99" opacity="0.27" stroke-linecap="round"/>
+<line x1="170.0" y1="212" x2="50.0" y2="308" stroke="#0f7490" stroke-width="1.27" opacity="0.33" stroke-linecap="round"/>
+<line x1="170.0" y1="212" x2="110.0" y2="308" stroke="#a8560a" stroke-width="1.21" opacity="0.32" stroke-linecap="round"/>
+<line x1="170.0" y1="212" x2="170.0" y2="308" stroke="#0f7490" stroke-width="0.83" opacity="0.23" stroke-linecap="round"/>
+<line x1="170.0" y1="212" x2="230.0" y2="308" stroke="#a8560a" stroke-width="2.70" opacity="0.66" stroke-linecap="round"/>
+<line x1="170.0" y1="212" x2="290.0" y2="308" stroke="#a8560a" stroke-width="2.71" opacity="0.66" stroke-linecap="round"/>
+<line x1="230.0" y1="212" x2="50.0" y2="308" stroke="#a8560a" stroke-width="2.01" opacity="0.50" stroke-linecap="round"/>
+<line x1="230.0" y1="212" x2="110.0" y2="308" stroke="#0f7490" stroke-width="1.47" opacity="0.38" stroke-linecap="round"/>
+<line x1="230.0" y1="212" x2="170.0" y2="308" stroke="#a8560a" stroke-width="0.95" opacity="0.26" stroke-linecap="round"/>
+<line x1="230.0" y1="212" x2="230.0" y2="308" stroke="#a8560a" stroke-width="1.49" opacity="0.38" stroke-linecap="round"/>
+<line x1="230.0" y1="212" x2="290.0" y2="308" stroke="#0f7490" stroke-width="1.01" opacity="0.27" stroke-linecap="round"/>
+<line x1="290.0" y1="212" x2="50.0" y2="308" stroke="#a8560a" stroke-width="0.82" opacity="0.23" stroke-linecap="round"/>
+<line x1="290.0" y1="212" x2="110.0" y2="308" stroke="#a8560a" stroke-width="1.56" opacity="0.40" stroke-linecap="round"/>
+<line x1="290.0" y1="212" x2="170.0" y2="308" stroke="#0f7490" stroke-width="2.01" opacity="0.50" stroke-linecap="round"/>
+<line x1="290.0" y1="212" x2="230.0" y2="308" stroke="#0f7490" stroke-width="1.56" opacity="0.40" stroke-linecap="round"/>
+<line x1="290.0" y1="212" x2="290.0" y2="308" stroke="#a8560a" stroke-width="1.83" opacity="0.46" stroke-linecap="round"/>
+<line x1="50.0" y1="332" x2="50.0" y2="428" stroke="#0f7490" stroke-width="0.96" opacity="0.26" stroke-linecap="round"/>
+<line x1="50.0" y1="332" x2="290.0" y2="428" stroke="#0f7490" stroke-width="0.72" opacity="0.21" stroke-linecap="round"/>
+<line x1="110.0" y1="332" x2="50.0" y2="428" stroke="#0f7490" stroke-width="2.40" opacity="0.59" stroke-linecap="round"/>
+<line x1="110.0" y1="332" x2="290.0" y2="428" stroke="#0f7490" stroke-width="1.70" opacity="0.43" stroke-linecap="round"/>
+<line x1="170.0" y1="332" x2="50.0" y2="428" stroke="#a8560a" stroke-width="1.62" opacity="0.41" stroke-linecap="round"/>
+<line x1="170.0" y1="332" x2="290.0" y2="428" stroke="#0f7490" stroke-width="2.90" opacity="0.71" stroke-linecap="round"/>
+<line x1="230.0" y1="332" x2="50.0" y2="428" stroke="#a8560a" stroke-width="2.43" opacity="0.60" stroke-linecap="round"/>
+<line x1="230.0" y1="332" x2="290.0" y2="428" stroke="#a8560a" stroke-width="0.99" opacity="0.27" stroke-linecap="round"/>
+<line x1="290.0" y1="332" x2="50.0" y2="428" stroke="#0f7490" stroke-width="1.83" opacity="0.46" stroke-linecap="round"/>
+<line x1="290.0" y1="332" x2="290.0" y2="428" stroke="#a8560a" stroke-width="2.27" opacity="0.56" stroke-linecap="round"/>
+<circle cx="50.0" cy="440" r="34" fill="url(#nglow)"/>
+<circle cx="50.0" cy="80" r="12" fill="#ffffff" stroke="#0f7490" stroke-width="1.6" class="fire" style="animation-delay:0.00s"/>
+<text x="50.0" y="60" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="10.5" fill="#6b7684">links</text>
+<circle cx="130.0" cy="80" r="12" fill="#ffffff" stroke="#0f7490" stroke-width="1.6" class="fire" style="animation-delay:0.06s"/>
+<text x="130.0" y="60" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="10.5" fill="#6b7684">CAPS</text>
+<circle cx="210.0" cy="80" r="12" fill="#ffffff" stroke="#0f7490" stroke-width="1.6" class="fire" style="animation-delay:0.12s"/>
+<text x="210.0" y="60" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="10.5" fill="#6b7684">sender</text>
+<circle cx="290.0" cy="80" r="12" fill="#ffffff" stroke="#0f7490" stroke-width="1.6" class="fire" style="animation-delay:0.18s"/>
+<text x="290.0" y="60" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="10.5" fill="#6b7684">length</text>
+<line x1="304" y1="80" x2="318" y2="80" stroke="#6b7684" stroke-width="1"/>
+<text x="322" y="84" font-family="ui-monospace, Consolas, monospace" font-size="12.5" font-weight="700" fill="#0f1720">input layer</text>
+<text x="322" y="98" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">features</text>
+<circle cx="50.0" cy="200" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.45s"/>
+<circle cx="110.0" cy="200" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.51s"/>
+<circle cx="170.0" cy="200" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.57s"/>
+<circle cx="230.0" cy="200" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.63s"/>
+<circle cx="290.0" cy="200" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.69s"/>
+<line x1="304" y1="200" x2="318" y2="200" stroke="#6b7684" stroke-width="1"/>
+<text x="322" y="204" font-family="ui-monospace, Consolas, monospace" font-size="12.5" font-weight="700" fill="#0f1720">hidden layer 1</text>
+<text x="322" y="218" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">learned patterns</text>
+<circle cx="50.0" cy="320" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.90s"/>
+<circle cx="110.0" cy="320" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:0.96s"/>
+<circle cx="170.0" cy="320" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:1.02s"/>
+<circle cx="230.0" cy="320" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:1.08s"/>
+<circle cx="290.0" cy="320" r="12" fill="#eef2f6" stroke="#3a4652" stroke-width="1.6" class="fire" style="animation-delay:1.14s"/>
+<line x1="304" y1="320" x2="318" y2="320" stroke="#6b7684" stroke-width="1"/>
+<text x="322" y="324" font-family="ui-monospace, Consolas, monospace" font-size="12.5" font-weight="700" fill="#0f1720">hidden layer 2</text>
+<text x="322" y="338" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">combined patterns</text>
+<circle cx="50.0" cy="440" r="12" fill="#0f7490" stroke="#0f7490" stroke-width="1.6" class="fire" style="animation-delay:1.35s"/>
+<text x="50.0" y="470" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">0.94</text>
+<text x="50.0" y="484" text-anchor="middle" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">spam</text>
+<circle cx="290.0" cy="440" r="12" fill="#ffffff" stroke="#0f7490" stroke-width="1.6" class="fire" style="animation-delay:1.41s"/>
+<text x="290.0" y="470" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#0f1720">0.06</text>
+<text x="290.0" y="484" text-anchor="middle" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">not spam</text>
+<line x1="304" y1="440" x2="318" y2="440" stroke="#6b7684" stroke-width="1"/>
+<text x="322" y="444" font-family="ui-monospace, Consolas, monospace" font-size="12.5" font-weight="700" fill="#0f1720">output</text>
+<text x="322" y="458" font-family="-apple-system, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#6b7684">probability</text>
+</svg>
+        <figcaption><b>How a network reads an email.</b> Each input is a feature of the message, and each line is a learned weight: thicker means stronger, cyan weights are positive and amber weights are negative. The hidden layers combine those signals until the output gives a probability. By page 11 you will build one of these yourself.</figcaption>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<footer style="max-width:1140px;">
+  Sinclair College - Dr. Mike Libassi &middot; interactive demos &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">ML series</span>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13 · Recurrent networks &amp; attention — ML Series</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  main.wide{max-width:1140px;}
+  .hero .lede{max-width:70ch;}
+  .index-layout{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:34px; align-items:start; margin-top:30px;}
+  .topic-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  a.topic{display:flex; flex-direction:column; gap:4px; text-decoration:none; padding:16px 16px 18px;
+    border:1px solid var(--border); border-top-width:3px; border-radius:10px; background:var(--panel); min-height:150px;}
+  a.topic:hover{background:var(--panel-alt); border-color:var(--cyan-dim);}
+  a.topic:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  a.topic .num{font-size:22px; font-weight:750; line-height:1.1;}
+  a.topic .t{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15.5px; font-weight:650; color:var(--text-bright);}
+  a.topic .d{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; color:var(--text); line-height:1.45;}
+  a.topic.s1{border-top-color:var(--cyan);} a.topic.s1 .num{color:var(--cyan);}
+  a.topic.s2{border-top-color:var(--amber);} a.topic.s2 .num{color:var(--amber);}
+  a.topic.s3{border-top-color:var(--red);} a.topic.s3 .num{color:var(--red);}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:16px; font-size:12.5px; color:var(--text-dim);}
+  .legend span{display:flex; align-items:center; gap:7px;}
+  .legend i{display:inline-block; width:14px; height:3px; border-radius:2px;}
+  figure.fridge{margin:0; padding:18px 14px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; position:sticky; top:64px;}
+  figure.fridge svg{width:100%; height:auto; display:block;}
+  figure.fridge figcaption{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; line-height:1.5; color:var(--text-dim); padding:10px 6px 2px; border-top:1px solid var(--border); margin-top:8px;}
+  figure.fridge figcaption b{color:var(--text-bright);}
+  .res-head{font-size:12.5px; color:var(--text-dim); letter-spacing:.04em; margin:30px 0 10px;}
+  .res-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+  a.topic.res{border-top-color:var(--text-dim); min-height:0;}
+  a.topic.res .num{color:var(--text-dim); font-size:15px; letter-spacing:.05em;}
+  @media (max-width:640px){ .res-grid{grid-template-columns:1fr;} }
+  .qbit{animation:qpulse 2.6s ease-in-out infinite;}
+  @keyframes qpulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  @media (prefers-reduced-motion: reduce){ .qbit{animation:none;} }
+  @media (max-width:900px){
+    .index-layout{grid-template-columns:1fr;}
+    figure.fridge{position:static; max-width:420px; margin:0 auto;}
+  }
+  @media (max-width:640px){ .topic-grid{grid-template-columns:1fr;} a.topic{min-height:0;} }
+
+  /* ---------- ML SERIES ADDITIONS ---------- */
+  .outcome, .scenario, .result-line, .metric .label{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .scenario{font-size:15px; color:var(--text-bright); padding:14px 16px; background:#ffffff; border:1px solid var(--border); border-radius:8px; margin-bottom:14px;}
+  .score{font-size:12.5px; color:var(--text-dim);}
+  .score b{color:var(--text-bright);}
+  .timeline{display:flex; flex-direction:column; gap:6px; margin-top:16px;}
+  .timeline .step-line b{color:var(--text-bright); margin-right:8px;}
+  .flow{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13.5px; color:var(--text-bright); margin:6px 0 4px;}
+  .flow .chip{padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--panel);}
+  .flow .chip.out{border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  .flow .op{color:var(--text-dim);}
+  svg.plot{width:100%; height:auto; display:block; background:#ffffff; border:1px solid var(--border); border-radius:8px;}
+  svg.plot .gridl{stroke:var(--panel-alt); stroke-width:1;}
+  svg.plot .axisl{stroke:var(--border); stroke-width:1.2;}
+  svg.plot text{font-family:ui-monospace, "SF Mono", Consolas, monospace; font-size:11px; fill:var(--text-dim);}
+  svg.plot text.big{font-size:12.5px; fill:var(--text-bright); font-weight:700;}
+  pre.code{margin:14px 0 0; padding:14px 16px; background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--cyan); border-radius:8px; overflow-x:auto; font-size:12.8px; line-height:1.55; color:var(--text-bright);}
+  pre.code .c{color:var(--text-dim);}
+  pre.code .k{color:var(--cyan); font-weight:700;}
+  pre.code .s{color:var(--green);}
+  pre.code .n{color:var(--amber);}
+  .metric-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:14px;}
+  .metric{padding:10px 12px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .metric .label{font-size:11.5px; color:var(--text-dim); margin-bottom:2px;}
+  .metric .v{font-size:18px; font-weight:700; color:var(--text-bright);}
+  .metric.good{border-color:var(--green);} .metric.good .v{color:var(--green);}
+  .metric.warn{border-color:var(--amber);} .metric.warn .v{color:var(--amber);}
+  .metric.bad{border-color:var(--red);} .metric.bad .v{color:var(--red);}
+  .tag{display:inline-block; font-size:11.5px; padding:2px 9px; border-radius:20px; border:1px solid var(--border); color:var(--text-dim); background:#ffffff;}
+  .tag.good{border-color:var(--green); color:var(--green);} .tag.warn{border-color:var(--amber); color:var(--amber);} .tag.bad{border-color:var(--red); color:var(--red);}
+  table.data{border-collapse:collapse; width:100%; font-size:12.5px; margin-top:12px; background:#ffffff;}
+  table.data th, table.data td{border:1px solid var(--border); padding:6px 9px; text-align:left;}
+  table.data th{background:var(--panel-alt); color:var(--text-bright); font-weight:700;}
+  .tablewrap{overflow-x:auto;}
+  ul.takeaways{margin:10px 0 0; padding-left:20px; max-width:66ch;}
+  ul.takeaways li{margin-bottom:6px;}
+  .pipe{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 14px;}
+  .pipe button{font-family:ui-monospace, monospace; font-size:12.5px; padding:8px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff; color:var(--text-bright); cursor:pointer;}
+  .pipe button:hover{border-color:var(--cyan-dim);}
+  .pipe button.sel{background:var(--cyan); border-color:var(--cyan); color:#ffffff; font-weight:700;}
+  .pipe button:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  .pipe .arr{color:var(--text-dim); align-self:center; font-size:12px;}
+  .toggle{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim); cursor:pointer;}
+  .toggle input{accent-color:var(--cyan); width:16px; height:16px;}
+  .ctl-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px 20px; margin-bottom:14px;}
+  .hint{font-size:12.5px; color:var(--text-dim); margin-top:8px;}
+
+  .tokens{display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 14px;}
+  .tok{font-family:ui-monospace, monospace; font-size:13px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:#ffffff; color:var(--text-dim);}
+  .tok.done{color:var(--text-bright); border-color:var(--cyan-dim);}
+  .tok.now{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  .att{display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 4px;}
+  .att button{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; padding:8px 10px 18px; border-radius:7px; border:1px solid var(--border); background:#ffffff; color:var(--text-bright); cursor:pointer; position:relative; min-width:44px;}
+  .att button.q{outline:2px solid var(--text-bright); outline-offset:1px;}
+  .att button .w{position:absolute; left:0; right:0; bottom:3px; font-family:ui-monospace, monospace; font-size:10px; color:var(--text-dim); text-align:center;}
+  .att button:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>ML SERIES</b> :: 13 RNNs &amp; attention</div>
+  <nav>
+    <a href="ml-index.html">Index</a>
+    <a href="#rnn">RNNs</a>
+    <a href="#vanish">Vanishing gradients</a>
+    <a href="#attention">Attention</a>
+    <a href="ml-reference.html">Reference</a>
+  </nav>
+</div>
+
+<main>
+
+  <section class="hero">
+    <p class="eyebrow">Page 13 of 14 &middot; Neural networks &amp; security</p>
+    <h1>Recurrent networks and attention: models for sequences</h1>
+    <p class="lede">Some data only makes sense in order: words in a sentence, events in a log, packets in a session. "Five failed logins, then a success, then sudo" tells a very different story than the same events shuffled. This page follows how networks learned to handle order, from recurrent networks to the attention mechanism behind today's large language models.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+  </section>
+
+  <section id="rnn">
+    <h2>A network with memory</h2>
+    <p>A <b>recurrent neural network</b> (RNN) reads a sequence one item at a time. At every step it combines the new input with its own <b>hidden state</b> from the previous step, then passes the updated state forward. The hidden state is the network's memory of everything it has seen so far.</p>
+    <div class="notation-box">
+      <div class="eq-row"><span>h<sub>t</sub></span><span class="op">=</span><span>tanh( W&middot;h<sub>t&minus;1</sub> + U&middot;x<sub>t</sub> + b )</span></div>
+      <p style="margin:0; font-size:13px; color:var(--text-dim);">The new memory h<sub>t</sub> depends on the old memory h<sub>t&minus;1</sub> and the current input x<sub>t</sub>. The same weights W and U are reused at every step, just as a CNN reuses one filter at every position.</p>
+    </div>
+    <div class="panel">
+      <h3>Step through an authentication log</h3>
+      <p style="font-size:13.5px; color:var(--text-dim);">A toy RNN with three hand-set memory units, so you can see what each one tracks. A trained RNN learns its own units, which are rarely this easy to read.</p>
+      <div class="btn-row" id="seqRow"></div>
+      <div class="tokens" id="toks"></div>
+      <div class="pbars" id="hBars"></div>
+      <div class="sim-controls" style="margin-top:14px; margin-bottom:0;">
+        <button class="btn primary" id="rStep">Read next event</button>
+        <button class="btn" id="rReset">Start over</button>
+      </div>
+      <div class="result-line" id="rMsg"></div>
+    </div>
+  </section>
+
+  <section id="vanish">
+    <h2>The problem: memories fade</h2>
+    <p>To learn from an event 50 steps back, backpropagation has to pass the gradient through all 50 steps, multiplying by roughly the same factor each time. If that factor is below 1, the signal shrinks toward zero (<b>vanishing gradient</b>). Above 1, it blows up (<b>exploding gradient</b>).</p>
+    <div class="panel">
+      <div class="ctl-grid">
+        <div><div class="slider-head"><span>factor per step</span><b id="fV"></b></div><input type="range" id="fS" min="0.5" max="1.3" step="0.01" value="0.85" aria-label="Gradient factor per step"></div>
+        <div><div class="slider-head"><span>steps back in time</span><b id="nV"></b></div><input type="range" id="nS" min="1" max="60" step="1" value="30" aria-label="Steps back"></div>
+      </div>
+      <svg class="plot" id="vanPlot" role="img" aria-label="Gradient size versus steps back, log scale"></svg>
+      <div class="result-line" id="vMsg"></div>
+    </div>
+    <p style="margin-top:16px;"><b>LSTM</b> (long short-term memory, 1997) and <b>GRU</b> networks fixed much of this with <b>gates</b>: small learned switches that decide what to write into memory, what to keep, and what to forget. A gate set to "keep" lets information and gradients pass through many steps nearly unchanged. LSTMs dominated speech recognition and translation through the mid-2010s.</p>
+  </section>
+
+  <section id="attention">
+    <h2>Attention: look at everything at once</h2>
+    <p>RNNs still read one word at a time and squeeze everything into one hidden state. <b>Attention</b> lets each word look directly at every other word and decide how much each one matters to its meaning. Select a word to see where it attends; the shading and percentages show the attention weights.</p>
+    <div class="panel">
+      <div class="btn-row" id="sentRow"></div>
+      <div class="att" id="attRow"></div>
+      <div class="outcome" id="attOut" aria-live="polite"></div>
+      <p class="hint">Weights here are hand-set to illustrate the idea. In a real transformer they are computed from learned query and key vectors, and there are many attention "heads," each looking for different relationships.</p>
+    </div>
+    <div class="notation-box">
+      <div class="eq-row"><span>Attention(Q, K, V)</span><span class="op">=</span><span>softmax( Q&middot;K<sup>T</sup> / &radic;d ) &middot; V</span></div>
+      <p style="margin:0; font-size:13px; color:var(--text-dim);">Each word produces a query (what am I looking for?), a key (what do I contain?), and a value (what do I pass along?). Matching queries against keys gives the weights; softmax (page 08) makes them sum to 1.</p>
+    </div>
+  </section>
+
+  <section id="transformer">
+    <h2>Transformers and LLMs</h2>
+    <p>The 2017 paper "Attention Is All You Need" dropped recurrence entirely and built a model from stacked attention layers: the <b>transformer</b>. Because every word is processed at the same time instead of one after another, transformers train efficiently on GPUs and scale to enormous datasets. Large language models such as GPT, Claude, and Gemini are transformers trained to predict the next token across huge amounts of text.</p>
+    <div class="stat-grid">
+      <div class="stat"><div class="label mono">RNN / LSTM</div><p style="margin:0; font-size:13.5px;">Reads in order, one step at a time. Memory fades over long sequences. Still used for small, streaming, or low-power tasks.</p></div>
+      <div class="stat q"><div class="label mono">transformer</div><p style="margin:0; font-size:13.5px;">Sees the whole sequence at once through attention. Parallel and scalable. The basis of modern language, vision, and code models.</p></div>
+    </div>
+    <div class="callout"><b>In security:</b> sequence models detect anomalous command sequences on hosts, classify phishing emails by their language, and flag malicious scripts. LLMs also introduced new attacks, such as prompt injection, covered on page 14.</div>
+<pre class="code"><span class="k">import</span> torch.nn <span class="k">as</span> nn
+lstm = nn.LSTM(input_size=<span class="n">32</span>, hidden_size=<span class="n">64</span>, batch_first=<span class="k">True</span>)        <span class="c"># reads sequences of 32-number events</span>
+attn = nn.MultiheadAttention(embed_dim=<span class="n">64</span>, num_heads=<span class="n">4</span>, batch_first=<span class="k">True</span>)</pre>
+    <ul class="takeaways" style="margin-top:20px;">
+      <li>RNNs carry a hidden state forward through a sequence, reusing the same weights at every step.</li>
+      <li>Plain RNNs struggle with long-range memory because gradients vanish or explode; LSTMs and GRUs use gates to fix this.</li>
+      <li>Attention lets every position weigh every other position directly; transformers are built from it.</li>
+    </ul>
+  </section>
+
+</main>
+
+<nav class="series-nav" aria-label="Series navigation">
+  <a href="ml-12-convolutional-networks.html"><span class="dir mono">&larr; Previous &middot; 12</span><span class="ttl">Convolutional networks</span></a>
+  <a class="next" href="ml-14-ml-security.html"><span class="dir mono">Next &rarr; 14</span><span class="ttl">ML security &amp; ethics</span></a>
+</nav>
+
+<footer>
+  Sinclair College - Dr. Mike Libassi &middot; interactive demos &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">ML series</span>
+</footer>
+
+<script>
+function el(tag,attrs,parent,text){var e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!==undefined)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+function frame(svg,o){
+  var p=o.pad||{l:44,r:14,t:12,b:34};
+  svg.setAttribute('viewBox','0 0 '+o.w+' '+o.h); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var X=function(v){return p.l+(v-o.x[0])/(o.x[1]-o.x[0])*(o.w-p.l-p.r);};
+  var Y=function(v){return o.h-p.b-(v-o.y[0])/(o.y[1]-o.y[0])*(o.h-p.t-p.b);};
+  (o.xt||[]).forEach(function(t){el('line',{x1:X(t),x2:X(t),y1:p.t,y2:o.h-p.b,'class':'gridl'},svg);el('text',{x:X(t),y:o.h-p.b+15,'text-anchor':'middle'},svg,t);});
+  (o.yt||[]).forEach(function(t){el('line',{x1:p.l,x2:o.w-p.r,y1:Y(t),y2:Y(t),'class':'gridl'},svg);el('text',{x:p.l-6,y:Y(t)+4,'text-anchor':'end'},svg,t);});
+  el('line',{x1:p.l,x2:o.w-p.r,y1:o.h-p.b,y2:o.h-p.b,'class':'axisl'},svg);
+  el('line',{x1:p.l,x2:p.l,y1:p.t,y2:o.h-p.b,'class':'axisl'},svg);
+  if(o.xl)el('text',{x:(p.l+o.w-p.r)/2,y:o.h-4,'text-anchor':'middle'},svg,o.xl);
+  if(o.yl)el('text',{x:12,y:(p.t+o.h-p.b)/2,'text-anchor':'middle',transform:'rotate(-90 12 '+((p.t+o.h-p.b)/2)+')'},svg,o.yl);
+  return {X:X,Y:Y,svg:svg,p:p,o:o};
+}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(r){var u=1-r(),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function sigmoid(z){return 1/(1+Math.exp(-z));}
+function heat(p,k){var t=Math.min(1,Math.abs(p-0.5)*2)*k,c=p>=0.5?[192,41,61]:[15,116,144];return 'rgb('+c.map(function(v){return Math.round(255+(v-255)*t);}).join(',')+')';}
+function fmt(v,d){return (d===undefined?v.toFixed(2):v.toFixed(d));}
+
+function makeSorter(rootId, items, choices){
+  var root=document.getElementById(rootId);
+  root.innerHTML='<div class="scenario" aria-live="polite"></div><div class="btn-row"></div><div class="sim-controls" style="margin-bottom:0;"><button class="btn primary" disabled>Next</button><span class="score"></span></div><div class="result-line" aria-live="polite"></div>';
+  var scen=root.querySelector('.scenario'),row=root.querySelector('.btn-row'),nextB=root.querySelector('.btn.primary'),score=root.querySelector('.score'),res=root.querySelector('.result-line');
+  var btns=choices.map(function(c){var b=document.createElement('button');b.className='btn';b.textContent=c[1];b.dataset.a=c[0];row.appendChild(b);return b;});
+  var names={};choices.forEach(function(c){names[c[0]]=c[1];});
+  var idx=0,right=0,done=0,answered=false;
+  function show(){answered=false;res.className='result-line';nextB.disabled=true;btns.forEach(function(b){b.disabled=false;b.classList.remove('sel');});
+    scen.textContent=(idx+1)+' of '+items.length+'. '+items[idx][0];score.innerHTML='Score: <b>'+right+'</b> / '+done;}
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    if(answered)return;answered=true;done++;var s=items[idx],ok=b.dataset.a===s[1];if(ok)right++;
+    b.classList.add('sel');btns.forEach(function(x){x.disabled=true;});
+    res.className='result-line show '+(ok?'ok':'fail');
+    res.innerHTML=(ok?'Correct. ':'Not quite, the answer is '+names[s[1]]+'. ')+s[2];
+    score.innerHTML='Score: <b>'+right+'</b> / '+done;nextB.disabled=false;nextB.textContent=idx<items.length-1?'Next':'Start over';});});
+  nextB.addEventListener('click',function(){if(idx<items.length-1)idx++;else{idx=0;right=0;done=0;}show();});
+  show();
+}
+document.querySelectorAll('.gterm').forEach(function(t){
+  function toggle(){document.getElementById(t.dataset.pop).classList.toggle('show');}
+  t.addEventListener('click',toggle);
+  t.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+});
+document.querySelectorAll('.term-grid[data-terms]').forEach(function(grid){
+  var terms=JSON.parse(grid.dataset.terms), def=document.getElementById(grid.dataset.def), open=null;
+  terms.forEach(function(t){
+    var b=document.createElement('button'); b.className='term-card'; b.setAttribute('aria-expanded','false');
+    b.innerHTML='<div class="term-sym">'+t[0]+'</div><div class="term-name">'+t[1]+'</div>';
+    b.addEventListener('click',function(){
+      if(open===b){b.classList.remove('open');b.setAttribute('aria-expanded','false');def.classList.remove('show');open=null;return;}
+      if(open){open.classList.remove('open');open.setAttribute('aria-expanded','false');}
+      b.classList.add('open');b.setAttribute('aria-expanded','true');open=b;
+      def.innerHTML='<b>'+t[1].charAt(0).toUpperCase()+t[1].slice(1)+':</b> '+t[2];def.classList.add('show');
+    });
+    grid.appendChild(b);
+  });
+});
+</script>
+
+
+<script>
+// ---- toy RNN ----
+var SEQS={
+ 'Brute force':['login_fail','login_fail','login_fail','login_fail','login_fail','login_ok','sudo'],
+ 'Normal day':['login_ok','file_read','file_read','logout'],
+ 'Typo, then work':['login_fail','login_ok','file_read','file_read','logout']};
+var seqName='Brute force',t=0,h=[0,0,0],hist=[];
+var UNITS=['failure memory','recent success','privileged action'];
+function stepRNN(tok){var x=[tok==='login_fail'?1:0,tok==='login_ok'?1:0,(tok==='sudo'||tok==='passwd_change')?1:0];
+  h=[Math.max(0,Math.tanh(1.3*h[0]+0.55*x[0]-0.4*((tok==='file_read'||tok==='logout')?1:0))),Math.tanh(0.35*h[1]+1.0*x[1]),Math.tanh(0.6*h[2]+1.0*x[2])];}
+function risk(){return sigmoid(4.2*h[0]+1.4*h[1]+3.2*h[2]-5.0);}
+var sr=document.getElementById('seqRow');Object.keys(SEQS).forEach(function(n){var b=document.createElement('button');b.className='btn'+(n===seqName?' sel':'');b.textContent=n;
+  b.addEventListener('click',function(){seqName=n;sr.querySelectorAll('button').forEach(function(x){x.classList.remove('sel');});b.classList.add('sel');reset();});sr.appendChild(b);});
+function reset(){t=0;h=[0,0,0];drawRNN();document.getElementById('rMsg').className='result-line';}
+function drawRNN(){var s=SEQS[seqName];
+  document.getElementById('toks').innerHTML=s.map(function(k,i){return '<span class="tok'+(i<t-1?' done':'')+(i===t-1?' now':'')+'">'+k+'</span>';}).join('');
+  var rows=UNITS.map(function(u,i){return '<div class="pbar-row" style="grid-template-columns:130px 1fr 50px;"><span class="k" style="font-weight:400;">h'+(i+1)+' '+u+'</span><div class="pbar-bg"><div class="pbar" style="width:'+(Math.max(0,h[i])*100).toFixed(1)+'%"></div></div><span class="v">'+h[i].toFixed(2)+'</span></div>';});
+  var r=risk();rows.push('<div class="pbar-row" style="grid-template-columns:130px 1fr 50px; margin-top:10px;"><span class="k" style="color:var(--red);">output: risk</span><div class="pbar-bg"><div class="pbar" style="width:'+(r*100).toFixed(1)+'%; background:var(--red);"></div></div><span class="v">'+(r*100).toFixed(0)+'%</span></div>');
+  document.getElementById('hBars').innerHTML=rows.join('');
+  var b=document.getElementById('rStep');b.disabled=t>=s.length;}
+document.getElementById('rStep').addEventListener('click',function(){var s=SEQS[seqName];if(t>=s.length)return;stepRNN(s[t]);t++;drawRNN();
+  if(t===s.length){var m=document.getElementById('rMsg'),r=risk();m.className='result-line show '+(r>0.5?'fail':'ok');
+    m.innerHTML=r>0.5?'High risk. The final <span class="mono">sudo</span> alone is ordinary, but the network still remembers the burst of failures that came before it. A model that saw only the last event could not tell this apart from a normal admin session.':'Low risk. The pattern matches ordinary use; any single failed login has mostly faded from memory.';}});
+document.getElementById('rReset').addEventListener('click',reset);reset();
+
+// ---- vanishing ----
+var fS=document.getElementById('fS'),nS=document.getElementById('nS');
+function drawV(){var f=+fS.value,n=+nS.value;document.getElementById('fV').textContent=f.toFixed(2);document.getElementById('nV').textContent=n;
+  var F=frame(document.getElementById('vanPlot'),{w:640,h:230,x:[0,61],y:[-8,4],xt:[0,10,20,30,40,50,60],yt:[-8,-4,0,4],xl:'steps back in time',yl:'log10 gradient size',pad:{l:40,r:12,t:10,b:34}});
+  el('line',{x1:F.X(0),x2:F.X(61),y1:F.Y(0),y2:F.Y(0),stroke:'#6b7684','stroke-dasharray':'4 4'},F.svg);
+  for(var k=1;k<=n;k++){var v=Math.max(-8,Math.min(4,k*Math.log10(f)));el('rect',{x:F.X(k)-3,width:6,y:Math.min(F.Y(0),F.Y(v)),height:Math.max(1,Math.abs(F.Y(v)-F.Y(0))),fill:v<0?'#a8560a':'#c0293d',opacity:.85,rx:1},F.svg);}
+  var g=Math.pow(f,n),m=document.getElementById('vMsg');
+  if(g<1e-3){m.className='result-line show fail';m.innerHTML='Gradient after '+n+' steps: '+g.toExponential(1)+'. Vanished: events this far back have almost no influence on learning.';}
+  else if(g>1e3){m.className='result-line show fail';m.innerHTML='Gradient after '+n+' steps: '+g.toExponential(1)+'. Exploded: weight updates become huge and training breaks down.';}
+  else{m.className='result-line show ok';m.innerHTML='Gradient after '+n+' steps: '+(g<0.01||g>100?g.toExponential(1):g.toFixed(3))+'. Still usable, but notice how sensitive this is to the factor.';}}
+[fS,nS].forEach(function(s){s.addEventListener('input',drawV);});drawV();
+
+// ---- attention ----
+var SENT={
+ malformed:{words:['The','firewall','blocked','the','packet','because','it','was','malformed'],
+   att:{6:{4:9,8:3,1:1.2},8:{4:6,6:4},2:{1:5,4:5},1:{2:4},4:{2:3,8:3},5:{2:3,8:2}}},
+ misconfigured:{words:['The','firewall','blocked','the','packet','because','it','was','misconfigured'],
+   att:{6:{1:9,8:3,4:1.2},8:{1:6,6:4},2:{1:5,4:5},1:{2:4,8:2},4:{2:3},5:{2:3,8:2}}}};
+var sk='malformed',qi=6;
+var sRow=document.getElementById('sentRow');[['malformed','"…because it was malformed"'],['misconfigured','"…because it was misconfigured"']].forEach(function(p){var b=document.createElement('button');b.className='btn'+(p[0]===sk?' sel':'');b.textContent=p[1];
+  b.addEventListener('click',function(){sk=p[0];sRow.querySelectorAll('button').forEach(function(x){x.classList.remove('sel');});b.classList.add('sel');qi=6;drawA();});sRow.appendChild(b);});
+function weights(){var S=SENT[sk],n=S.words.length,w=[];for(var j=0;j<n;j++){var base=j===qi?1.5:(Math.abs(j-qi)===1?0.8:0.4);if(S.words[j].toLowerCase()==='the')base*=0.5;w.push(base+((S.att[qi]||{})[j]||0));}
+  var s=w.reduce(function(a,b){return a+b;},0);return w.map(function(v){return v/s;});}
+function drawA(){var S=SENT[sk],w=weights(),mx=Math.max.apply(null,w),row=document.getElementById('attRow');row.innerHTML='';
+  S.words.forEach(function(word,j){var b=document.createElement('button');b.className=j===qi?'q':'';var tt=w[j]/mx;
+    b.style.background='rgb('+[15,116,144].map(function(c){return Math.round(255+(c-255)*tt*0.75);}).join(',')+')';if(tt>0.6)b.style.color='#ffffff';
+    b.innerHTML=word+'<span class="w" style="'+(tt>0.6?'color:#e6f1f5;':'')+'">'+Math.round(w[j]*100)+'%</span>';b.setAttribute('aria-label',word+', attention '+Math.round(w[j]*100)+' percent');
+    b.addEventListener('click',function(){qi=j;drawA();});row.appendChild(b);});
+  var top=0;w.forEach(function(v,j){if(j!==qi&&v>w[top]||top===qi)top=j;});
+  var msg='When the model processes <b>"'+S.words[qi]+'"</b>, it draws most from <b>"'+S.words[top]+'"</b>.';
+  if(qi===6)msg+=sk==='malformed'?' Packets are what get malformed, so "it" means the packet. One changed word at the end of the sentence changes what "it" refers to; try the other sentence.':' Firewalls are what get misconfigured, so here "it" means the firewall. An RNN would have to carry "firewall" through five words of memory to work that out.';
+  document.getElementById('attOut').innerHTML=msg;}
+drawA();
+</script>
+
+</body>
+</html>

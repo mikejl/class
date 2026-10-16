@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notation & glossary — ML Series</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f6f8fa;
+    --panel-alt:#eef2f6;
+    --border:#dbe2e8;
+    --text:#3a4652;
+    --text-dim:#6b7684;
+    --text-bright:#0f1720;
+    --cyan:#0f7490;
+    --cyan-dim:#5cb8cf;
+    --red:#c0293d;
+    --amber:#a8560a;
+    --green:#157a4a;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .prose, h1, h2, h3, p, li, button, .term-def{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  code, .mono, .seq, .stat-num, .keybox, .step-line, kbd{
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+
+  a{color:var(--cyan);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 22px;
+    background:rgba(255,255,255,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+  }
+  .topbar .brand{color:var(--cyan); letter-spacing:0.03em;}
+  .topbar .brand b{color:var(--text-bright);}
+  .topbar nav{display:flex; gap:16px;}
+  .topbar nav a{color:var(--text-dim); text-decoration:none; white-space:nowrap;}
+  .topbar nav a:hover{color:var(--cyan);}
+  @media (max-width:760px){ .topbar nav{display:none;} }
+
+  main{max-width:740px; margin:0 auto; padding:0 22px 90px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+
+  .eyebrow{color:var(--cyan); font-size:12.5px; letter-spacing:0.04em; margin:0 0 10px;}
+  h1{font-size:clamp(28px,5vw,42px); color:var(--text-bright); margin:0 0 14px; line-height:1.15; font-weight:650;}
+  h2{font-size:22px; color:var(--text-bright); margin:0 0 6px; font-weight:650;}
+  h3{font-size:15.5px; color:var(--text-bright); margin:0 0 8px; font-weight:650;}
+  .lede{font-size:16.5px; color:var(--text); max-width:60ch;}
+  p{margin:0 0 14px; max-width:66ch;}
+  .subhead{color:var(--text-dim); font-size:13.5px; margin:0 0 26px;}
+  .byline{color:var(--text-dim); font-size:12.5px; margin:-4px 0 0;}
+
+  /* HERO */
+  .hero{padding-top:44px;}
+  .hero-visual{
+    margin-top:26px; padding:22px 20px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    display:flex; align-items:stretch; gap:18px; overflow:hidden; flex-wrap:wrap;
+  }
+  .hero-note{font-size:12px; color:var(--text-dim); margin-top:14px;}
+  .hbox{flex:1; min-width:220px; padding:14px 16px; border-radius:8px; border:1px solid var(--border); background:#ffffff;}
+  .hbox.q{border-color:var(--cyan-dim);}
+  .hbox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:8px;}
+  .hbox.q .label{color:var(--cyan);}
+  .hbit{font-size:44px; font-weight:750; color:var(--text-bright); line-height:1.1;}
+  .hket{font-size:17px; color:var(--text-bright); margin-bottom:10px; white-space:nowrap;}
+  .hket .amp{color:var(--amber);}
+
+  /* TERM GRID */
+  .term-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:18px;}
+  .term-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; cursor:pointer; text-align:left;
+  }
+  .term-card:hover{border-color:var(--cyan-dim);}
+  .term-card.open{border-color:var(--cyan); background:var(--panel-alt);}
+  .term-sym{color:var(--amber); font-size:15px; font-weight:700; font-family: ui-monospace, monospace;}
+  .term-name{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+  .term-def{
+    grid-column:1/-1; background:var(--panel-alt); border:1px solid var(--cyan-dim);
+    border-radius:8px; padding:14px 16px; font-size:13.5px; color:var(--text); display:none;
+  }
+  .term-def.show{display:block;}
+  .keychain{margin-top:20px; display:flex; gap:14px; flex-wrap:wrap;}
+  .keybox{
+    flex:1; min-width:220px; padding:14px 16px; border-radius:8px; font-size:13px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .keybox.pub{border-color:var(--cyan-dim);}
+  .keybox.priv{border-color:var(--red); background:#fdf1f2;}
+  .keybox .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:6px;}
+  .keybox.pub .label{color:var(--cyan);}
+  .keybox.priv .label{color:var(--red);}
+
+  /* GLOSSARY TERM INLINE */
+  .gterm{border-bottom:1px dotted var(--cyan); cursor:pointer; color:var(--text-bright);}
+  .gpop{
+    display:none; margin:10px 0 0; padding:12px 14px; font-size:13px;
+    background:var(--panel-alt); border:1px solid var(--cyan-dim); border-radius:8px; max-width:60ch;
+  }
+  .gpop.show{display:block;}
+
+  /* SIMULATOR PANEL */
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:24px; margin-top:20px;
+  }
+  .sim-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  select, button.btn{
+    font-family: ui-monospace, monospace; font-size:13.5px;
+    background:#ffffff; color:var(--text-bright); border:1px solid var(--border);
+    border-radius:7px; padding:9px 14px; cursor:pointer;
+  }
+  select:focus, button.btn:focus, button.bitbtn:focus, input[type=range]:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  button.btn{border-color:var(--cyan-dim);}
+  button.btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  button.btn:disabled{opacity:0.4; cursor:not-allowed;}
+  button.btn.primary{background:var(--cyan); color:#ffffff; border-color:var(--cyan); font-weight:700;}
+  button.btn.primary:hover{color:#ffffff; background:#0c637c;}
+  button.btn.sel{background:var(--panel-alt); border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  label.inline{font-size:12.5px; color:var(--text-dim); display:flex; align-items:center; gap:8px;}
+
+  .result-line{margin-top:16px; font-size:14px; padding:12px 14px; border-radius:8px; display:none;}
+  .result-line.show{display:block;}
+  .result-line.ok{background:rgba(21,122,74,0.08); border:1px solid var(--green); color:var(--green);}
+  .result-line.fail{background:rgba(192,41,61,0.08); border:1px solid var(--red); color:var(--red);}
+
+  .step-line{
+    font-size:12.5px; color:var(--text-dim);
+    padding:6px 10px; background:var(--panel-alt); border-radius:6px; border-left:2px solid var(--border);
+  }
+  .step-line.hi{color:var(--amber); border-left-color:var(--amber);}
+
+  /* SCALE COMPARISON */
+  .scale{margin-top:20px;}
+  .scale-row{margin-bottom:16px;}
+  .scale-label{display:flex; justify-content:space-between; gap:12px; font-size:12.5px; color:var(--text-dim); margin-bottom:5px;}
+  .scale-bar-bg{height:10px; border-radius:6px; background:var(--panel-alt); overflow:hidden; border:1px solid var(--border);}
+  .scale-bar{height:100%; border-radius:6px; background:var(--green); transition:width 0.25s ease;}
+  .scale-bar.over{background:linear-gradient(90deg,var(--amber),var(--red));}
+  .scale-label .fits{color:var(--green);}
+  .scale-label .nofit{color:var(--red);}
+
+  .callout{
+    margin-top:18px; padding:14px 16px; border-radius:8px; font-size:13px;
+    background:rgba(168,86,10,0.07); border:1px solid var(--amber); color:#6b3d06;
+  }
+  .callout b{color:var(--amber);}
+
+  footer{max-width:740px; margin:0 auto; padding:30px 22px 60px; color:var(--text-dim); font-size:12px;}
+  .badge{
+    display:inline-block; font-size:11px; letter-spacing:0.03em; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-left:8px;
+  }
+
+  /* ---------- QUANTUM SERIES ADDITIONS ---------- */
+  /* ket / matrix notation */
+  .eq-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size:15px; color:var(--text-bright); margin:18px 0;
+  }
+  .eq-row .op{color:var(--text-dim);}
+  .mat{
+    display:inline-flex; flex-direction:column; justify-content:center; text-align:center;
+    padding:4px 10px; line-height:1.5; min-width:34px;
+    border-left:2px solid var(--text-bright); border-right:2px solid var(--text-bright); border-radius:5px;
+  }
+  .mat .hl{color:var(--amber); font-weight:700;}
+  .ket{color:var(--cyan); font-weight:700;}
+  .notation-box{
+    padding:16px 18px; border-radius:10px; background:#ffffff; border:1px solid var(--border); margin-top:14px;
+  }
+  .notation-box .eq-row{margin:8px 0;}
+
+  /* bit toggles */
+  .bit-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  button.bitbtn{
+    width:56px; height:64px; font-size:28px; font-weight:750; border-radius:8px; cursor:pointer;
+    font-family: ui-monospace, monospace; background:#ffffff; color:var(--text-dim); border:1px solid var(--border);
+  }
+  button.bitbtn.on{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  .bitbtn-label{font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;}
+  .cell-grid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .cell{
+    font-size:12px; text-align:center; padding:6px 0; border-radius:6px;
+    border:1px solid var(--border); background:var(--panel-alt); color:var(--text-dim);
+  }
+  .cell.hit{background:var(--cyan); color:#ffffff; border-color:var(--cyan);}
+  @media (max-width:520px){ .cell-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* sliders */
+  input[type=range]{width:100%; accent-color:var(--cyan); margin:6px 0 2px;}
+  .slider-head{display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim);}
+  .slider-head b{color:var(--text-bright);}
+
+  /* probability bars */
+  .pbars{margin-top:14px;}
+  .pbar-row{display:grid; grid-template-columns:62px 1fr 64px; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .pbar-row .k{color:var(--cyan); font-weight:700;}
+  .pbar-row .v{text-align:right; color:var(--text-bright);}
+  .pbar-bg{height:14px; border-radius:6px; background:#ffffff; border:1px solid var(--border); overflow:hidden;}
+  .pbar{height:100%; background:var(--cyan); transition:width 0.2s ease;}
+  .pbar.b1{background:var(--amber);}
+  .mini .pbar-row{grid-template-columns:44px 1fr 42px; font-size:12px; margin-bottom:5px;}
+  .mini .pbar-bg{height:9px;}
+
+  .twocol{display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;}
+  .twocol > *{flex:1; min-width:240px;}
+
+  .outcome{
+    font-size:14px; padding:12px 14px; border-radius:8px; margin-top:14px;
+    background:#ffffff; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .outcome b{color:var(--text-bright);}
+
+  /* basis state chips */
+  .basis-track{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .basis-chip{
+    padding:7px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff;
+    font-size:13.5px; color:var(--text-bright);
+  }
+  .basis-chip .amp{color:var(--amber); font-size:11.5px; margin-left:6px;}
+
+  /* stat tiles */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:16px;}
+  .stat{padding:12px 14px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .stat .label{font-size:11px; letter-spacing:0.03em; color:var(--text-dim); margin-bottom:4px;}
+  .stat-num{font-size:18px; font-weight:700; color:var(--text-bright); word-break:break-all;}
+  .stat.q{border-color:var(--cyan-dim);}
+  .stat.q .label{color:var(--cyan);}
+
+  /* series navigation */
+  .series-nav{
+    max-width:740px; margin:0 auto; padding:22px 22px 0;
+    display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    border-top:1px solid var(--border);
+  }
+  .series-nav a{
+    flex:1; min-width:200px; text-decoration:none; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--panel);
+  }
+  .series-nav a:hover{border-color:var(--cyan);}
+  .series-nav .dir{display:block; font-size:11px; color:var(--text-dim); letter-spacing:0.03em;}
+  .series-nav .ttl{display:block; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:14px; color:var(--text-bright); font-weight:650;}
+  .series-nav a.next{text-align:right;}
+
+
+  .slides-cta{max-width:740px; margin:0 auto; padding:0 22px 22px;}
+  .slides-cta a{display:flex; align-items:center; gap:16px; text-decoration:none; padding:16px 18px; border-radius:10px;
+    border:1px solid var(--cyan-dim); background:var(--panel-alt);}
+  .slides-cta a:hover{border-color:var(--cyan); background:#e6f1f5;}
+  .slides-cta a:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  .slides-cta .ico{flex:none; width:44px; height:30px; border:2px solid var(--cyan); border-radius:5px; position:relative;}
+  .slides-cta .ico::after{content:''; position:absolute; left:8px; right:8px; top:8px; height:3px; background:var(--cyan); box-shadow:0 7px 0 var(--cyan-dim);}
+  .slides-cta .txt{display:flex; flex-direction:column;}
+  .slides-cta .dir{font-size:11px; color:var(--cyan); letter-spacing:0.03em;}
+  .slides-cta .ttl{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15px; font-weight:650; color:var(--text-bright);}
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .pbar, .scale-bar{transition:none;}
+  }
+
+  main.wide{max-width:1140px;}
+  .hero .lede{max-width:70ch;}
+  .index-layout{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); gap:34px; align-items:start; margin-top:30px;}
+  .topic-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+  a.topic{display:flex; flex-direction:column; gap:4px; text-decoration:none; padding:16px 16px 18px;
+    border:1px solid var(--border); border-top-width:3px; border-radius:10px; background:var(--panel); min-height:150px;}
+  a.topic:hover{background:var(--panel-alt); border-color:var(--cyan-dim);}
+  a.topic:focus{outline:2px solid var(--cyan); outline-offset:2px;}
+  a.topic .num{font-size:22px; font-weight:750; line-height:1.1;}
+  a.topic .t{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:15.5px; font-weight:650; color:var(--text-bright);}
+  a.topic .d{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; color:var(--text); line-height:1.45;}
+  a.topic.s1{border-top-color:var(--cyan);} a.topic.s1 .num{color:var(--cyan);}
+  a.topic.s2{border-top-color:var(--amber);} a.topic.s2 .num{color:var(--amber);}
+  a.topic.s3{border-top-color:var(--red);} a.topic.s3 .num{color:var(--red);}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:16px; font-size:12.5px; color:var(--text-dim);}
+  .legend span{display:flex; align-items:center; gap:7px;}
+  .legend i{display:inline-block; width:14px; height:3px; border-radius:2px;}
+  figure.fridge{margin:0; padding:18px 14px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; position:sticky; top:64px;}
+  figure.fridge svg{width:100%; height:auto; display:block;}
+  figure.fridge figcaption{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size:13px; line-height:1.5; color:var(--text-dim); padding:10px 6px 2px; border-top:1px solid var(--border); margin-top:8px;}
+  figure.fridge figcaption b{color:var(--text-bright);}
+  .res-head{font-size:12.5px; color:var(--text-dim); letter-spacing:.04em; margin:30px 0 10px;}
+  .res-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+  a.topic.res{border-top-color:var(--text-dim); min-height:0;}
+  a.topic.res .num{color:var(--text-dim); font-size:15px; letter-spacing:.05em;}
+  @media (max-width:640px){ .res-grid{grid-template-columns:1fr;} }
+  .qbit{animation:qpulse 2.6s ease-in-out infinite;}
+  @keyframes qpulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  @media (prefers-reduced-motion: reduce){ .qbit{animation:none;} }
+  @media (max-width:900px){
+    .index-layout{grid-template-columns:1fr;}
+    figure.fridge{position:static; max-width:420px; margin:0 auto;}
+  }
+  @media (max-width:640px){ .topic-grid{grid-template-columns:1fr;} a.topic{min-height:0;} }
+
+  /* ---------- ML SERIES ADDITIONS ---------- */
+  .outcome, .scenario, .result-line, .metric .label{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .scenario{font-size:15px; color:var(--text-bright); padding:14px 16px; background:#ffffff; border:1px solid var(--border); border-radius:8px; margin-bottom:14px;}
+  .score{font-size:12.5px; color:var(--text-dim);}
+  .score b{color:var(--text-bright);}
+  .timeline{display:flex; flex-direction:column; gap:6px; margin-top:16px;}
+  .timeline .step-line b{color:var(--text-bright); margin-right:8px;}
+  .flow{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13.5px; color:var(--text-bright); margin:6px 0 4px;}
+  .flow .chip{padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--panel);}
+  .flow .chip.out{border-color:var(--cyan); color:var(--cyan); font-weight:700;}
+  .flow .op{color:var(--text-dim);}
+  svg.plot{width:100%; height:auto; display:block; background:#ffffff; border:1px solid var(--border); border-radius:8px;}
+  svg.plot .gridl{stroke:var(--panel-alt); stroke-width:1;}
+  svg.plot .axisl{stroke:var(--border); stroke-width:1.2;}
+  svg.plot text{font-family:ui-monospace, "SF Mono", Consolas, monospace; font-size:11px; fill:var(--text-dim);}
+  svg.plot text.big{font-size:12.5px; fill:var(--text-bright); font-weight:700;}
+  pre.code{margin:14px 0 0; padding:14px 16px; background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--cyan); border-radius:8px; overflow-x:auto; font-size:12.8px; line-height:1.55; color:var(--text-bright);}
+  pre.code .c{color:var(--text-dim);}
+  pre.code .k{color:var(--cyan); font-weight:700;}
+  pre.code .s{color:var(--green);}
+  pre.code .n{color:var(--amber);}
+  .metric-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:14px;}
+  .metric{padding:10px 12px; border-radius:8px; background:#ffffff; border:1px solid var(--border);}
+  .metric .label{font-size:11.5px; color:var(--text-dim); margin-bottom:2px;}
+  .metric .v{font-size:18px; font-weight:700; color:var(--text-bright);}
+  .metric.good{border-color:var(--green);} .metric.good .v{color:var(--green);}
+  .metric.warn{border-color:var(--amber);} .metric.warn .v{color:var(--amber);}
+  .metric.bad{border-color:var(--red);} .metric.bad .v{color:var(--red);}
+  .tag{display:inline-block; font-size:11.5px; padding:2px 9px; border-radius:20px; border:1px solid var(--border); color:var(--text-dim); background:#ffffff;}
+  .tag.good{border-color:var(--green); color:var(--green);} .tag.warn{border-color:var(--amber); color:var(--amber);} .tag.bad{border-color:var(--red); color:var(--red);}
+  table.data{border-collapse:collapse; width:100%; font-size:12.5px; margin-top:12px; background:#ffffff;}
+  table.data th, table.data td{border:1px solid var(--border); padding:6px 9px; text-align:left;}
+  table.data th{background:var(--panel-alt); color:var(--text-bright); font-weight:700;}
+  .tablewrap{overflow-x:auto;}
+  ul.takeaways{margin:10px 0 0; padding-left:20px; max-width:66ch;}
+  ul.takeaways li{margin-bottom:6px;}
+  .pipe{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 14px;}
+  .pipe button{font-family:ui-monospace, monospace; font-size:12.5px; padding:8px 11px; border-radius:7px; border:1px solid var(--border); background:#ffffff; color:var(--text-bright); cursor:pointer;}
+  .pipe button:hover{border-color:var(--cyan-dim);}
+  .pipe button.sel{background:var(--cyan); border-color:var(--cyan); color:#ffffff; font-weight:700;}
+  .pipe button:focus{outline:2px solid var(--cyan); outline-offset:1px;}
+  .pipe .arr{color:var(--text-dim); align-self:center; font-size:12px;}
+  .toggle{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim); cursor:pointer;}
+  .toggle input{accent-color:var(--cyan); width:16px; height:16px;}
+  .ctl-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px 20px; margin-bottom:14px;}
+  .hint{font-size:12.5px; color:var(--text-dim); margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">&gt; <b>ML SERIES</b> :: reference</div>
+  <nav>
+    <a href="ml-index.html">Index</a>
+    <a href="#symbols">Symbols</a>
+    <a href="#equations">Equations</a>
+    <a href="#glossary">Glossary</a>
+  </nav>
+</div>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Reference &middot; use alongside any page</p>
+    <h1>Notation and glossary</h1>
+    <p class="lede">Machine learning borrows symbols from statistics and calculus. This page lists every symbol used in the series, shows how to read the main equations out loud, and defines the key terms, each linked to the page where it is introduced.</p>
+    <p class="byline">Sinclair College - Dr. Mike Libassi</p>
+  </section>
+  <section id="symbols">
+    <h2>Symbols</h2>
+    <div class="tablewrap"><table class="data"><thead><tr><th>Symbol</th><th>Say it</th><th>Meaning</th><th>Page</th></tr></thead><tbody><tr><td class="mono" style="color:var(--amber); font-weight:700;">x</td><td>&quot;x&quot;</td><td>A feature, or the input to a model</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">y</td><td>&quot;y&quot;</td><td>The true label or target value</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">ŷ</td><td>&quot;y-hat&quot;</td><td>The model&#x27;s prediction; the hat means &quot;predicted&quot;</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">X</td><td>&quot;capital X&quot;</td><td>The feature matrix: n rows by d columns</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">n</td><td>&quot;n&quot;</td><td>Number of examples (rows)</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">d</td><td>&quot;d&quot;</td><td>Number of features (columns)</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">xᵢ, yᵢ</td><td>&quot;x sub i&quot;</td><td>The i-th example and its label</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">m, b</td><td>&quot;m&quot;, &quot;b&quot;</td><td>Slope and intercept of a line</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">w, wⱼ</td><td>&quot;w sub j&quot;</td><td>Weights: the parameters a model learns</td><td><a href="ml-07-regularization.html">07</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">θ</td><td>&quot;theta&quot;</td><td>All of a model&#x27;s parameters together</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">f_θ(x)</td><td>&quot;f of x with parameters theta&quot;</td><td>The model as a function</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">L</td><td>&quot;L&quot;</td><td>The loss: one number for how wrong the model is</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">Σ</td><td>&quot;sum&quot;</td><td>Add up the terms that follow, usually over every example</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">∂L/∂w</td><td>&quot;partial L partial w&quot;</td><td>How much the loss changes when w changes slightly (the gradient)</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">α or η</td><td>&quot;alpha&quot; or &quot;eta&quot;</td><td>The learning rate (step size)</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">μ, σ</td><td>&quot;mu&quot;, &quot;sigma&quot;</td><td>Mean and standard deviation, used for scaling</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">λ</td><td>&quot;lambda&quot;</td><td>Regularization strength</td><td><a href="ml-07-regularization.html">07</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">σ(z)</td><td>&quot;sigma of z&quot;</td><td>The sigmoid function; context tells you it is not the standard deviation</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">z</td><td>&quot;z&quot;</td><td>A raw score before the activation function</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">p</td><td>&quot;p&quot;</td><td>A predicted probability</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">β</td><td>&quot;beta&quot;</td><td>Momentum factor</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">ε</td><td>&quot;epsilon&quot;</td><td>A small amount; on page 14, the size of an adversarial change</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">hₜ</td><td>&quot;h sub t&quot;</td><td>An RNN&#x27;s hidden state at step t</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">Q, K, V</td><td>&quot;queries, keys, values&quot;</td><td>The three inputs to attention</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr><td class="mono" style="color:var(--amber); font-weight:700;">Kᵀ</td><td>&quot;K transpose&quot;</td><td>A matrix flipped so rows become columns</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr></tbody></table></div>
+  </section>
+  <section id="equations">
+    <h2>Reading the equations</h2>
+    <p>Math notation is compact, not mysterious. Each equation below is followed by a plain-English sentence you could say out loud.</p>
+    <div class="notation-box"><div class="eq-row"><span>ŷ = m·x + b</span></div><p style="margin:0; font-size:13px;"><b>Linear regression (page 04).</b> <span style="color:var(--text-dim);">Read it as: The prediction equals the slope times x, plus the intercept.</span></p></div><div class="notation-box"><div class="eq-row"><span>MSE = (1/n) Σ (yᵢ − ŷᵢ)²</span></div><p style="margin:0; font-size:13px;"><b>Mean squared error (page 04).</b> <span style="color:var(--text-dim);">Read it as: Average the squared differences between the true and predicted values.</span></p></div><div class="notation-box"><div class="eq-row"><span>w ← w − α · ∂L/∂w</span></div><p style="margin:0; font-size:13px;"><b>Gradient descent update (page 04).</b> <span style="color:var(--text-dim);">Read it as: Replace each weight with itself minus the learning rate times its gradient.</span></p></div><div class="notation-box"><div class="eq-row"><span>x_scaled = (x − μ) / σ</span></div><p style="margin:0; font-size:13px;"><b>Standardization (page 05).</b> <span style="color:var(--text-dim);">Read it as: Subtract the mean, then divide by the standard deviation.</span></p></div><div class="notation-box"><div class="eq-row"><span>Loss = MSE + λ Σ wⱼ²</span></div><p style="margin:0; font-size:13px;"><b>L2 regularization (page 07).</b> <span style="color:var(--text-dim);">Read it as: The error plus lambda times the sum of the squared weights.</span></p></div><div class="notation-box"><div class="eq-row"><span>σ(z) = 1 / (1 + e⁻ᶻ)</span></div><p style="margin:0; font-size:13px;"><b>Sigmoid (page 08).</b> <span style="color:var(--text-dim);">Read it as: One over one plus e to the minus z; turns any score into a value between 0 and 1.</span></p></div><div class="notation-box"><div class="eq-row"><span>−[y log p + (1−y) log(1−p)]</span></div><p style="margin:0; font-size:13px;"><b>Log loss (page 08).</b> <span style="color:var(--text-dim);">Read it as: If the label is 1, the loss is minus log p; if 0, minus log of one minus p.</span></p></div><div class="notation-box"><div class="eq-row"><span>precision = TP / (TP + FP)</span></div><p style="margin:0; font-size:13px;"><b>Precision (page 09).</b> <span style="color:var(--text-dim);">Read it as: Of everything flagged, the share that was really positive.</span></p></div><div class="notation-box"><div class="eq-row"><span>recall = TP / (TP + FN)</span></div><p style="margin:0; font-size:13px;"><b>Recall (page 09).</b> <span style="color:var(--text-dim);">Read it as: Of everything really positive, the share that was flagged.</span></p></div><div class="notation-box"><div class="eq-row"><span>hₜ = tanh(W·hₜ₋₁ + U·xₜ + b)</span></div><p style="margin:0; font-size:13px;"><b>RNN update (page 13).</b> <span style="color:var(--text-dim);">Read it as: The new hidden state comes from the old state and the current input.</span></p></div>
+  </section>
+  <section id="glossary">
+    <h2>Glossary</h2>
+    <label class="inline" for="gq" style="margin-bottom:10px;">Filter terms</label>
+    <input id="gq" type="search" placeholder="Type to filter, e.g. loss" style="width:100%; max-width:360px; font-family:ui-monospace, monospace; font-size:13.5px; padding:9px 12px; border:1px solid var(--border); border-radius:7px; margin:6px 0 4px;">
+    <p class="hint" id="gCount"></p>
+    <div class="tablewrap"><table class="data" id="gTable"><thead><tr><th>Term</th><th>Meaning</th><th>Page</th></tr></thead><tbody><tr data-t="accuracy share of predictions that are correct. misleading on imbalanced data."><td><b>accuracy</b></td><td>Share of predictions that are correct. Misleading on imbalanced data.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="activation function the nonlinear function a neuron applies to its weighted sum, such as relu or sigmoid."><td><b>activation function</b></td><td>The nonlinear function a neuron applies to its weighted sum, such as ReLU or sigmoid.</td><td><a href="ml-11-multi-layer-networks.html">11</a></td></tr><tr data-t="adversarial example an input deliberately modified so a model misclassifies it."><td><b>adversarial example</b></td><td>An input deliberately modified so a model misclassifies it.</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr data-t="anomaly detection finding examples that do not fit the normal pattern."><td><b>anomaly detection</b></td><td>Finding examples that do not fit the normal pattern.</td><td><a href="ml-10-unsupervised-learning.html">10</a></td></tr><tr data-t="attention a mechanism that lets each position in a sequence weigh every other position."><td><b>attention</b></td><td>A mechanism that lets each position in a sequence weigh every other position.</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr data-t="backpropagation computing every weight&#x27;s gradient by applying the chain rule backward through a network."><td><b>backpropagation</b></td><td>Computing every weight&#x27;s gradient by applying the chain rule backward through a network.</td><td><a href="ml-11-multi-layer-networks.html">11</a></td></tr><tr data-t="batch size number of examples used for one gradient step."><td><b>batch size</b></td><td>Number of examples used for one gradient step.</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr data-t="bias (statistical) error from a model&#x27;s overly simple assumptions; high bias means underfitting."><td><b>bias (statistical)</b></td><td>Error from a model&#x27;s overly simple assumptions; high bias means underfitting.</td><td><a href="ml-06-underfit-overfit.html">06</a></td></tr><tr data-t="bias (neuron) the constant b added to a neuron&#x27;s weighted sum."><td><b>bias (neuron)</b></td><td>The constant b added to a neuron&#x27;s weighted sum.</td><td><a href="ml-11-multi-layer-networks.html">11</a></td></tr><tr data-t="classification predicting a category."><td><b>classification</b></td><td>Predicting a category.</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr data-t="clustering grouping similar examples without labels."><td><b>clustering</b></td><td>Grouping similar examples without labels.</td><td><a href="ml-10-unsupervised-learning.html">10</a></td></tr><tr data-t="confusion matrix a table of true positives, false positives, false negatives, and true negatives."><td><b>confusion matrix</b></td><td>A table of true positives, false positives, false negatives, and true negatives.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="convolution sliding a small filter across an input and recording how well each region matches."><td><b>convolution</b></td><td>Sliding a small filter across an input and recording how well each region matches.</td><td><a href="ml-12-convolutional-networks.html">12</a></td></tr><tr data-t="cross-validation training and validating k times on different splits and averaging the scores."><td><b>cross-validation</b></td><td>Training and validating k times on different splits and averaging the scores.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="data leakage information from outside the training data sneaking into training, inflating scores."><td><b>data leakage</b></td><td>Information from outside the training data sneaking into training, inflating scores.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="decision boundary the line or surface where a classifier switches from one class to another."><td><b>decision boundary</b></td><td>The line or surface where a classifier switches from one class to another.</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr data-t="deep learning machine learning with neural networks of many layers."><td><b>deep learning</b></td><td>Machine learning with neural networks of many layers.</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr data-t="drift changes in real-world data over time that make a deployed model less accurate."><td><b>drift</b></td><td>Changes in real-world data over time that make a deployed model less accurate.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="dropout randomly switching off neurons during training to reduce overfitting."><td><b>dropout</b></td><td>Randomly switching off neurons during training to reduce overfitting.</td><td><a href="ml-07-regularization.html">07</a></td></tr><tr data-t="early stopping ending training when validation error starts to rise."><td><b>early stopping</b></td><td>Ending training when validation error starts to rise.</td><td><a href="ml-07-regularization.html">07</a></td></tr><tr data-t="epoch one full pass through the training data."><td><b>epoch</b></td><td>One full pass through the training data.</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr data-t="evasion crafting inputs at prediction time to fool a model."><td><b>evasion</b></td><td>Crafting inputs at prediction time to fool a model.</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr data-t="f1 score the harmonic mean of precision and recall."><td><b>F1 score</b></td><td>The harmonic mean of precision and recall.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="feature a measurable input column describing each example."><td><b>feature</b></td><td>A measurable input column describing each example.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="feature map the output of a convolution: where in the input a filter&#x27;s pattern appears."><td><b>feature map</b></td><td>The output of a convolution: where in the input a filter&#x27;s pattern appears.</td><td><a href="ml-12-convolutional-networks.html">12</a></td></tr><tr data-t="feature scaling rescaling features to similar ranges so training converges faster."><td><b>feature scaling</b></td><td>Rescaling features to similar ranges so training converges faster.</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr data-t="generalization how well a model performs on data it was not trained on."><td><b>generalization</b></td><td>How well a model performs on data it was not trained on.</td><td><a href="ml-06-underfit-overfit.html">06</a></td></tr><tr data-t="gradient the direction and rate of steepest increase of the loss; training steps the opposite way."><td><b>gradient</b></td><td>The direction and rate of steepest increase of the loss; training steps the opposite way.</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr data-t="gradient descent repeatedly adjusting parameters against the gradient to reduce the loss."><td><b>gradient descent</b></td><td>Repeatedly adjusting parameters against the gradient to reduce the loss.</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr data-t="hidden layer a layer of neurons between the input and output."><td><b>hidden layer</b></td><td>A layer of neurons between the input and output.</td><td><a href="ml-11-multi-layer-networks.html">11</a></td></tr><tr data-t="hyperparameter a setting chosen before training, such as the learning rate or λ."><td><b>hyperparameter</b></td><td>A setting chosen before training, such as the learning rate or λ.</td><td><a href="ml-07-regularization.html">07</a></td></tr><tr data-t="inertia in k-means, the total squared distance from points to their cluster centers."><td><b>inertia</b></td><td>In k-means, the total squared distance from points to their cluster centers.</td><td><a href="ml-10-unsupervised-learning.html">10</a></td></tr><tr data-t="inference using a trained model to make predictions."><td><b>inference</b></td><td>Using a trained model to make predictions.</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr data-t="k-means a clustering algorithm that alternates assigning points and moving cluster centers."><td><b>k-means</b></td><td>A clustering algorithm that alternates assigning points and moving cluster centers.</td><td><a href="ml-10-unsupervised-learning.html">10</a></td></tr><tr data-t="label the correct answer for a training example."><td><b>label</b></td><td>The correct answer for a training example.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="learning rate how large a step gradient descent takes."><td><b>learning rate</b></td><td>How large a step gradient descent takes.</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr data-t="linear regression predicting a number with a weighted sum of features plus a bias."><td><b>linear regression</b></td><td>Predicting a number with a weighted sum of features plus a bias.</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr data-t="log loss the loss used for classification; punishes confident wrong answers."><td><b>log loss</b></td><td>The loss used for classification; punishes confident wrong answers.</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr data-t="logistic regression a linear score passed through a sigmoid to classify."><td><b>logistic regression</b></td><td>A linear score passed through a sigmoid to classify.</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr data-t="loss function a formula that turns a model&#x27;s errors into one number to minimize."><td><b>loss function</b></td><td>A formula that turns a model&#x27;s errors into one number to minimize.</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr data-t="lstm a recurrent network with gates that help it remember over long sequences."><td><b>LSTM</b></td><td>A recurrent network with gates that help it remember over long sequences.</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr data-t="membership inference determining whether a specific record was in a model&#x27;s training data."><td><b>membership inference</b></td><td>Determining whether a specific record was in a model&#x27;s training data.</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr data-t="model a function with learned parameters that maps inputs to predictions."><td><b>model</b></td><td>A function with learned parameters that maps inputs to predictions.</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr data-t="model extraction copying a model by training on its answers to many queries."><td><b>model extraction</b></td><td>Copying a model by training on its answers to many queries.</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr data-t="momentum carrying part of the previous step into the next to speed up gradient descent."><td><b>momentum</b></td><td>Carrying part of the previous step into the next to speed up gradient descent.</td><td><a href="ml-05-optimizing-training.html">05</a></td></tr><tr data-t="neuron a unit computing a weighted sum plus bias, followed by an activation."><td><b>neuron</b></td><td>A unit computing a weighted sum plus bias, followed by an activation.</td><td><a href="ml-11-multi-layer-networks.html">11</a></td></tr><tr data-t="overfitting memorizing training data, including noise, so the model fails on new data."><td><b>overfitting</b></td><td>Memorizing training data, including noise, so the model fails on new data.</td><td><a href="ml-06-underfit-overfit.html">06</a></td></tr><tr data-t="parameter a number inside the model that training adjusts."><td><b>parameter</b></td><td>A number inside the model that training adjusts.</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr data-t="poisoning corrupting training data to change what a model learns."><td><b>poisoning</b></td><td>Corrupting training data to change what a model learns.</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr data-t="pooling shrinking a feature map by summarizing blocks, for example with their maximum."><td><b>pooling</b></td><td>Shrinking a feature map by summarizing blocks, for example with their maximum.</td><td><a href="ml-12-convolutional-networks.html">12</a></td></tr><tr data-t="precision of predicted positives, the share that are truly positive."><td><b>precision</b></td><td>Of predicted positives, the share that are truly positive.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="prompt injection hiding instructions in text an llm reads, to hijack its behavior."><td><b>prompt injection</b></td><td>Hiding instructions in text an LLM reads, to hijack its behavior.</td><td><a href="ml-14-ml-security.html">14</a></td></tr><tr data-t="recall of true positives, the share the model caught."><td><b>recall</b></td><td>Of true positives, the share the model caught.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="regression predicting a number."><td><b>regression</b></td><td>Predicting a number.</td><td><a href="ml-04-linear-regression.html">04</a></td></tr><tr data-t="regularization penalizing model complexity, such as large weights, to reduce overfitting."><td><b>regularization</b></td><td>Penalizing model complexity, such as large weights, to reduce overfitting.</td><td><a href="ml-07-regularization.html">07</a></td></tr><tr data-t="reinforcement learning learning from rewards and penalties earned by actions."><td><b>reinforcement learning</b></td><td>Learning from rewards and penalties earned by actions.</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr data-t="relu the activation max(0, z), standard for hidden layers."><td><b>ReLU</b></td><td>The activation max(0, z), standard for hidden layers.</td><td><a href="ml-11-multi-layer-networks.html">11</a></td></tr><tr data-t="rnn a recurrent neural network: processes sequences while carrying a hidden state forward."><td><b>RNN</b></td><td>A recurrent neural network: processes sequences while carrying a hidden state forward.</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr data-t="roc auc area under the roc curve; how well a model ranks positives above negatives."><td><b>ROC AUC</b></td><td>Area under the ROC curve; how well a model ranks positives above negatives.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="sigmoid the s-shaped function mapping any number into the range 0 to 1."><td><b>sigmoid</b></td><td>The S-shaped function mapping any number into the range 0 to 1.</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr data-t="softmax turns a list of scores into probabilities that sum to 1."><td><b>softmax</b></td><td>Turns a list of scores into probabilities that sum to 1.</td><td><a href="ml-08-logistic-regression.html">08</a></td></tr><tr data-t="supervised learning learning from examples that have labels."><td><b>supervised learning</b></td><td>Learning from examples that have labels.</td><td><a href="ml-01-what-is-ai-ml.html">01</a></td></tr><tr data-t="test set data held back for one final, honest evaluation."><td><b>test set</b></td><td>Data held back for one final, honest evaluation.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="threshold the probability above which a classifier predicts the positive class."><td><b>threshold</b></td><td>The probability above which a classifier predicts the positive class.</td><td><a href="ml-09-evaluating-models.html">09</a></td></tr><tr data-t="training set the data a model learns its parameters from."><td><b>training set</b></td><td>The data a model learns its parameters from.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="transformer a network architecture built from attention layers; the basis of llms."><td><b>transformer</b></td><td>A network architecture built from attention layers; the basis of LLMs.</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr data-t="underfitting a model too simple to capture the pattern, with high error everywhere."><td><b>underfitting</b></td><td>A model too simple to capture the pattern, with high error everywhere.</td><td><a href="ml-06-underfit-overfit.html">06</a></td></tr><tr data-t="unsupervised learning finding structure in data without labels."><td><b>unsupervised learning</b></td><td>Finding structure in data without labels.</td><td><a href="ml-10-unsupervised-learning.html">10</a></td></tr><tr data-t="validation set data used during development to compare models and settings."><td><b>validation set</b></td><td>Data used during development to compare models and settings.</td><td><a href="ml-02-ml-system-structure.html">02</a></td></tr><tr data-t="vanishing gradient gradients shrinking toward zero as they pass back through many layers or steps."><td><b>vanishing gradient</b></td><td>Gradients shrinking toward zero as they pass back through many layers or steps.</td><td><a href="ml-13-rnn-attention.html">13</a></td></tr><tr data-t="variance error from being too sensitive to the specific training sample; high variance means overfitting."><td><b>variance</b></td><td>Error from being too sensitive to the specific training sample; high variance means overfitting.</td><td><a href="ml-06-underfit-overfit.html">06</a></td></tr></tbody></table></div>
+  </section>
+</main>
+
+<nav class="series-nav" aria-label="Series navigation">
+  <a href="ml-index.html"><span class="dir mono">&larr; Series index</span><span class="ttl">All topics</span></a>
+  <a class="next" href="ml-further-learning.html"><span class="dir mono">Next &rarr;</span><span class="ttl">Further learning</span></a>
+</nav>
+
+<footer>
+  Sinclair College - Dr. Mike Libassi &middot; interactive demos &middot; not graded, no submission required &middot; explore freely
+  <span class="badge">ML series</span>
+</footer>
+
+<script>
+function el(tag,attrs,parent,text){var e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!==undefined)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+function frame(svg,o){
+  var p=o.pad||{l:44,r:14,t:12,b:34};
+  svg.setAttribute('viewBox','0 0 '+o.w+' '+o.h); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var X=function(v){return p.l+(v-o.x[0])/(o.x[1]-o.x[0])*(o.w-p.l-p.r);};
+  var Y=function(v){return o.h-p.b-(v-o.y[0])/(o.y[1]-o.y[0])*(o.h-p.t-p.b);};
+  (o.xt||[]).forEach(function(t){el('line',{x1:X(t),x2:X(t),y1:p.t,y2:o.h-p.b,'class':'gridl'},svg);el('text',{x:X(t),y:o.h-p.b+15,'text-anchor':'middle'},svg,t);});
+  (o.yt||[]).forEach(function(t){el('line',{x1:p.l,x2:o.w-p.r,y1:Y(t),y2:Y(t),'class':'gridl'},svg);el('text',{x:p.l-6,y:Y(t)+4,'text-anchor':'end'},svg,t);});
+  el('line',{x1:p.l,x2:o.w-p.r,y1:o.h-p.b,y2:o.h-p.b,'class':'axisl'},svg);
+  el('line',{x1:p.l,x2:p.l,y1:p.t,y2:o.h-p.b,'class':'axisl'},svg);
+  if(o.xl)el('text',{x:(p.l+o.w-p.r)/2,y:o.h-4,'text-anchor':'middle'},svg,o.xl);
+  if(o.yl)el('text',{x:12,y:(p.t+o.h-p.b)/2,'text-anchor':'middle',transform:'rotate(-90 12 '+((p.t+o.h-p.b)/2)+')'},svg,o.yl);
+  return {X:X,Y:Y,svg:svg,p:p,o:o};
+}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(r){var u=1-r(),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function sigmoid(z){return 1/(1+Math.exp(-z));}
+function heat(p,k){var t=Math.min(1,Math.abs(p-0.5)*2)*k,c=p>=0.5?[192,41,61]:[15,116,144];return 'rgb('+c.map(function(v){return Math.round(255+(v-255)*t);}).join(',')+')';}
+function fmt(v,d){return (d===undefined?v.toFixed(2):v.toFixed(d));}
+
+function makeSorter(rootId, items, choices){
+  var root=document.getElementById(rootId);
+  root.innerHTML='<div class="scenario" aria-live="polite"></div><div class="btn-row"></div><div class="sim-controls" style="margin-bottom:0;"><button class="btn primary" disabled>Next</button><span class="score"></span></div><div class="result-line" aria-live="polite"></div>';
+  var scen=root.querySelector('.scenario'),row=root.querySelector('.btn-row'),nextB=root.querySelector('.btn.primary'),score=root.querySelector('.score'),res=root.querySelector('.result-line');
+  var btns=choices.map(function(c){var b=document.createElement('button');b.className='btn';b.textContent=c[1];b.dataset.a=c[0];row.appendChild(b);return b;});
+  var names={};choices.forEach(function(c){names[c[0]]=c[1];});
+  var idx=0,right=0,done=0,answered=false;
+  function show(){answered=false;res.className='result-line';nextB.disabled=true;btns.forEach(function(b){b.disabled=false;b.classList.remove('sel');});
+    scen.textContent=(idx+1)+' of '+items.length+'. '+items[idx][0];score.innerHTML='Score: <b>'+right+'</b> / '+done;}
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    if(answered)return;answered=true;done++;var s=items[idx],ok=b.dataset.a===s[1];if(ok)right++;
+    b.classList.add('sel');btns.forEach(function(x){x.disabled=true;});
+    res.className='result-line show '+(ok?'ok':'fail');
+    res.innerHTML=(ok?'Correct. ':'Not quite, the answer is '+names[s[1]]+'. ')+s[2];
+    score.innerHTML='Score: <b>'+right+'</b> / '+done;nextB.disabled=false;nextB.textContent=idx<items.length-1?'Next':'Start over';});});
+  nextB.addEventListener('click',function(){if(idx<items.length-1)idx++;else{idx=0;right=0;done=0;}show();});
+  show();
+}
+document.querySelectorAll('.gterm').forEach(function(t){
+  function toggle(){document.getElementById(t.dataset.pop).classList.toggle('show');}
+  t.addEventListener('click',toggle);
+  t.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+});
+document.querySelectorAll('.term-grid[data-terms]').forEach(function(grid){
+  var terms=JSON.parse(grid.dataset.terms), def=document.getElementById(grid.dataset.def), open=null;
+  terms.forEach(function(t){
+    var b=document.createElement('button'); b.className='term-card'; b.setAttribute('aria-expanded','false');
+    b.innerHTML='<div class="term-sym">'+t[0]+'</div><div class="term-name">'+t[1]+'</div>';
+    b.addEventListener('click',function(){
+      if(open===b){b.classList.remove('open');b.setAttribute('aria-expanded','false');def.classList.remove('show');open=null;return;}
+      if(open){open.classList.remove('open');open.setAttribute('aria-expanded','false');}
+      b.classList.add('open');b.setAttribute('aria-expanded','true');open=b;
+      def.innerHTML='<b>'+t[1].charAt(0).toUpperCase()+t[1].slice(1)+':</b> '+t[2];def.classList.add('show');
+    });
+    grid.appendChild(b);
+  });
+});
+</script>
+
+<script>
+var q=document.getElementById('gq'),rows=document.querySelectorAll('#gTable tbody tr');
+function f(){var v=q.value.trim().toLowerCase(),c=0;rows.forEach(function(r){var s=!v||r.dataset.t.indexOf(v)>=0;r.style.display=s?'':'none';if(s)c++;});document.getElementById('gCount').textContent=c+' of '+rows.length+' terms';}
+q.addEventListener('input',f);f();
+</script>
+</body>
+</html>
