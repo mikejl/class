@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Virtual Sticker Heist — Easy Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#111417;--panel:#1a1e22;--panel2:#232830;--drawer:#16191d;
+    --line:#323840;--ink:#e9ede8;--muted:#a7b0ab;
+    --copper:#e0955b;--copper-d:#a85f2a;--lcd:#bff4d6;--lcd-dim:#7fa892;
+    --amber:#ffc25a;--bad:#ff6b5a;--ok:#6fdc9b;--gold:#f2c14e;--sky:#8cc8ff;
+    --nfc:#6a4b9c;--nfc-wave:#ff5a48;--metal-hi:#3a4047;--metal:#23272c;--metal-lo:#15181b;
+    --term-bg:#050806;
+    --f-disp:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+    --f-mono:ui-monospace,Menlo,Consolas,monospace;
+    --f-body:system-ui,-apple-system,'Segoe UI',sans-serif;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+  code{font-family:var(--f-mono);color:var(--lcd)}
+  #app{max-width:1180px;margin:0 auto;padding:10px 16px 28px}
+
+  #bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:8px 0 10px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0;flex:1 1 auto}
+  .brand .mark{width:30px;height:30px;flex:none;border-radius:7px;position:relative;
+    background:linear-gradient(145deg,#1f6b43,#0f3d26);box-shadow:inset 0 1px 0 #ffffff22,0 0 14px #1f6b4355}
+  .brand .mark::before{content:"";position:absolute;inset:7px 9px 6px;border-radius:3px 3px 5px 5px;
+    border:2px solid var(--ok);border-bottom-width:6px}
+  .brand h1{margin:0;font-family:var(--f-disp);font-size:25px;line-height:1;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  .brand small{display:block;color:var(--muted);font-size:12px}
+  .bar-right{display:flex;align-items:center;gap:8px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-family:var(--f-mono);font-size:11px;background:#173a28;color:var(--ok)}
+  .pill.draft{background:#3a2a10;color:var(--amber)}
+  .btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:8px;font-size:13px}
+  .btn:hover{border-color:#6a7380}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  #trail{display:flex;flex-wrap:wrap;gap:6px;width:100%;margin-bottom:12px}
+  .step{display:flex;align-items:center;gap:8px;flex:1 1 130px;min-width:120px;
+    border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:7px 10px}
+  .step .n{width:20px;height:20px;flex:none;border-radius:50%;display:grid;place-items:center;
+    font-family:var(--f-mono);font-size:11px;color:var(--muted);border:1px solid var(--line)}
+  .step .t{font-size:12px;color:#cdd3cf;line-height:1.2}
+  .step.active{border-color:var(--copper);box-shadow:0 0 0 1px var(--copper) inset}
+  .step.active .n{color:var(--copper);border-color:var(--copper)}
+  .step.done{border-color:#2f6b49}
+  .step.done .n{background:#173a28;color:var(--ok);border-color:#2f6b49}
+  .step.done .t{color:var(--ok)}
+
+  #stageWrap{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    background:radial-gradient(900px 560px at 50% 38%,#20262a 0%,#171b1f 60%,#121518 100%)}
+  #stageWrap::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(92deg,#ffffff06 0 2px,transparent 2px 12px)}
+  #scene{position:relative;min-height:500px;display:grid;place-items:center;padding:34px 18px 26px;perspective:1500px}
+  .scene-hint{position:absolute;left:16px;bottom:12px;font-family:var(--f-mono);font-size:11px;color:#9aa69f;pointer-events:none;max-width:72%}
+  .scene-net{position:absolute;right:16px;bottom:12px;font-family:var(--f-mono);font-size:11px;color:#9aa69f;text-align:right;pointer-events:none}
+  .scene-net b{color:var(--lcd);font-weight:500}
+
+  .box{position:relative;width:440px;max-width:92vw;transform-style:preserve-3d}
+  .lid{position:relative;height:142px;transform-origin:50% 100%;transition:transform .6s cubic-bezier(.3,.7,.2,1);transform:rotateX(0)}
+  .box.open .lid{transform:rotateX(-108deg)}
+  .lid-top{position:absolute;inset:0;border-radius:12px 12px 4px 4px;
+    background:linear-gradient(160deg,var(--metal-hi),var(--metal) 45%,var(--metal-lo));
+    box-shadow:inset 0 1px 0 #ffffff1f,inset 0 -8px 20px #0007,0 2px 4px #0008;
+    backface-visibility:hidden;display:flex;align-items:center;gap:14px;padding:0 20px}
+  .lid-under{position:absolute;inset:0;border-radius:12px 12px 4px 4px;transform:rotateX(180deg);
+    background:linear-gradient(160deg,#20242a,#191c20);box-shadow:inset 0 0 0 1px #0007;backface-visibility:hidden}
+  .lcd-win{width:152px;height:36px;border-radius:4px;background:#0a2331;box-shadow:inset 0 0 10px #0cf3,0 0 0 3px #0a0d0f;
+    display:grid;place-items:center;font-family:var(--f-mono);font-size:11px;color:#bfe6ff;letter-spacing:.02em;white-space:nowrap;overflow:hidden}
+  .led-holes{display:flex;gap:11px}
+  .led-holes i{width:12px;height:12px;border-radius:50%;background:#0c0f12;box-shadow:inset 0 2px 3px #000;transition:all .2s}
+  .led-holes i.on-g{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .led-holes i.on-a{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+  .led-holes i.on-r{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+  .nfc-pad{margin-left:auto;width:74px;height:54px;border-radius:7px;background:var(--nfc);display:grid;place-items:center;box-shadow:inset 0 0 0 1px #ffffff18}
+  .nfc-pad svg{width:30px;height:30px}
+
+  .box-front{position:relative;height:175px;border-radius:0 0 12px 12px;margin-top:-3px;
+    background:linear-gradient(170deg,#262b30,#1a1d21 55%,#141619);
+    box-shadow:inset 0 1px 0 #ffffff14,inset 0 -3px 14px #0008,0 20px 36px -16px #000c;overflow:hidden}
+  .vents{position:absolute;right:16px;bottom:14px;left:80px;height:86px;border-radius:6px;
+    background:repeating-linear-gradient(#0000 0 6px,#0b0d0f 6px 9px);opacity:.7}
+  .hasp{position:absolute;left:50%;top:-14px;transform:translateX(-50%);z-index:3}
+  /* TSA travel lock (black, red diamond, 3 dials) */
+  .lock{position:relative;width:132px;height:150px;cursor:pointer;background:none;border:0;padding:0;filter:drop-shadow(0 10px 12px #000b)}
+  .lock .cable{position:absolute;left:50%;top:0;width:60px;height:50px;margin-left:-30px;border:6px solid #2b2f34;border-bottom:0;border-radius:36px 36px 0 0;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+  .box.unlocked .lock .cable{transform:translate(20px,-6px) rotate(30deg)}
+  .lock .body{position:absolute;left:20px;top:32px;width:92px;height:116px;border-radius:16px;transform:rotate(-9deg);
+    background:linear-gradient(150deg,#30343a,#15171a 58%,#0c0d0f);box-shadow:inset 0 2px 0 #ffffff1f,inset 0 -12px 22px #000,inset 0 0 0 1px #000}
+  .lock .badge{position:absolute;left:11px;top:11px;width:19px;height:19px;background:linear-gradient(135deg,#e53935,#b71c1c);transform:rotate(45deg);border-radius:3px;box-shadow:inset 0 0 0 2px #ffffff55,0 1px 2px #0008}
+  .lock .brand{position:absolute;left:33px;top:13px;font-family:var(--f-disp);font-size:11px;letter-spacing:.1em;color:#d7d7d7;font-weight:500}
+  .lock .dials{position:absolute;left:0;right:0;bottom:12px;display:flex;gap:5px;justify-content:center}
+  .lock .dials i{width:21px;height:30px;border-radius:4px;background:linear-gradient(#f4f4f4,#c9c9c9);color:#17191c;
+    display:grid;place-items:center;font-family:var(--f-mono);font-weight:700;font-size:15px;box-shadow:inset 0 3px 4px #0003,inset 0 -4px 5px #0002,0 1px 0 #ffffff55}
+  .lock:hover .body{box-shadow:inset 0 2px 0 #ffffff1f,inset 0 -12px 22px #000,inset 0 0 0 1px #000,0 0 0 2px var(--copper)}
+
+  /* interior — top-down green board (matches Open-top.jpg) */
+  .interior{position:absolute;left:0;right:0;top:0;height:142px;border-radius:12px 12px 4px 4px;overflow:hidden;opacity:0;transition:opacity .4s .25s;
+    background:repeating-linear-gradient(0deg,#ffffff07 0 1px,transparent 1px 11px),repeating-linear-gradient(90deg,#ffffff07 0 1px,transparent 1px 11px),linear-gradient(150deg,#176039,#0f3f27 60%,#0c3420);
+    box-shadow:inset 0 0 0 1px #0a2a1b,inset 0 0 26px #04150d;display:flex;align-items:center;gap:7px;padding:8px 9px}
+  .box.open .interior{opacity:1}
+  .packet-env{flex:none;width:72px;height:84px;cursor:pointer;border:0;border-radius:2px;position:relative;overflow:hidden;
+    background:linear-gradient(#f4d35e,#e9c23c);color:#3a2f00;font-family:var(--f-disp);font-weight:600;font-size:12px;letter-spacing:.03em;text-transform:uppercase;line-height:1.05;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 5px 9px;box-shadow:0 6px 12px -4px #000b}
+  .packet-env span{font-family:var(--f-mono);font-size:7.5px;font-weight:400;text-transform:none;color:#6a5500}
+  .packet-env::before{content:"";position:absolute;top:0;left:0;right:0;height:0;border-left:36px solid transparent;border-right:36px solid transparent;border-top:32px solid #e0b733}
+  .packet-env::after{content:"";position:absolute;inset:0;border:1px solid #c9a52f;border-radius:2px;pointer-events:none}
+  .packet-env:hover,.packet-env:focus-visible{box-shadow:0 8px 16px -4px #000b,0 0 0 2px var(--copper)}
+  .packet-env.flash{animation:postflash 1.1s ease-out 3}
+  .keypad{flex:none;display:grid;grid-template-columns:repeat(4,8px);gap:2px;padding:4px;border-radius:4px;background:#111;box-shadow:inset 0 0 0 1px #000}
+  .keypad i{width:8px;height:8px;border-radius:2px;background:linear-gradient(#f2f2f2,#cfcfcf);box-shadow:0 1px 1px #000a}
+  .ictr{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px}
+  .mini-lcd{width:100%;max-width:210px;height:46px;border-radius:3px;background:#0a2331;box-shadow:inset 0 0 8px #0cf3,0 0 0 2px #0a0d0f;cursor:pointer;
+    font-family:var(--f-mono);font-size:11px;color:#bfe6ff;display:flex;flex-direction:column;justify-content:center;align-items:center;line-height:1.4;white-space:nowrap;overflow:hidden}
+  .mini-lcd:hover{box-shadow:inset 0 0 8px #0cf3,0 0 0 2px var(--copper)}
+  .leds3{display:flex;gap:9px}
+  .leds3 i{width:11px;height:11px;border-radius:50%;background:#1a1d20;box-shadow:inset 0 2px 2px #000}
+  .leds3 i.g.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
+  .leds3 i.a.on{background:var(--amber);box-shadow:0 0 9px var(--amber)}
+  .leds3 i.r.on{background:var(--bad);box-shadow:0 0 9px var(--bad)}
+  .leds3 i.blink,.led-holes i.blink{animation:ledblink 1s steps(1,end) infinite}
+  @keyframes ledblink{50%{opacity:.2}}
+  .nfc-mod{flex:none;width:34px;height:34px;border-radius:6px;background:linear-gradient(150deg,#e2402e,#8f2318);box-shadow:inset 0 0 0 1px #5a1812,0 2px 4px #0008}
+  .pi-area{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;background:linear-gradient(150deg,#1a5f39,#0f3d25);padding:5px;border-radius:5px;box-shadow:inset 0 0 0 1px #0a2a1b}
+  .oled{width:124px;height:46px;border-radius:3px;background:#031018;box-shadow:0 0 0 2px #060a0c,0 0 10px #0cf3;
+    font-family:var(--f-mono);font-size:10px;line-height:1.35;color:#9fe0ff;padding:5px 7px;white-space:pre;overflow:hidden;cursor:pointer;border:0;text-align:left}
+  .oled:hover{box-shadow:0 0 0 2px var(--copper),0 0 10px #0cf5}
+  .pi-cap{font-family:var(--f-mono);font-size:7px;color:#7fd3a0}
+  @keyframes postflash{0%,100%{box-shadow:0 5px 9px -3px #000a,0 0 0 0 #ffe23a00}50%{box-shadow:0 5px 9px -3px #000a,0 0 0 5px #ffe23acc}}
+
+  .stage-cta{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%}
+  .btn.prime{background:var(--copper);color:#1b1006;border-color:var(--copper);font-weight:600;padding:9px 16px}
+  .btn.prime:hover{background:#eba876}
+
+
+  /* look / overlays */
+  .ovl{position:fixed;inset:0;z-index:50;background:#000c;display:grid;place-items:center;padding:16px}
+  .sheet{max-width:440px;width:100%}
+  .note-paper{background:linear-gradient(135deg,#fff38a,#ffe23a);color:#3a3000;border-radius:3px;padding:30px 30px 36px;
+    box-shadow:0 30px 60px -20px #000;position:relative;transform:rotate(-1.3deg);font-family:'Segoe Print','Bradley Hand','Comic Sans MS',var(--f-mono)}
+  .note-paper::after{content:"";position:absolute;right:0;bottom:0;width:0;height:0;border-style:solid;border-width:0 0 34px 34px;border-color:transparent transparent #e4ca00 #e4ca00}
+  .note-paper h3{font-family:var(--f-disp);letter-spacing:.06em;text-transform:uppercase;margin:0 0 16px;font-size:22px;color:#4a3d00}
+  .note-paper .kv{font-size:17px;margin:9px 0}
+  .note-paper .kv b{display:inline-block;min-width:96px;color:#7a6600;font-weight:600}
+  .note-paper .hand{font-size:21px;color:#9a2015;font-weight:700}
+  .oled-big{background:#031018;border-radius:8px;padding:20px 22px;box-shadow:0 30px 60px -20px #000,inset 0 0 40px #0cf2;
+    font-family:var(--f-mono);color:#9fe0ff;font-size:15px;line-height:1.7;white-space:pre;text-align:left;border:1px solid #0a3a52}
+  .lcd-big{background:#0a2331;border-radius:8px;padding:20px 22px;box-shadow:0 30px 60px -20px #000,inset 0 0 40px #0cf2;
+    font-family:var(--f-mono);color:#cfe8ff;font-size:15px;line-height:1.7;white-space:pre;text-align:left;border:1px solid #16456a}
+  .look-close{margin-top:14px;width:100%}
+
+  /* packet items */
+  .packet-grid{display:grid;grid-template-columns:1fr;gap:14px}
+  .item{border-radius:10px;padding:16px 18px;cursor:pointer;position:relative;border:1px solid transparent}
+  .item.card-biz{background:linear-gradient(135deg,#f3efe6,#e4dccb);color:#2a2620;font-family:var(--f-body)}
+  .item.card-biz .co{font-family:var(--f-disp);font-size:20px;letter-spacing:.04em;text-transform:uppercase;color:#1f6b43;font-weight:600}
+  .item.card-biz .nm{font-weight:600;margin-top:6px}
+  .item.card-biz .ln{font-family:var(--f-mono);font-size:13px;color:#4a4033;margin-top:2px}
+  .item.card-rfid{background:linear-gradient(135deg,#7d1f17,#521712);color:#ffd9d2;font-family:var(--f-mono);font-size:13px}
+  .item.note-paper{cursor:pointer;transform:none}
+  .item .pin{position:absolute;right:12px;top:10px;font-family:var(--f-mono);font-size:10px;color:#a85f2a;letter-spacing:.08em;text-transform:uppercase}
+
+  /* browser */
+  #browser .win{max-width:760px;width:100%;background:#15181c;border:1px solid #3a424b;border-radius:12px;overflow:hidden;box-shadow:0 40px 80px -30px #000}
+  .bw-bar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#20242a;border-bottom:1px solid #30363d}
+  .bw-tabs{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-family:var(--f-mono)}
+  .bw-tdot{width:11px;height:11px;border-radius:50%}
+  .bw-addr{flex:1;display:flex;align-items:center;gap:6px;background:#0d1013;border:1px solid #30363d;border-radius:8px;padding:5px 10px;min-width:0}
+  .bw-addr input{flex:1;background:transparent;border:0;outline:0;color:#cfe;font-family:var(--f-mono);font-size:12.5px;min-width:0}
+  .bw-go{border:1px solid #30363d;background:#0d1013;border-radius:8px;padding:5px 10px;font-size:12px}
+  .bw-src{border:1px solid #30363d;background:#0d1013;border-radius:8px;padding:5px 9px;font-size:11px;font-family:var(--f-mono)}
+  .bw-view{background:#fff;color:#1a1a1a;max-height:62vh;overflow:auto;padding:22px 26px;font-family:Georgia,'Times New Roman',serif}
+  .bw-view.dark{background:#0b0e10;color:#cfe;font-family:var(--f-mono)}
+  .bw-view h1{font-size:30px;margin:0 0 4px}
+  .bw-view h2{font-size:19px;margin:0 0 14px;color:#333}
+  .bw-view a{color:#2a2ad0;text-decoration:underline;cursor:pointer}
+  .bw-view hr{border:0;border-top:1px solid #ccc;margin:16px 0}
+  .ss-logo{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 50% 42%,#1657c8,#0a2f78);display:grid;place-items:center;color:#39ff6a;font-family:var(--f-mono);font-size:11px;line-height:1.1;text-align:center;box-shadow:inset 0 0 0 4px #ffd34d}
+  .dir-tbl{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:13px}
+  .dir-tbl th{text-align:left;color:#1557c8;border-bottom:1px solid #bbb;padding:5px 10px 5px 0}
+  .dir-tbl td{padding:4px 10px 4px 0;border-bottom:1px solid #eee}
+  .dir-tbl a{color:#1557c8}
+  .pdfwrap{background:#4a4a4a;padding:18px;border-radius:6px}
+  .pdfpage{background:#fff;color:#111;border-radius:2px;padding:26px 28px;font-family:Georgia,serif;box-shadow:0 6px 18px #0007}
+  .pdfpage .conf{color:#b00;font-weight:700;letter-spacing:.14em;font-size:12px}
+  .close-x{margin-left:auto;border:1px solid #30363d;background:#0d1013;border-radius:8px;padding:5px 10px;font-size:12px}
+
+  /* desk */
+  .desk{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;margin-top:16px;align-items:start}
+  .col-left{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .laptop{border:1px solid #3d444c;background:var(--drawer);border-radius:18px;padding:12px;box-shadow:0 30px 60px -30px #000d;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .term-head{display:flex;align-items:center;gap:8px;padding:2px 4px 4px;font-family:var(--f-mono);font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .tdot{width:12px;height:12px;border-radius:50%}.td-r{background:#ff5f57}.td-y{background:#ffbd2e}.td-g{background:#28ca41}
+  #net-label{margin-left:auto;color:var(--copper)}
+  .term-out{background:var(--term-bg);border:1px solid #1d3a2c;border-radius:10px;padding:10px 12px;overflow-y:auto;min-height:240px;max-height:380px;font-family:var(--f-mono);font-size:13px;line-height:1.55;color:#d6f5e3}
+  .term-out .line{margin:1px 0;white-space:pre-wrap;word-break:break-word}
+  .l-prompt{color:var(--ok)}.l-out{color:#d6f5e3}.l-err{color:var(--bad)}.l-warn{color:var(--amber)}
+  .l-info{color:var(--sky)}.l-ok{color:var(--ok)}.l-dim{color:var(--lcd-dim)}
+  .term-in-row{display:flex;gap:8px;align-items:center;background:var(--term-bg);border:1px solid #1d3a2c;border-radius:10px;padding:8px 12px;font-family:var(--f-mono);font-size:13px}
+  .term-in-row:focus-within{border-color:var(--copper);box-shadow:0 0 0 1px var(--copper)}
+  .p-label{color:#8fd1b0;white-space:nowrap}
+  .term-in{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#e9fff3;font-family:var(--f-mono);font-size:13px;caret-color:var(--copper)}
+  .term-in::placeholder{color:#7fa892}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .hintbar{display:flex;gap:6px 12px;flex-wrap:wrap;background:#2a2210;border:1px solid #5a4718;border-radius:10px;padding:7px 12px;font-family:var(--f-mono);font-size:11.5px;color:var(--amber)}
+  .hintbar b{color:#ffd98a;font-weight:600}
+
+  .drawer{border:1px solid #3d444c;background:var(--drawer);border-radius:18px;box-shadow:0 30px 60px -30px #000d;padding:14px 16px 16px;display:flex;flex-direction:column;gap:16px;min-width:0}
+  .drawer h2{margin:0;font-family:var(--f-disp);font-size:21px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  .sect{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--copper);margin:0 0 6px;font-weight:500}
+  .intel-item{display:flex;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid #2a3037;color:#cdd3cf}
+  .intel-item:last-child{border-bottom:0}
+  .intel-item .k{color:var(--muted);min-width:88px}
+  .intel-item .v{color:var(--lcd);font-family:var(--f-mono)}
+  .intel-item .v.unknown{color:var(--muted);font-style:italic;font-family:var(--f-body)}
+  .lesson{background:#101712;border:1px solid #244a33;border-radius:12px;padding:11px 13px}
+  .lesson .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;color:var(--amber);text-transform:uppercase}
+  .lesson h4{margin:4px 0 5px;font-family:var(--f-disp);font-size:18px;letter-spacing:.03em;color:#dfe6df;font-weight:600}
+  .lesson p{margin:0;font-size:12.5px;color:#c2c9c4;line-height:1.5}
+  #lessons{display:flex;flex-direction:column;gap:10px}
+  #lessons:empty::after{content:"Security lessons appear here as you work through the heist.";color:var(--muted);font-size:12.5px;font-style:italic}
+
+  /* Intel panel styled as a paper notepad */
+  .notepad{position:relative;color:#2b2720;border:1px solid #d9cfb6;
+    background:repeating-linear-gradient(transparent 0 26px,#8fb0d426 26px 27px),linear-gradient(180deg,#fdfbf3,#f3eddd);
+    box-shadow:0 30px 60px -30px #000d,inset 0 0 0 1px #ffffff66;
+    padding:32px 16px 18px 42px;font-family:'Segoe Print','Bradley Hand','Comic Sans MS',var(--f-body)}
+  .notepad::before{content:"";position:absolute;top:0;bottom:0;left:32px;width:2px;background:#df6f66aa}
+  .notepad .rings{position:absolute;top:9px;left:42px;right:16px;height:13px;display:flex;justify-content:space-between;pointer-events:none}
+  .notepad .rings i{width:9px;height:13px;border-radius:50%;background:radial-gradient(circle at 50% 32%,#0007,#0001);box-shadow:inset 0 1px 1px #0009,0 1px 0 #fff8}
+  .notepad h2{color:#2b2720;font-family:inherit;transform:rotate(-1.2deg);margin:0 0 6px}
+  .notepad .sect{color:#b5651d}
+  .notepad .intel-item{border-bottom:1px dashed #cdc2a6;color:#2b2720}
+  .notepad .intel-item .k{color:#6f6552}
+  .notepad .intel-item .v{color:#1c3f7a;font-family:var(--f-mono)}
+  .notepad .intel-item .v.unknown{color:#9a9079;font-style:italic;font-family:inherit}
+
+  /* finale */
+  #finale{border:1px solid #3d444c;background:var(--drawer);border-radius:18px;padding:16px 18px;box-shadow:0 30px 60px -30px #000d}
+  #finale h3{font-family:var(--f-disp);font-size:24px;letter-spacing:.05em;text-transform:uppercase;margin:0 0 4px;font-weight:600}
+  #finale .sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .fin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .fpanel{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px}
+  .fpanel h4{margin:0 0 4px;font-family:var(--f-disp);font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+  .fpanel .fh{color:var(--muted);font-size:12px;margin:0 0 12px}
+  .kprow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .kdisplay{flex:1;background:#0a2331;border-radius:6px;box-shadow:inset 0 0 10px #0cf3,0 0 0 2px #0a0d0f;
+    font-family:var(--f-mono);color:#bfe6ff;font-size:22px;letter-spacing:.3em;padding:10px 12px;text-align:center;min-height:44px}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-width:230px}
+  .key{border:1px solid #3a424b;background:linear-gradient(#f4f4f4,#d4d4d4);color:#1a1a1a;border-radius:7px;padding:11px 0;font-family:var(--f-mono);font-weight:600;font-size:16px}
+  .key:hover{background:#fff}
+  .key.alt{background:linear-gradient(#3a424b,#2a3038);color:#dfe6df}
+  .door{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .doorbox{width:60px;height:50px;border-radius:6px;border:2px solid #3a424b;background:#14181c;position:relative;overflow:hidden}
+  .doorleaf{position:absolute;inset:0;background:linear-gradient(135deg,#3a4047,#23272c);transition:transform .4s;transform-origin:left}
+  .door.open .doorleaf{transform:perspective(200px) rotateY(-72deg)}
+  .finleds{display:flex;gap:8px}
+  .finleds i{width:16px;height:16px;border-radius:50%;background:#1a1d20;box-shadow:inset 0 2px 3px #000}
+  .finleds i.g.on{background:var(--ok);box-shadow:0 0 12px var(--ok)}
+  .finleds i.a.on{background:var(--amber);box-shadow:0 0 12px var(--amber)}
+  .finleds i.r.on{background:var(--bad);box-shadow:0 0 12px var(--bad)}
+  .cdown{font-family:var(--f-mono);font-size:13px;color:var(--amber);min-height:18px}
+  .safe-dial{display:flex;align-items:center;gap:14px}
+  .safe-lock{position:relative;pointer-events:none;flex:none}
+  .safe.open .safe-lock .cable{transform:translate(20px,-6px) rotate(30deg)}
+
+  #win{margin-top:16px;border:1px solid #2f6b49;background:linear-gradient(#10211a,#0d1713);border-radius:18px;padding:22px;text-align:center}
+  #win h3{font-family:var(--f-disp);font-size:30px;letter-spacing:.05em;text-transform:uppercase;margin:0 0 6px;color:var(--ok)}
+  #win .stk{font-size:40px;letter-spacing:6px;margin:10px 0}
+  #win p{color:#cdd3cf;max-width:620px;margin:6px auto;font-size:13.5px}
+
+  #toast{position:fixed;right:16px;top:16px;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:flex-end;width:min(330px,calc(100vw - 32px));pointer-events:none}
+  .toast{background:#0b0e0df2;border:1px solid #3a4a42;color:var(--lcd);font-family:var(--f-mono);font-size:12.5px;padding:8px 14px;border-radius:10px;animation:tin .25s ease-out;max-width:100%}
+  .toast.ok{border-color:#2f6b49;color:#a8f3c6}.toast.gold{border-color:var(--gold);color:var(--gold)}.toast.bad{border-color:#6b2f2f;color:#ffb3aa}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}}
+
+  #help .win2{max-width:560px;width:100%;background:var(--drawer);border:1px solid #3d444c;border-radius:18px;padding:20px 24px;max-height:92vh;overflow:auto}
+  #help h2{margin:0 0 8px;font-family:var(--f-disp);font-size:28px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  #help ol{padding-left:20px;margin:6px 0 12px}#help li{margin-bottom:6px;color:#d6dbd8}
+
+  @media (max-width:860px){.desk{grid-template-columns:1fr}.fin-grid{grid-template-columns:1fr}.scene-hint{display:none}}
+  @media (max-width:600px){.term-in,.bw-addr input{font-size:16px}.brand small{display:none}}
+  @media (prefers-reduced-motion:reduce){.lid,.lock .cable,.interior,.doorleaf,.safe-lock .cable,.toast,.leds3 i.blink,.led-holes i.blink{transition:none;animation:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>Virtual Sticker Heist</h1>
+        <small>Sticker Security Inc. &middot; Easy Mode &middot; full flow</small>
+      </div>
+    </div>
+    <div class="bar-right">
+      <span class="pill">🔒 SANDBOX</span>
+      <span class="pill draft">DRAFT</span>
+    </div>
+  </header>
+
+  <nav id="trail" aria-label="Heist progress"></nav>
+
+  <section id="stageWrap">
+    <div id="scene">
+      <div class="box" id="box">
+        <div class="lid" id="lid">
+          <div class="lid-top">
+            <div class="lcd-win" id="topLcd">SYSTEM LOCKED</div>
+            <div class="led-holes" id="topLeds" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="nfc-pad" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--nfc-wave)" stroke-width="2" stroke-linecap="round">
+                <path d="M6 8c3 3 3 5 0 8"/><path d="M10 6c4.5 4 4.5 8 0 12"/><path d="M14 4c6 5 6 11 0 16"/></svg>
+            </div>
+          </div>
+          <div class="lid-under" aria-hidden="true"></div>
+        </div>
+        <div class="interior" id="interior" aria-hidden="true">
+          <button type="button" class="packet-env" id="packetBtn" aria-label="Packet — open to see">Packet<span>open to see</span></button>
+          <div class="keypad" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="ictr">
+            <button type="button" class="mini-lcd" id="miniLcd" title="16x2 status LCD">SecSystem v?.?<br>Alarm Set</button>
+            <div class="leds3" aria-hidden="true"><i class="g"></i><i class="a"></i><i class="r"></i></div>
+          </div>
+          <div class="nfc-mod" aria-hidden="true"></div>
+          <div class="pi-area">
+            <button type="button" class="oled" id="oled" title="Raspberry Pi OLED">booting…</button>
+            <span class="pi-cap">Pi 4</span>
+          </div>
+        </div>
+        <div class="box-front" id="boxFront">
+          <div class="hasp">
+            <button type="button" class="lock" id="lock" aria-label="TSA combination lock set to 0 0 0. Try to open it.">
+              <span class="cable" aria-hidden="true"></span>
+              <span class="body">
+                <span class="badge" aria-hidden="true"></span>
+                <span class="brand">TRAVELMORE</span>
+                <span class="dials" aria-hidden="true"><i>0</i><i>0</i><i>0</i></span>
+              </span>
+            </button>
+          </div>
+          <div class="vents" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="scene-hint" id="sceneHint">Click the combination lock to try the box.</div>
+      <div class="scene-net">SSID <b id="netSsid">—</b> &middot; <b id="netStatus">offline</b></div>
+    </div>
+    <div class="stage-cta"><button type="button" class="btn prime" id="openLidBtn" hidden>Open the lid</button></div>
+  </section>
+
+  <div class="desk">
+    <div class="col-left">
+    <section class="laptop" aria-label="Attacker laptop">
+      <div class="term-head">
+        <span class="tdot td-r"></span><span class="tdot td-y"></span><span class="tdot td-g"></span>
+        <span style="margin-left:6px">sticker@heistboot:~$</span>
+        <span id="net-label">not connected</span>
+      </div>
+      <div class="term-out" id="term" role="log" aria-live="polite"></div>
+      <div class="term-in-row">
+        <span class="p-label" id="pLabel">sticker@heistboot:~$</span>
+        <input class="term-in" id="cmd" type="text" placeholder="type a command… (try: help)" autocomplete="off" spellcheck="false" aria-label="Terminal">
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn" id="browserBtn" disabled>🌐 Open browser</button>
+        <button type="button" class="btn" id="helpCmdBtn">Commands</button>
+      </div>
+    </section>
+
+  <section id="finale" hidden>
+    <h3>Disarm &amp; crack</h3>
+    <p class="sub">You've got the codes. Finish the physical heist: disarm the alarm, then open the safe.</p>
+    <div class="fin-grid">
+      <div class="fpanel" id="alarmPanel">
+        <h4>Alarm override</h4>
+        <p class="fh">Open the door to start the countdown, close it, then key in the override PIN before the siren.</p>
+        <div class="door" id="door">
+          <div class="doorbox"><div class="doorleaf"></div></div>
+          <button type="button" class="btn" id="doorToggle">Open door</button>
+          <div class="finleds" aria-label="status LEDs"><i class="a on" id="laA"></i><i class="r" id="laR"></i><i class="g" id="laG"></i></div>
+        </div>
+        <div class="cdown" id="cdown">Alarm armed (yellow).</div>
+        <div class="kprow"><div class="kdisplay" id="kdisp">----</div></div>
+        <div class="keys" id="keys"></div>
+      </div>
+      <div class="fpanel">
+        <h4>The safe</h4>
+        <p class="fh">Enter the 3-digit safe code (last three digits from the business card / lock.txt).</p>
+        <div class="safe-dial">
+          <div class="safe" id="safe">
+            <div class="lock safe-lock" aria-hidden="true">
+              <span class="cable"></span>
+              <span class="body">
+                <span class="badge"></span>
+                <span class="brand">TRAVELMORE</span>
+                <span class="dials"><i id="sd0">–</i><i id="sd1">–</i><i id="sd2">–</i></span>
+              </span>
+            </div>
+          </div>
+          <div>
+            <div class="kprow"><div class="kdisplay" id="sdisp" style="font-size:20px;min-height:40px">---</div></div>
+            <div class="keys" id="skeys" style="max-width:200px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <aside class="drawer" aria-label="Security lessons">
+      <h2>Security lessons</h2>
+      <div id="lessons"></div>
+    </aside>
+    </div>
+
+    <aside class="drawer notepad" aria-label="Intel">
+      <div class="rings" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <h2>Intel</h2>
+      <div>
+        <h3 class="sect">Recovered</h3>
+        <div class="intel-item"><span class="k">Lock combo</span><span class="v unknown" id="iLock">not tried</span></div>
+        <div class="intel-item"><span class="k">System</span><span class="v unknown" id="iSys">unknown</span></div>
+        <div class="intel-item"><span class="k">Wi-Fi</span><span class="v unknown" id="iWifi">unknown</span></div>
+        <div class="intel-item"><span class="k">Admin user</span><span class="v unknown" id="iUser">unknown</span></div>
+        <div class="intel-item"><span class="k">Sys password</span><span class="v unknown" id="iPass">unknown</span></div>
+        <div class="intel-item"><span class="k">Safe code</span><span class="v unknown" id="iSafe">unknown</span></div>
+        <div class="intel-item"><span class="k">Override PIN</span><span class="v unknown" id="iPin">unknown</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <section id="win" hidden>
+    <h3>Heist complete</h3>
+    <div class="stk">🎟️ 🏷️ ✨ 🏷️ 🎟️</div>
+    <p>Alarm disarmed, safe open — you walked out with the stickers. Every step here was a real-world failure: a default lock, a password on a sticky note, sensitive data on a business card, a network name on the display, open services, a misconfigured web server leaking files, a password reused across SSH/FTP/VNC, and a hard-coded PIN sitting in source code.</p>
+    <p style="color:var(--amber)">Defense recap: change defaults, keep secrets out of plain sight and out of source, close unused ports, lock down directory listings, and never reuse credentials.</p>
+  </section>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div class="ovl" id="look" hidden><div class="sheet" id="lookSheet"></div></div>
+
+<div class="ovl" id="browser" hidden>
+  <div class="win" role="dialog" aria-modal="true" aria-label="Web browser">
+    <div class="bw-bar">
+      <span class="bw-tabs"><span class="bw-tdot td-r"></span><span class="bw-tdot td-y"></span><span class="bw-tdot td-g"></span></span>
+      <span class="bw-addr">🔒<input id="bwUrl" value="http://10.42.0.1" aria-label="Address bar" autocomplete="off" spellcheck="false"></span>
+      <button class="bw-go" id="bwGo">Go</button>
+      <button class="bw-src" id="bwSrc">View source</button>
+      <button class="close-x" id="bwClose">Close</button>
+    </div>
+    <div class="bw-view" id="bwView"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const S={
+  lockCombo:'000', ssid:'secsrv', wifiPass:'securitysrv1',
+  subnet:'10.42.0.0/24', serverIp:'10.42.0.1', attackerIp:'10.42.0.50',
+  serverHost:'secsrv', adminUser:'secops', sysPassword:'midnight',
+  safeCode:'309', overridePIN:'2580', sysVersion:'2.1',
+  bizPhone:'(937) 555-0309', webServer:'lighttpd/1.4.59'
+};
+const LOGO="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCAFSAWgDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAUGBAcBAwgCCf/EAE8QAAEDAwEEBgUJBQUECQUAAAEAAgMEBREGBxIhMQgTQVFhcRQiMoGRFRZCUmJykqGxIzM0gsEXNUOi0SQlY7NTc3R1k6OywuE3RVak0v/EABwBAQACAwEBAQAAAAAAAAAAAAAFBwMEBgIBCP/EAEMRAAEDAgQCBQkGBgECBwAAAAEAAgMEEQUGITESQRNRYXGRBxQiMoGhscHRIzM1QlLwFRZUcrLhYiSCJZKiwtLx8v/aAAwDAQACEQMRAD8A9UoiIiIiIiIiIiIiIiIiIiIiIiIijr7qOzaYoXV17ulHbaVvOWplDAfAZ5nwCIpFF561r0ydK2h0lNpa21V+qBkCd/7CDPhkFzvwjzWmNTdIfatrMvbFcxYqR/KK3t6kgffOX/mtmlop6p3BAwuPYLry57Wi7jZe27zqWyachM95u9BbosZ3qqdsYP4iMrWeoOlTsvsTnRx3iousrfo0FO54/E7dafcV4wmtNRcah1VdbjU1lQ/i6SR5c53m52SV3xWiih5QNce9/FdXSZExKbWSzB2m58Bdaj6+Ju2q9DXjpu0QcWWPRtVUdz6uqEf+VrXfqqncOl/tIrz/ALusVmomd5gkkd8S8D8lq9jGRjDGtaPAYX0ugg8nMY++nJ7hb4krWdiR/K1XCq6R22au9m8wUgz/AIVHAP1aVGzbaNsVS7L9Y1bfuCJg/wArVAopFnk/w4es559o+ixnEZOoKa/td2u//mtf/wCI3/8AldsO2nbFTO3maxqn4+uInj/M1QCLIcg4YebvEfRfP4hL2K40nSQ2y0Pt3enrBnOJqOA5/CAVPW/phbRaE4uWn7NWs72wyRu+IcR+S1gi1JfJ5Rn7uVw77H5BexiT+YC37Z+m7bnODL7o6tpuPF9HUtl/yuDf1WwtP9KXZdf3Njfe5bXK76FwgdGPxDLR8V4+fGyQYexrh4jKxJrPQzc4A097OChqnyd1DdYJQ7vBH1WZuJNPrBfoxab/AGi/wCotN0orhERnfpZ2yD4tJWcvzUprZWWqpFXZ7pVUNQ3i2SKRzHDyc0grYmmekftV0cWMqq2O/wBG3nHXs6x2P+sbh/xJXL12WsSo7mWI26xqPd81tx1MT9ivc6LQOiemLo++OjptS0VVp6pdgGU/t6fP3mjeHvb71vCzX21aioWV9nuNJcKV/szU0rZGn3g81BLOs5EREREREREREREREREREREREREREREREREREREREREREREXxUVENJBJUVEscMMbS58kjg1rAOZJPABEX2oTVmtdPaGtpuOortTW6nGd3rXetIe5rRxcfAArRG1bpc0Vrlls2z6GO6VvFjrlI0mCM/8ADb/iHxOG+a83Xae+awuj7vqm6VNfVyczK/JA7h2NHgOClMMwerxF/BTMv1nkO8/srFLMyMXcVvHaB0xLncpZbds+tfo0fFvyhWMD5T4tj9lvm7PkFo26yXzVte65anvFXcKp3N0sheR4DPBo8AMLIhgip2BkTGsb3AL7VnYVkOlgAfWHpHdWzfqf3oouXEHu0ZouimoaekH7GJrT9bmT713oi7eGCOFgZE0NA5AWWg5xcbkoiIsy+IiIiIiIiIiIiIiIiIiIiIiIiLHqaCmqx+1iaT9YcD8UstXqLRleLjpW9VdvqBz6qTd3h3OHsuHgQshFB4llygxAEzRji6xof9+26zxVMkfqlbu2fdMarpJY7dtCtRI4N+UaKPDh4vi5Hzb8F6V0zq2xaytrblp+60typXfTgfktPc4c2nwIBX58T08VSzcmja9vj2L4sdw1Doa6Nu+k7rU0NS3mI3e2PquB4PHgQq0xjI9XSXkpT0jP/UPZz9ngpSGvY/R2hX6QIvO+ybpa2u/yRWbXUcVluRIY2tbkU0p+1njGfP1fEL0NFLHNG2WJ7ZI3gOa5pyHA8iD2hcQQQbFby+kRF8RERERERERERERERERERERERERERERERaw20bdrJslt5gG5X3+dmaaga72c8nyEey38z2dpBFZ9oO0jTuzOyOuuoK0RNORDTs4zVDvqsb2+fIdpXjDadtq1Ztkqn0xc606eY/LKGJ53XY5GR3+I7w5Du7VWL7eL9tCvcmoNVV0tVPKfVYeDWN7G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";
+const st={unlocked:false,lidOpen:false,sawDisplays:false,openedPacket:false,sawNote:false,sawBiz:false,
+  connected:false,scanned:false,visitedWeb:false,sawSysInfo:false,foundDocs:false,foundPassword:false,
+  loggedIn:false,foundSafe:false,foundPin:false,alarmDisarmed:false,safeOpen:false,won:false,epoch:0};
+
+const STEPS=[
+  {id:'open',t:'Open the box'},{id:'recon',t:'Recon the contents'},{id:'net',t:'Join the network'},
+  {id:'scan',t:'Scan the host'},{id:'web',t:'Web recon'},{id:'login',t:'Access the server'},
+  {id:'codes',t:'Find the codes'},{id:'prize',t:'Disarm & grab stickers'}
+];
+function doneMap(){return{open:st.unlocked,recon:st.openedPacket&&st.sawDisplays,net:st.connected,scan:st.scanned,
+  web:st.foundPassword,login:st.loggedIn,codes:st.foundSafe&&st.foundPin,prize:st.won};}
+
+const $=id=>document.getElementById(id);
+const term=$('term'),cmd=$('cmd'),look=$('look'),lookSheet=$('lookSheet');
+
+// terminal
+function print(t,c='l-out'){const d=document.createElement('div');d.className='line '+c;d.textContent=t;term.appendChild(d);term.scrollTop=term.scrollHeight;}
+function blank(){print('');}
+function banner(){
+  print('╔══════════════════════════════════════════════════════╗','l-info');
+  print('║   VIRTUAL STICKER HEIST — EASY MODE  ·  SANDBOX LAB   ║','l-info');
+  print('║   Simulated target. For security education only.     ║','l-info');
+  print('╚══════════════════════════════════════════════════════╝','l-info');blank();
+}
+let mode='normal'; // normal | wifi-pass | ssh-pass | shell
+let cwd='~';
+
+function renderTrail(){
+  const el=$('trail');el.innerHTML='';const dm=doneMap();let act=false;
+  STEPS.forEach((s,i)=>{const done=dm[s.id];const d=document.createElement('div');d.className='step'+(done?' done':'');
+    if(!done&&!act){d.classList.add('active');act=true;}
+    d.innerHTML='<span class="n">'+(done?'✓':i+1)+'</span><span class="t">'+s.t+'</span>';el.appendChild(d);});
+}
+function setI(id,v,known){const e=$(id);e.textContent=v;e.classList.toggle('unknown',!known);}
+function renderIntel(){
+  setI('iLock',st.unlocked?'000 (default)':'not tried',st.unlocked);
+  setI('iSys',st.sawDisplays?('v'+S.sysVersion+' · '+S.serverHost+' · '+S.serverIp):'unknown',st.sawDisplays);
+  setI('iWifi',st.sawNote?(S.ssid+' / '+S.wifiPass):(st.sawDisplays?S.ssid+' / ?':'unknown'),st.sawNote);
+  setI('iUser',st.visitedWeb?S.adminUser:'unknown',st.visitedWeb);
+  setI('iPass',st.foundPassword?S.sysPassword:'unknown',st.foundPassword);
+  setI('iSafe',st.foundSafe?S.safeCode:'unknown',st.foundSafe);
+  setI('iPin',st.foundPin?S.overridePIN:'unknown',st.foundPin);
+  $('netSsid').textContent=st.sawDisplays?S.ssid:'—';
+  $('netStatus').textContent=st.connected?'connected':'offline';
+  $('net-label').textContent=st.connected?('connected · '+S.ssid):'not connected';
+  $('browserBtn').disabled=!st.connected;
+}
+const shown=new Set();
+function lesson(id,tag,title,body){if(shown.has(id))return;shown.add(id);
+  const b=$('lessons');const e=document.createElement('div');e.className='lesson';
+  e.innerHTML='<span class="tag"></span><h4></h4><p></p>';
+  e.querySelector('.tag').textContent=tag;e.querySelector('h4').textContent=title;e.querySelector('p').textContent=body;b.appendChild(e);}
+function toast(m,k){const b=$('toast');const d=document.createElement('div');d.className='toast '+(k||'');d.textContent=m;b.appendChild(d);setTimeout(()=>d.remove(),3300);while(b.children.length>3)b.firstChild.remove();}
+function hint(){}
+
+// ── box interactions ──
+$('lock').addEventListener('click',()=>{
+  if(st.unlocked)return;st.unlocked=true;$('box').classList.add('unlocked');
+  $('topLcd').textContent='*** UNLOCKED ***';$('openLidBtn').hidden=false;
+  $('sceneHint').textContent='The lock sprang open on the first try. Now open the lid.';
+  toast('Lock opened on 000','ok');
+  lesson('lock','Physical · Default credentials','Default combination 000',
+    'The TSA lock shipped at 000 and was never changed. Default credentials are the first thing an attacker tries — on locks, routers, cameras and admin panels alike. Change them before a device goes live.');
+  print('[lock] TSA combination 000 accepted — box open. Never changed from factory default.','l-warn');blank();
+  hint('<b>Next:</b> click <b>Open the lid</b>, then read the displays and open the packet.');
+  renderTrail();renderIntel();
+});
+$('openLidBtn').addEventListener('click',()=>{
+  if(!st.unlocked||st.lidOpen)return;st.lidOpen=true;$('box').classList.add('open');
+  $('interior').setAttribute('aria-hidden','false');$('openLidBtn').hidden=true;
+  const env=$('packetBtn');env.classList.add('flash');env.addEventListener('animationend',()=>env.classList.remove('flash'),{once:true});
+  $('oled').textContent='host: '+S.serverHost+'\nip: '+S.serverIp+'\nv'+S.sysVersion;
+  $('miniLcd').innerHTML='SecSystem v'+S.sysVersion+'<br>Alarm Set';
+  $('sceneHint').textContent='Read the LCD and the Pi screen, and open the yellow packet.';
+  print('[box] Open. Inside: Raspberry Pi + OLED, keypad board, status LCD, red reader, and a parts packet.','l-info');blank();
+  renderTrail();
+});
+$('oled').addEventListener('click',()=>{if(!st.lidOpen)return;
+  lookSheet.innerHTML='<div class="oled-big">┌─ Raspberry Pi ──────────┐\n'+
+    '  HOST : '+S.serverHost+'\n  IP   : '+S.serverIp+'\n  NET  : '+S.subnet+'\n  VER  : SecSystem v'+S.sysVersion+'\n  LINK : up\n'+
+    '└─────────────────────────┘</div><button type="button" class="btn look-close" id="lc" style="margin-top:14px">Close</button>';
+  openLook();markDisplays();
+  print('[recon] Pi OLED → host '+S.serverHost+', ip '+S.serverIp+', '+S.subnet+', SecSystem v'+S.sysVersion,'l-info');blank();
+});
+$('miniLcd').addEventListener('click',()=>{if(!st.lidOpen)return;openLcd();
+  print('[recon] Status LCD → "SecSystem v'+S.sysVersion+' / Alarm Set". The running version is '+S.sysVersion+'.','l-info');blank();
+});
+function markDisplays(){if(st.sawDisplays){renderIntel();return;}st.sawDisplays=true;
+  lesson('recon','Recon · Information exposure','The device tells on itself',
+    'Hostname, IP, network size and the exact firmware version ('+S.sysVersion+') are printed right on the screens. None of it is secret, but it hands an attacker the map: what to target and which version to look up. Treat on-device info as public.');
+  renderTrail();renderIntel();}
+
+function setSystemLeds(stt){
+  const top=$('topLeds').children;top[0].className='';top[1].className='';top[2].className='';
+  const row=document.querySelectorAll('.leds3 i');row.forEach(i=>i.classList.remove('on','blink'));
+  if(stt==='armed'){top[1].className='on-a';if(row[1])row[1].classList.add('on');}
+  else if(stt==='disarmed'){top[0].className='on-g';if(row[0])row[0].classList.add('on');}
+  else if(stt==='alarm'){top[2].className='on-r blink';if(row[2])row[2].classList.add('on','blink');}
+}
+function openLcd(){
+  lookSheet.innerHTML='<div class="lcd-big">┌─ Status LCD (16×2) ─────┐\n'+
+    '  SecSystem v'+S.sysVersion+'\n'+
+    '  Alarm : '+(st.alarmDisarmed?'OFF (disarmed)':'SET (armed)')+'\n'+
+    '└─────────────────────────┘</div>'+
+    '<div style="color:#9aa69f;font-family:var(--f-mono);font-size:11px;margin-top:8px">The 16×2 LCD shows the live alarm state and the running firmware version.</div>'+
+    '<button type="button" class="btn look-close" id="lc" style="margin-top:12px">Close</button>';
+  openLook();markDisplays();
+}
+
+// packet
+$('packetBtn').addEventListener('click',()=>{
+  lookSheet.innerHTML='<div class="packet-grid">'+
+    '<div class="item card-biz" id="pBiz"><span class="pin">business card</span>'+
+      '<div class="co">Sticker Security Inc.</div><div class="nm">'+S.adminUser+' — Security Operations</div>'+
+      '<div class="ln">tel '+S.bizPhone+'</div><div class="ln">'+S.adminUser+'@'+S.serverHost+'</div></div>'+
+    '<div class="item note-paper" id="pNote"><h3>Wi-Fi — don\'t forget!</h3>'+
+      '<div class="kv"><b>Network</b> <span class="hand">'+S.ssid+'</span></div>'+
+      '<div class="kv"><b>Password</b> <span class="hand">'+S.wifiPass+'</span></div>'+
+      '<div class="kv" style="font-size:13px;color:#7a6600;margin-top:10px">— IT (leave this here)</div></div>'+
+    '<div class="item card-rfid" id="pRfid"><span class="pin" style="color:#ffb3aa">access card</span>'+
+      'RFID KEY CARD · UID 04:A3:1C:… <br><span style="opacity:.8">(reader shows: NOT AUTHORIZED)</span></div>'+
+    '</div><button type="button" class="btn look-close" id="lc" style="margin-top:14px">Close packet</button>';
+  openLook();
+  if(!st.openedPacket){st.openedPacket=true;print('[packet] Contents: a business card, a Wi-Fi note, and an RFID card.','l-info');blank();renderTrail();}
+  $('pNote').addEventListener('click',readNote);
+  $('pBiz').addEventListener('click',()=>{
+    toast('Business card phone ends '+S.safeCode,'ok');
+    if(!st.sawBiz){st.sawBiz=true;
+      print('[recon] Business card: '+S.adminUser+'@'+S.serverHost+', tel '+S.bizPhone,'l-warn');blank();renderIntel();}
+  });
+  $('pRfid').addEventListener('click',()=>{
+    toast('RFID card: NOT AUTHORIZED (decoy)','bad');
+    lesson('rfid','Recon · Red herrings','Not every artifact is a key',
+      'The spare RFID card does nothing — the reader rejects it. Real engagements are full of dead ends. Noting what does NOT work is as valuable as finding what does, and keeps you from chasing the wrong lead.');
+  });
+});
+function readNote(){
+  lookSheet.innerHTML='<div class="note-paper"><h3>Wi-Fi — don\'t forget!</h3>'+
+    '<div class="kv"><b>Network</b> <span class="hand">'+S.ssid+'</span></div>'+
+    '<div class="kv"><b>Password</b> <span class="hand">'+S.wifiPass+'</span></div>'+
+    '<div class="kv" style="font-size:14px;color:#7a6600;margin-top:14px">— IT (leave this here)</div></div>'+
+    '<button type="button" class="btn look-close" id="lc">Close note</button>';
+  openLook();
+  if(!st.sawNote){st.sawNote=true;
+    lesson('note','Credentials · Secrets management','Wi-Fi password on a sticky note',
+      'The network password is on a Post-it by the hardware "so nobody forgets it." A written secret sitting with the device defeats the password entirely. Secrets belong in a manager or vault, never taped to the box.');
+    toast('Wi-Fi password: '+S.wifiPass,'ok');
+    print('[note] Wi-Fi '+S.ssid+' / '+S.wifiPass,'l-warn');blank();
+    hint('<b>Next:</b> in the terminal, <b>connect '+S.ssid+' '+S.wifiPass+'</b>');
+    renderTrail();renderIntel();}
+}
+function openLook(){look.hidden=false;const c=$('lc');if(c){c.addEventListener('click',closeLook);c.focus();}}
+function closeLook(){look.hidden=true;}
+look.addEventListener('click',e=>{if(e.target===look)closeLook();});
+
+// ── terminal engine ──
+function setMode(m){mode=m;
+  if(m==='shell'){$('pLabel').textContent=S.adminUser+'@'+S.serverHost+':'+cwd+'$';cmd.placeholder='ls, cat lock.txt, cd Documents …';cmd.type='text';}
+  else if(m==='wifi-pass'||m==='ssh-pass'){$('pLabel').textContent='password:';cmd.placeholder='enter password';cmd.type='password';}
+  else{$('pLabel').textContent='sticker@heistboot:~$';cmd.placeholder='type a command… (try: help)';cmd.type='text';}
+}
+let pending=null;
+function helpList(){
+  print('Commands:','l-info');blank();
+  print('  help                        this list','l-out');
+  print('  scan-wifi                   list Wi-Fi networks','l-out');
+  print('  connect <ssid> <pass>       join the network','l-out');
+  print('  nmap <ip>                   scan ports on a host','l-out');
+  print('  dirb <url> / nikto -h <ip>  probe the web server','l-out');
+  print('  browser                     open the web browser','l-out');
+  print('  ssh <user>@<ip>             log into the server','l-out');
+  print('  status / reset / clear','l-out');blank();
+}
+function doScan(){print('$ nmcli dev wifi list','l-prompt');
+  if(!st.sawDisplays&&!st.sawNote){print('No networks identified. Open the box and read the displays first.','l-warn');return;}
+  print('SSID              SIGNAL  SECURITY','l-dim');print(S.ssid.padEnd(18)+'88%     WPA2','l-out');
+  print('(other networks out of range)','l-dim');blank();}
+function doConnect(a,b){
+  if(!a){print('Usage: connect <ssid> <password>','l-warn');return;}
+  if(!b){pending={ssid:a};print('Password for "'+a+'":','l-dim');setMode('wifi-pass');return;}
+  finishConnect(a,b);
+}
+function finishConnect(ssid,pass){
+  print('$ nmcli dev wifi connect "'+ssid+'" password "••••••••"','l-prompt');
+  if(ssid!==S.ssid){print('Error: SSID "'+ssid+'" not in range. Check the display for the exact name.','l-err');return;}
+  if(pass!==S.wifiPass){print('Error: authentication failed — wrong password (check the note).','l-err');toast('Wrong Wi-Fi password','bad');return;}
+  if(st.connected){print('Already connected.','l-ok');return;}
+  const run=st.epoch;const d=ms=>new Promise(r=>setTimeout(r,ms));
+  (async()=>{print('Associating…','l-dim');await d(300);if(run!==st.epoch)return;
+    print('DHCP lease…','l-dim');await d(300);if(run!==st.epoch)return;
+    print('Connected. IP '+S.attackerIp+' on '+ssid+' ('+S.subnet+')','l-ok');blank();
+    st.connected=true;
+    lesson('connect','Perimeter · Lateral access','Inside the network',
+      'With a found SSID and a found password, the laptop is now a trusted host on the internal '+S.subnet+' — same footing as the Pi. Everything downstream assumes the perimeter held. It did not.');
+    toast('On the network','gold');
+    print('Host up: '+S.serverIp,'l-info');
+    hint('<b>Next:</b> <b>nmap '+S.serverIp+'</b> to find open services.');
+    renderTrail();renderIntel();})();
+}
+function doNmap(ip){print('$ nmap -sV '+(ip||''),'l-prompt');
+  if(!st.connected){print('Error: not on the network. connect first.','l-err');return;}
+  if(ip!==S.serverIp){print('Note: nothing of interest at '+ip+'. The system is at '+S.serverIp+'.','l-warn');return;}
+  print('Starting Nmap against '+S.serverIp+' ('+S.serverHost+')','l-dim');
+  print('PORT     STATE  SERVICE  VERSION','l-dim');
+  print('21/tcp   open   ftp      vsftpd 3.0.3','l-out');
+  print('22/tcp   open   ssh      OpenSSH 8.4','l-out');
+  print('80/tcp   open   http     '+S.webServer,'l-out');
+  print('5900/tcp open   vnc      RealVNC','l-out');blank();
+  if(!st.scanned){st.scanned=true;
+    lesson('ports','Network · Attack surface','Open ports = ways in',
+      'FTP, SSH, HTTP and VNC are all listening. Every open service is attack surface. Port 80 is the right first look; 22/21/5900 become useful once you have credentials. Close or firewall anything the device does not need.');
+    toast('4 open ports found','ok');
+    hint('<b>Next:</b> <b>Open browser</b> → read the site and find <b>/docs/</b>');
+    renderTrail();}
+}
+function doDirb(){print('$ dirb http://'+S.serverIp+'/','l-prompt');
+  if(!st.connected){print('Error: not on the network.','l-err');return;}
+  print('---- Scanning URL: http://'+S.serverIp+'/ ----','l-dim');
+  print('==> DIRECTORY: http://'+S.serverIp+'/docs/','l-ok');
+  print('==> DIRECTORY: http://'+S.serverIp+'/pics/','l-ok');
+  print('==> DIRECTORY: http://'+S.serverIp+'/images/','l-ok');blank();
+  revealDocs();}
+function doNikto(){print('$ nikto -h '+S.serverIp,'l-prompt');
+  if(!st.connected){print('Error: not on the network.','l-err');return;}
+  print('+ Server: '+S.webServer,'l-out');
+  print('+ /docs/: Directory indexing found.','l-warn');
+  print('+ /pics/: Directory indexing found.','l-warn');
+  print('+ X-Frame-Options / X-Content-Type-Options headers missing.','l-out');blank();
+  revealDocs();}
+function revealDocs(){if(st.foundDocs){return;}st.foundDocs=true;
+  lesson('dir','Web · Security misconfiguration','Directory indexing is on',
+    'The web server lists the raw contents of /docs/ to anyone — an OWASP Top 10 "Security Misconfiguration." Files never meant to be browsed (including a confidential PDF) are exposed. Disable auto-indexing and keep sensitive files off the web root.');
+  toast('/docs/ is browsable','ok');
+  hint('<b>Next:</b> open the browser → <b>/docs/</b> → open the confidential PDF.');}
+
+// shell
+const FILES={
+  '~':['Desktop','Documents','lock.txt','notes.txt'],
+  '~/Documents':['secsystem_v2_1.ino','secsystem_v2_2.ino','README.txt']
+};
+function doShellCmd(raw){
+  const p=raw.split(/\s+/),c=p[0];
+  if(c==='ls'){print((FILES[cwd]||[]).join('   '),'l-out');return;}
+  if(c==='pwd'){print(cwd.replace('~','/home/'+S.adminUser),'l-out');return;}
+  if(c==='whoami'){print(S.adminUser,'l-out');return;}
+  if(c==='cd'){const t=p[1]||'~';
+    if(t==='~'||t==='/home/'+S.adminUser){cwd='~';}
+    else if(t==='..'){cwd='~';}
+    else if((t==='Documents'||t==='./Documents')&&cwd==='~'){cwd='~/Documents';}
+    else{print('cd: no such directory: '+t,'l-err');return;}
+    setMode('shell');return;}
+  if(c==='cat'){
+    const f=p[1]||'';
+    if(f==='lock.txt'&&cwd==='~'){print('# Physical safe — do not share','l-dim');print('Safe lock code: '+S.safeCode,'l-warn');
+      if(!st.foundSafe){st.foundSafe=true;lesson('safe','Server · Secrets in plain files','The safe code in a text file',
+        'lock.txt stores the physical safe code in clear text in the admin home directory. Once someone is on the box, flat-file secrets are free. Keep physical codes out of the filesystem entirely.');
+      lesson('biz','Recon · Sensitive data exposure','A code hiding on a business card',
+        'The safe code ('+S.safeCode+') is also the last three digits of the phone number on the business card in the packet. Reusing a "memorable" number as a secret means anyone holding the card holds the key. Codes should be random and never embedded in public artifacts.');
+      toast('Safe code: '+S.safeCode,'gold');revealFinale();renderTrail();renderIntel();}return;}
+    if(f==='notes.txt'&&cwd==='~'){print('reminder: rotate the vault password (midnight) ...someday','l-out');return;}
+    if(f==='README.txt'&&cwd==='~/Documents'){print('Build notes. v2.1 is the version in service. v2.2 is a scrapped prototype.','l-out');return;}
+    if(f==='secsystem_v2_1.ino'&&cwd==='~/Documents'){
+      print('// ---- SecSystem v2.1  (Key Pad Config) ----','l-dim');
+      print('char keys[ROWS][COLS] = {{\'1\',\'2\',\'3\',\'A\'},{\'4\',\'5\',\'6\',\'B\'},...};','l-out');
+      print('Password password = Password("'+S.overridePIN+'");  // disarm PIN: open door, countdown, close, enter code','l-warn');
+      if(!st.foundPin){st.foundPin=true;lesson('pin','Server · Hard-coded secrets','The override PIN is in the source',
+        'The keypad disarm PIN ('+S.overridePIN+') is hard-coded in the v2.1 firmware source. Hard-coded secrets ship to everyone who can read the code. Keep credentials in protected config, not in source.');
+      toast('Override PIN: '+S.overridePIN,'gold');revealFinale();renderTrail();renderIntel();}return;}
+    if(f==='secsystem_v2_2.ino'&&cwd==='~/Documents'){
+      print('// ---- SecSystem v2.2 (PROTOTYPE — not deployed) ----','l-dim');
+      print('Password password = Password("1379");  // decoy: this version is not in service','l-out');
+      print('(The LCD says v'+S.sysVersion+' — use the matching source.)','l-dim');return;}
+    print('cat: '+f+': No such file','l-err');return;}
+  if(c==='exit'){print('logout','l-dim');setMode('normal');cwd='~';return;}
+  if(c==='help'){print('shell: ls, pwd, cd <dir>, cat <file>, whoami, exit','l-out');return;}
+  if(c==='clear'){term.innerHTML='';return;}
+  print(c+': command not found','l-err');
+}
+
+function doSsh(arg){
+  if(!st.connected){print('ssh: connect to the network first.','l-err');return;}
+  const m=(arg||'').match(/^([\w.-]+)@([\d.]+)$/);
+  if(!m){print('Usage: ssh <user>@<ip>  (e.g. ssh '+S.adminUser+'@'+S.serverIp+')','l-warn');return;}
+  if(m[2]!==S.serverIp){print('ssh: connect to host '+m[2]+' failed.','l-err');return;}
+  if(m[1]!==S.adminUser){print('ssh: '+m[1]+'@'+m[2]+': Permission denied.','l-err');return;}
+  pending={sshUser:m[1],sshIp:m[2]};
+  print(m[1]+'@'+m[2]+"'s password:",'l-dim');setMode('ssh-pass');
+}
+function finishSsh(pass){
+  if(pass!==S.sysPassword){print('Permission denied, please try again.','l-err');toast('SSH login failed','bad');setMode('normal');pending=null;return;}
+  setMode('shell');cwd='~';pending=null;
+  print('Welcome to Sticker Security System ('+S.serverHost+')','l-ok');blank();
+  if(!st.loggedIn){st.loggedIn=true;
+    lesson('creds','Access · Weak / reused credentials','One password opens everything',
+      'The same password (midnight) works for SSH, FTP and VNC — found inside a browsable PDF. Weak, reused credentials turn a single leak into full system access. Use strong, unique secrets and multi-factor where possible.');
+    toast('Shell on '+S.serverHost,'gold');hint('<b>Next:</b> <b>cat lock.txt</b> and read the v'+S.sysVersion+' source in <b>Documents</b>.');renderTrail();}
+}
+
+function handle(raw){
+  if(mode==='wifi-pass'){const ss=pending&&pending.ssid;pending=null;setMode('normal');print('password: ••••••••','l-prompt');blank();finishConnect(ss,raw);return;}
+  if(mode==='ssh-pass'){print('password: ••••••••','l-prompt');blank();finishSsh(raw);return;}
+  print(($('pLabel').textContent)+' '+raw,'l-prompt');blank();
+  if(mode==='shell'){doShellCmd(raw);blank();return;}
+  const p=raw.split(/\s+/),c=p[0].toLowerCase();
+  if(c==='help')helpList();
+  else if(c==='scan-wifi'||c==='scan')doScan();
+  else if(c==='connect')doConnect(p[1],p.slice(2).join(' '));
+  else if(c==='nmap')doNmap(p[1]);
+  else if(c==='dirb')doDirb();
+  else if(c==='nikto')doNikto();
+  else if(c==='browser'){openBrowser();}
+  else if(c==='ssh')doSsh(p[1]);
+  else if(c==='ftp'||c==='vnc'){print(c+': service is open — same credentials as SSH.','l-info');}
+  else if(c==='status')doStatus();
+  else if(c==='reset')doReset();
+  else if(c==='clear')term.innerHTML='';
+  else print('Command not found: '+c+'. Type help.','l-err');
+  blank();
+}
+function doStatus(){
+  print('Lock:        '+(st.unlocked?'open (000)':'closed'),st.unlocked?'l-ok':'l-dim');
+  print('Displays:    '+(st.sawDisplays?('v'+S.sysVersion+' / '+S.serverHost+' / '+S.serverIp):'—'),st.sawDisplays?'l-ok':'l-dim');
+  print('Wi-Fi:       '+(st.sawNote?S.ssid+' / '+S.wifiPass:'—'),st.sawNote?'l-ok':'l-dim');
+  print('Network:     '+(st.connected?'connected':'offline'),st.connected?'l-ok':'l-dim');
+  print('Sys password:'+(st.foundPassword?S.sysPassword:'—'),st.foundPassword?'l-ok':'l-dim');
+  print('Safe code:   '+(st.foundSafe?S.safeCode:'—'),st.foundSafe?'l-ok':'l-dim');
+  print('Override PIN:'+(st.foundPin?S.overridePIN:'—'),st.foundPin?'l-ok':'l-dim');
+}
+cmd.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const v=cmd.value;if(mode!=='wifi-pass'&&mode!=='ssh-pass'&&!v.trim())return;cmd.value='';handle(v.trim());});
+$('helpCmdBtn').addEventListener('click',()=>{helpList();blank();cmd.focus();});
+
+// ── browser ──
+function bwHome(){return '<h1>Welcome to the Sticker Security System</h1><h2>Sticker Secuirty Inc.</h2>'+
+  '<img src="'+LOGO+'" alt="Sticker Security Inc." style="width:150px;height:150px;border-radius:50%;display:block">'+
+  '<p style="margin-top:14px">Please see admin for access to the vault. (admin: <b>'+S.adminUser+'@'+S.serverHost+'</b>)</p><hr>'+
+  '<p style="font-size:13px;color:#555">🍓 Raspberry Pi &nbsp;·&nbsp; ∞ ARDUINO® &nbsp;·&nbsp; ∞ ARDUINO®</p><hr>'+
+  '<p><b>Local web page for system info</b></p>'+
+  '<p><a data-go="http://'+S.serverIp+'/docs/secsystem-state-machine-v2-1.pdf">System Info 2.1</a><br>'+
+  '<a data-go="http://'+S.serverIp+'/docs/secsystem-state-machine-v2-2.pdf">System Info 2.2</a></p>'+
+  '<p style="font-size:12px;color:#777;margin-top:18px"><b>Hacking is not allowed</b></p>';}
+function bwDocs(){return '<h1 style="font-size:24px">Index of /docs/</h1><table class="dir-tbl"><tr><th>Name</th><th>Last modified</th><th>Size</th></tr>'+
+  '<tr><td><a data-go="http://'+S.serverIp+'/">../</a></td><td>—</td><td>-</td></tr>'+
+  '<tr><td><a data-go="file:000_RPi_BeginnersGuide_DIGITAL.pdf">000_RPi_BeginnersGuide_DIGITAL.pdf</a></td><td>2022-11-16</td><td>24.0M</td></tr>'+
+  '<tr><td><a data-go="file:arduino-ref.pdf">arduino-ref.pdf</a></td><td>2022-11-16</td><td>1.9M</td></tr>'+
+  '<tr><td><a data-go="conf:secsystem-diagram-v2-1.pdf">secsystem-diagram-v2-1.pdf</a></td><td>2022-12-19</td><td>212.4K</td></tr>'+
+  '<tr><td><a data-go="file:secsystem-diagram-v2-2.pdf">secsystem-diagram-v2-2.pdf</a></td><td>2022-11-16</td><td>212.6K</td></tr>'+
+  '<tr><td><a data-go="http://'+S.serverIp+'/docs/secsystem-state-machine-v2-1.pdf">secsystem-state-machine-v2-1.pdf</a></td><td>2022-12-19</td><td>61.5K</td></tr>'+
+  '<tr><td><a data-go="file:secsystem-state-machine-v2-2.pdf">secsystem-state-machine-v2-2.pdf</a></td><td>2022-11-16</td><td>63.0K</td></tr>'+
+  '</table><p style="color:#888;font-family:monospace;margin-top:16px">'+S.webServer+'</p>';}
+function bwStateMachine(v){const correct=v==='1';
+  return '<div class="pdfwrap"><div class="pdfpage"><h2 style="margin-top:0">SecSystem v2.'+v+' — State Machine</h2>'+
+  (correct?'':'<p class="conf">PROTOTYPE — v2.2 is not the deployed version.</p>')+
+  '<p>RFID Read → <b>Alarm Set / Yellow LED</b> → Prox sensor tripped → <b>seven-second wait w/ beep</b> → <b>Keypad Entry</b> → Override code good? → <b>Alarm OFF</b> (else Siren / Red LED).</p>'+
+  '<p style="font-size:13px;color:#555">Legend: Yellow = armed/closed · Red = alarm/door open · Green = alarm off.</p>'+
+  '<p style="font-size:13px;color:#555">Recon note: there is a timer and a keypad <b>override code</b>. The deployed version is '+(correct?'<b>this one (2.1)</b> — matches the LCD':'<b>2.1</b>, per the LCD')+'.</p>'+
+  '</div></div>';}
+function bwPdfPlain(name){return '<div class="pdfwrap"><div class="pdfpage"><h2 style="margin-top:0">'+name+'</h2><p>Reference material. Nothing sensitive here.</p></div></div>';}
+function bwConf(){return '<div class="pdfwrap"><div class="pdfpage"><p class="conf">CONFIDENTIAL — INTERNAL USE ONLY</p>'+
+  '<h2 style="margin-top:6px">SecSystem — Wiring &amp; Access Notes</h2>'+
+  '<p>Admin account: <b>'+S.adminUser+'</b></p>'+
+  '<p>System password (SSH / FTP / VNC): <b>'+S.sysPassword+'</b></p>'+
+  '<p style="font-size:13px;color:#555">Do not distribute. (It was left in a browsable web directory anyway.)</p></div></div>';}
+function bwSource(){return '<pre style="white-space:pre-wrap">&lt;!doctype html&gt;\n&lt;title&gt;Security Server&lt;/title&gt;\n&lt;h1&gt;Welcome to the Sticker Security System&lt;/h1&gt;\n&lt;!-- TODO: verify web docs are secure — see /docs/ --&gt;\n&lt;a href="/docs/secsystem-state-machine-v2-1.pdf"&gt;System Info 2.1&lt;/a&gt;\n...</pre>';}
+
+let bwShowingSource=false;
+function render(url){
+  const view=$('bwView');view.classList.remove('dark');bwShowingSource=false;
+  $('bwUrl').value=url;
+  const u=url.replace(/^https?:\/\//,'').replace(/\/+$/, m=>m); // keep
+  if(/^(http:\/\/)?10\.42\.0\.1\/?$/.test(url)||url==='10.42.0.1'){
+    view.innerHTML=bwHome();
+    if(!st.visitedWeb){st.visitedWeb=true;
+      lesson('web','Web · Information disclosure','The front page leaks the admin',
+        'The home page names the admin account ('+S.adminUser+'@'+S.serverHost+') and shows the hardware (Raspberry Pi + Arduino). That is free username enumeration and a hardware fingerprint — exactly what an attacker needs next. Keep internal identifiers off public pages.');
+      toast('Admin user: '+S.adminUser,'ok');print('[web] Port 80 page names admin '+S.adminUser+'@'+S.serverHost+'.','l-info');blank();renderIntel();renderTrail();}
+  }else if(/\/docs\/?$/.test(url)){view.innerHTML=bwDocs();revealDocs();}
+  else if(/state-machine-v2-1\.pdf/.test(url)){view.innerHTML=bwStateMachine('1');markSysInfo();}
+  else if(/state-machine-v2-2\.pdf/.test(url)){view.innerHTML=bwStateMachine('2');markSysInfo();}
+  else if(/diagram-v2-1\.pdf/.test(url)){view.innerHTML=bwConf();
+    if(!st.foundPassword){st.foundPassword=true;
+      lesson('pdf','Web · Sensitive data exposure','Password in a confidential PDF',
+        'The "confidential" PDF sat in the browsable /docs/ folder and plainly lists the system password ('+S.sysPassword+'). Marking a file confidential does nothing if it is reachable. Sensitive documents must never live under the web root.');
+      toast('System password: '+S.sysPassword,'gold');print('[web] Confidential PDF → system password '+S.sysPassword,'l-warn');blank();
+      hint('<b>Next:</b> <b>ssh '+S.adminUser+'@'+S.serverIp+'</b> (password from the PDF)');renderIntel();renderTrail();}}
+  else if(/diagram-v2-2\.pdf|arduino-ref\.pdf|BeginnersGuide/.test(url)){view.innerHTML=bwPdfPlain(url.split('/').pop());}
+  else{view.innerHTML='<p style="font-family:monospace">404 — Not Found<br>'+url+'</p>';}
+}
+function markSysInfo(){if(st.sawSysInfo)return;st.sawSysInfo=true;
+  lesson('sysinfo','Recon · Reading the design','The state machine shows the way out',
+    'The System Info diagram is not a vulnerability, but it reveals how the alarm works: a seven-second timer and a keypad override code. Physical recon (the LCD) told you v'+S.sysVersion+' is in service, so trust the matching diagram and source.');
+  print('[web] System Info v'+S.sysVersion+': timer + keypad override code. Use the v'+S.sysVersion+' source.','l-info');blank();renderTrail();}
+function openBrowser(){$('browser').hidden=false;render('http://'+S.serverIp);$('bwUrl').focus();}
+$('browserBtn').addEventListener('click',openBrowser);
+$('bwClose').addEventListener('click',()=>{$('browser').hidden=true;});
+$('bwGo').addEventListener('click',()=>goUrl());
+$('bwUrl').addEventListener('keydown',e=>{if(e.key==='Enter')goUrl();});
+function goUrl(){let v=$('bwUrl').value.trim();if(!/^https?:\/\//.test(v)&&!/^10\.42/.test(v))v='http://'+v;render(v);}
+$('bwView').addEventListener('click',e=>{const a=e.target.closest('a[data-go]');if(!a)return;e.preventDefault();
+  const g=a.getAttribute('data-go');
+  if(g.startsWith('conf:'))render('http://'+S.serverIp+'/docs/'+g.slice(5));
+  else if(g.startsWith('file:'))render('http://'+S.serverIp+'/docs/'+g.slice(5));
+  else render(g);});
+$('bwSrc').addEventListener('click',()=>{const view=$('bwView');
+  if(bwShowingSource){render('http://'+S.serverIp);return;}
+  view.classList.add('dark');view.innerHTML=bwSource();bwShowingSource=true;
+  lesson('source','Web · Comments in source','Secrets in the page source',
+    'Viewing source reveals a developer comment pointing at /docs/. Comments and leftover TODOs routinely leak paths, keys and logic. Strip comments from production and never rely on "nobody will look."');});
+$('browser').addEventListener('click',e=>{if(e.target===$('browser'))$('browser').hidden=true;});
+
+// ── finale ──
+function revealFinale(){$('finale').hidden=false;}
+let alarmArmed=true,doorOpen=false,cd=0,cdTimer=null,kbuf='',sbuf='';
+function setLeds(a,r,g){$('laA').classList.toggle('on',a);$('laR').classList.toggle('on',r);$('laG').classList.toggle('on',g);}
+function buildKeys(container,onKey){const el=$(container);el.innerHTML='';
+  ['1','2','3','4','5','6','7','8','9','*','0','#'].forEach(k=>{const b=document.createElement('button');b.className='key'+(k==='*'||k==='#'?' alt':'');b.textContent=k;b.addEventListener('click',()=>onKey(k));el.appendChild(b);});}
+buildKeys('keys',k=>{
+  if(!st.foundPin&&kbuf==='')toast('Enter the override PIN (from the v2.1 source)','bad');
+  if(k==='*'){kbuf='';}else if(k==='#'){checkPin();return;}else if(kbuf.length<6){kbuf+=k;}
+  $('kdisp').textContent=kbuf.padEnd(4,'-').slice(0,Math.max(4,kbuf.length));
+  if(kbuf.length===S.overridePIN.length)checkPin();
+});
+function checkPin(){
+  if(st.alarmDisarmed)return;
+  if(!doorOpen&&cd<=0){toast('Open the door first to start the countdown','bad');kbuf='';$('kdisp').textContent='----';return;}
+  if(kbuf===S.overridePIN){
+    st.alarmDisarmed=true;alarmArmed=false;clearInterval(cdTimer);cd=0;
+    $('cdown').textContent='Alarm OFF (green).';setLeds(false,false,true);setSystemLeds('disarmed');$('kdisp').textContent='OK';
+    toast('Alarm disarmed','gold');checkWin();
+  }else{toast('Wrong PIN','bad');$('kdisp').textContent='ERR';kbuf='';setTimeout(()=>{if(!st.alarmDisarmed)$('kdisp').textContent='----';},700);}
+}
+$('doorToggle').addEventListener('click',()=>{
+  if(st.alarmDisarmed)return;
+  doorOpen=!doorOpen;$('door').classList.toggle('open',doorOpen);$('doorToggle').textContent=doorOpen?'Close door':'Open door';
+  if(doorOpen){setLeds(false,true,false);startCountdown();}
+  else{$('cdown').textContent=cd>0?('Door closed — enter PIN! '+cd+'s'):'Door closed.';}
+});
+function startCountdown(){clearInterval(cdTimer);cd=12;setSystemLeds('alarm');$('cdown').textContent='⚠ Door open — countdown '+cd+'s. Close it and enter the PIN.';
+  cdTimer=setInterval(()=>{cd--;
+    if(cd<=0){clearInterval(cdTimer);cd=0;setLeds(false,true,false);$('cdown').textContent='🚨 SIREN! Too slow — reset: close the door and try again.';doorOpen=false;$('door').classList.remove('open');$('doorToggle').textContent='Open door';return;}
+    $('cdown').textContent=(doorOpen?'⚠ Door open':'Door closed')+' — countdown '+cd+'s.';
+  },1000);}
+function setSafeDials(){['sd0','sd1','sd2'].forEach((id,i)=>{$(id).textContent=sbuf[i]||'–';});}
+buildKeys('skeys',k=>{
+  if(k==='*'){sbuf='';}else if(k==='#'){checkSafe();return;}else if(sbuf.length<3){sbuf+=k;}
+  $('sdisp').textContent=sbuf.padEnd(3,'-');setSafeDials();
+  if(sbuf.length===3)checkSafe();
+});
+function checkSafe(){
+  if(st.safeOpen)return;
+  if(sbuf===S.safeCode){st.safeOpen=true;$('safe').classList.add('open');$('sdisp').textContent='OPEN';toast('Safe open','gold');checkWin();}
+  else{toast('Wrong safe code','bad');$('sdisp').textContent='ERR';sbuf='';setSafeDials();setTimeout(()=>{if(!st.safeOpen)$('sdisp').textContent='---';},700);}
+}
+function checkWin(){if(st.won)return;if(st.alarmDisarmed&&st.safeOpen){st.won=true;$('win').hidden=false;
+  toast('🎉 Heist complete — stickers acquired','gold');$('win').scrollIntoView({behavior:'smooth',block:'center'});renderTrail();}}
+
+// reset
+function doReset(){st.epoch++;Object.keys(st).forEach(k=>{if(typeof st[k]==='boolean')st[k]=false;});
+  clearInterval(cdTimer);cd=0;doorOpen=false;alarmArmed=true;kbuf='';sbuf='';cwd='~';shown.clear();
+  $('box').className='box';$('topLcd').textContent='SYSTEM LOCKED';$('topLeds').querySelectorAll('i').forEach(i=>i.className='');
+  $('interior').setAttribute('aria-hidden','true');
+  $('oled').textContent='booting…';$('miniLcd').innerHTML='SecSystem v?.?<br>Alarm Set';$('openLidBtn').hidden=true;
+  $('sceneHint').textContent='Click the combination lock to try the box.';
+  $('lessons').innerHTML='';$('finale').hidden=true;$('win').hidden=true;$('door').classList.remove('open');$('safe').classList.remove('open');
+  $('doorToggle').textContent='Open door';$('cdown').textContent='Alarm armed (yellow).';setLeds(true,false,false);setSystemLeds('armed');
+  $('kdisp').textContent='----';$('sdisp').textContent='---';sbuf='';setSafeDials();setMode('normal');
+  term.innerHTML='';banner();hint('<b>Next:</b> open the box, then type <b>help</b>.');renderTrail();renderIntel();
+}
+
+// esc closes pop-ups
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!look.hidden)closeLook();else if(!$('browser').hidden)$('browser').hidden=true;});
+
+// boot
+setLeds(true,false,false);setSystemLeds('armed');banner();renderTrail();renderIntel();setMode('normal');
+</script>
+</body>
+</html>
