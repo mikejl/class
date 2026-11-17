@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dr. Mike's Course Material</title>
+    <title>Course Materials</title>
 
     <style>
         :root {
@@ -18,10 +18,8 @@
             --lab-soft: #e6f6f4;
             --util: #b45309;
             --util-soft: #fdf3e7;
-            --pres: #7c3aed;
-            --pres-soft: #f3edff;
-            --quantum: #be185d;
-            --quantum-soft: #fdf2f8;
+            --course: #7c3aed;
+            --course-soft: #f3edff;
         }
 
         * { box-sizing: border-box; }
@@ -130,23 +128,14 @@
 
         #utilities .title { color: var(--util); }
 
-        #presentations .count {
-            background: var(--pres-soft);
-            color: var(--pres);
+        #courses .count {
+            background: var(--course-soft);
+            color: var(--course);
         }
 
-        #presentations .page a { border-left-color: var(--pres); }
+        #courses .page a { border-left-color: var(--course); }
 
-        #presentations .title { color: var(--pres); }
-
-        #quantum .count {
-            background: var(--quantum-soft);
-            color: var(--quantum);
-        }
-
-        #quantum .page a { border-left-color: var(--quantum); }
-
-        #quantum .title { color: var(--quantum); }
+        #courses .title { color: var(--course); }
 
         .filename {
             display: block;
@@ -169,29 +158,42 @@
 <body>
 
 <header>
-    <h1>Dr. Mike's Course Material</h1>
+    <h1>Course Materials</h1>
     <p>Course Labs and Demos created with Claude(AI)</p>
 </header>
 
+<section id="courses">
+    <h2>Courses <span class="count">2</span></h2>
+    <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/MachineLearning/ml-index.html"><span class="title">Machine Learning</span><span class="filename">MachineLearning/ml-index.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/quantum/quantum-index.html"><span class="title">Quantum Computing</span><span class="filename">quantum/quantum-index.html</span></a></li>
+    </ul>
+</section>
+
 <section id="demos">
-    <h2>Demos <span class="count">10</span></h2>
+    <h2>Demos <span class="count">12</span></h2>
     <ul class="page-list">
         <li class="page"><a href="https://mikejl.github.io/class/Bell-LaPadula-Lattice-Demo.html"><span class="title">Bell-LaPadula Lattice Demo</span><span class="filename">Bell-LaPadula-Lattice-Demo.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/CIT-1107-Intro-Cloud.html"><span class="title">CIT-1107: Cloud Computing Fundamentals</span><span class="filename">CIT-1107-Intro-Cloud.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/CIT-1107-Intro-IoT.html"><span class="title">CIT-1107: Introduction to the Internet of Things</span><span class="filename">CIT-1107-Intro-IoT.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/CIT-2808-Midterm-Study-Guide.html"><span class="title">CIT-2808 Midterm Lab Study Guide</span><span class="filename">CIT-2808-Midterm-Study-Guide.html</span></a></li>
-        <li class="page"><a href="https://mikejl.github.io/class/crypto-randomness-nonce-keyspace.html"><span class="title">Randomness, Nonces &amp; Key Space</span><span class="filename">crypto-randomness-nonce-keyspace.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/Hidden-in-Plain-Sight.html"><span class="title">Hidden in Plain Sight</span><span class="filename">Hidden-in-Plain-Sight.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/mac-selinux-demo.html"><span class="title">MAC &amp; SELinux Demo</span><span class="filename">mac-selinux-demo.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/crypto-randomness-nonce-keyspace.html"><span class="title">Randomness, Nonces &amp; Key Space</span><span class="filename">crypto-randomness-nonce-keyspace.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/RSA_Calculator.html"><span class="title">RSA Calculator</span><span class="filename">RSA_Calculator.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/shors-algorithm-demo.html"><span class="title">Shor's Algorithm Demo</span><span class="filename">shors-algorithm-demo.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/sinclair-ctf.html"><span class="title">Sinclair CTF // Ghost Protocol</span><span class="filename">sinclair-ctf.html</span></a></li>
-        <li class="page"><a href="https://mikejl.github.io/class/vigenere.html"><span class="title">Vigenère Cipher Encoder / Decoder</span><span class="filename">vigenere.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/xor-stream-block-ciphers.html"><span class="title">Stream &amp; Block Ciphers (XOR) Demo</span><span class="filename">xor-stream-block-ciphers.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/vigenere.html"><span class="title">Vigenère Cipher Encoder / Decoder</span><span class="filename">vigenere.html</span></a></li>
     </ul>
 </section>
 
 <section id="labs">
-    <h2>Labs <span class="count">9</span></h2>
+    <h2>Labs <span class="count">14</span></h2>
     <ul class="page-list">
+        <li class="page"><a href="https://mikejl.github.io/class/ai-report-generation.html"><span class="title">AI Report Generation — Draft, Validate, Export</span><span class="filename">ai-report-generation.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/ai-test-harness-builder.html"><span class="title">AI Test Harness Builder — Governing an AI Scan</span><span class="filename">ai-test-harness-builder.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/ai-triage-check.html"><span class="title">AI Triage Check — Verifying AI Findings &amp; Reproduction Steps</span><span class="filename">ai-triage-check.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/buffer-overflow-lab.html"><span class="title">Buffer Overflow Lab</span><span class="filename">buffer-overflow-lab.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/CIT2808_Module1_ChainOfCustody_Lab.html"><span class="title">Chain of Custody Lab</span><span class="filename">CIT2808_Module1_ChainOfCustody_Lab.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/cloud-security-lab.html"><span class="title">Cloud Security Lab</span><span class="filename">cloud-security-lab.html</span></a></li>
@@ -200,15 +202,9 @@
         <li class="page"><a href="https://mikejl.github.io/class/emotet-lab.html"><span class="title">Emotet Malware Analysis Lab</span><span class="filename">emotet-lab.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/iot-security-lab.html"><span class="title">IoT Security Lab</span><span class="filename">iot-security-lab.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/CIT2640_Module1_Lab_SocialEngineeringAttack.html"><span class="title">Social Engineering Attack Lab</span><span class="filename">CIT2640_Module1_Lab_SocialEngineeringAttack.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/sticker-heist-ai-helpdesk.html"><span class="title">Sticker Security — Shop &amp; AI Help Desk</span><span class="filename">sticker-heist-ai-helpdesk.html</span></a></li>
+        <li class="page"><a href="https://mikejl.github.io/class/synthetic-lure-lab.html"><span class="title">Synthetic Lure Lab — AI-Enabled Social Engineering</span><span class="filename">synthetic-lure-lab.html</span></a></li>
         <li class="page"><a href="https://mikejl.github.io/class/tcp_wrappers_lab.html"><span class="title">TCP Wrappers Lab</span><span class="filename">tcp_wrappers_lab.html</span></a></li>
-    </ul>
-</section>
-
-<section id="presentations">
-    <h2>Presentations <span class="count">2</span></h2>
-    <ul class="page-list">
-        <li class="page"><a href="https://mikejl.github.io/class/CIT-1107-Intro-Cloud.html"><span class="title">CIT-1107: Cloud Computing Fundamentals</span><span class="filename">CIT-1107-Intro-Cloud.html</span></a></li>
-        <li class="page"><a href="https://mikejl.github.io/class/CIT-1107-Intro-IoT.html"><span class="title">CIT-1107: Introduction to the Internet of Things</span><span class="filename">CIT-1107-Intro-IoT.html</span></a></li>
     </ul>
 </section>
 
@@ -216,14 +212,6 @@
     <h2>Utilities <span class="count">1</span></h2>
     <ul class="page-list">
         <li class="page"><a href="https://mikejl.github.io/class/netlab-diagnostics.html"><span class="title">Netlab Reachability Console</span><span class="filename">netlab-diagnostics.html</span></a></li>
-    </ul>
-</section>
-
-<section id="quantum">
-    <h2>Courses <span class="count">2</span></h2>
-    <ul class="page-list">
-        <li class="page"><a href="https://mikejl.github.io/class/quantum/quantum-index.html"><span class="title">Quantum Computing for Cybersecurity &mdash; Series Index</span><span class="filename">quantum/quantum-index.html</span></a></li>
-        <li class="page"><a href="https://mikejl.github.io/class/MachineLearning/ml-index.html"><span class="title">Introduction to Machine Learning &mdash; Series Index</span><span class="filename">MachineLearning/ml-index.html</span></a></li>
     </ul>
 </section>
 
